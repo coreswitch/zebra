@@ -1,0 +1,16 @@
+module test-typedef {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "test-typedef";
+
+  typedef percent {
+    type uint8 {
+      range "0 .. 100";
+    }
+  }
+
+  leaf completed {
+    type percent;
+  }
+}

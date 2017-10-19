@@ -1,0 +1,17 @@
+module test-leaf {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  leaf union-address {
+    type union {
+      type inet:ipv4-address;
+      type inet:ipv6-address;
+    }
+  }
+}

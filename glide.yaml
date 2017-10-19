@@ -1,0 +1,33 @@
+package: github.com/coreswitch/zebra
+import:
+- package: github.com/Sirupsen/logrus
+- package: github.com/coreos/etcd
+  version: v3.2.7
+  subpackages:
+  - clientv3
+- package: github.com/coreswitch/cmd
+- package: github.com/coreswitch/component
+- package: github.com/coreswitch/netutil
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+- package: github.com/coreswitch/openconfigd
+  subpackages:
+  - proto
+- package: github.com/vishvananda/netlink
+  version: master
+  subpackages:
+  - nl
+- package: github.com/vishvananda/netns
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: google.golang.org/grpc
+  version: v1.2.1
+  subpackages:
+  - grpclog
+- package: golang.org/x/crypto
+  version: 1351f936d976c60a0a48d728281922cf63eafb8d
+  subpackages:
+  - bcrypt
+  - blowfish

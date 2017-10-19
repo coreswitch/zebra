@@ -1,0 +1,896 @@
+
+
+
+
+IDR                                                      S. Previdi, Ed.
+Internet-Draft                                               C. Filsfils
+Intended status: Standards Track                               A. Lindem
+Expires: June 15, 2017                                          K. Patel
+                                                          A. Sreekantiah
+                                                           Cisco Systems
+                                                                  S. Ray
+                                                            Unaffiliated
+                                                              H. Gredler
+                                                            RtBrick Inc.
+                                                       December 12, 2016
+
+
+             Segment Routing Prefix SID extensions for BGP
+                    draft-ietf-idr-bgp-prefix-sid-04
+
+Abstract
+
+   Segment Routing (SR) architecture allows a node to steer a packet
+   flow through any topological path and service chain by leveraging
+   source routing.  The ingress node prepends a SR header to a packet
+   containing a set of "segments".  Each segment represents a
+   topological or a service-based instruction.  Per-flow state is
+   maintained only at the ingress node of the SR domain.
+
+   This document describes the BGP extension for announcing BGP Prefix
+   Segment Identifier (BGP Prefix SID) information.
+
+Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119]
+   only when they appear in all upper case.  They may also appear in
+   lower or mixed case as English words, without any normative meaning.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 1]
+
+Internet-Draft                                             December 2016
+
+
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on June 15, 2017.
+
+Copyright Notice
+
+   Copyright (c) 2016 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Segment Routing Documents . . . . . . . . . . . . . . . . . .   3
+   2.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+   3.  BGP-Prefix-SID  . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.1.  MPLS Prefix Segment . . . . . . . . . . . . . . . . . . .   4
+     3.2.  IPv6 Prefix Segment . . . . . . . . . . . . . . . . . . .   5
+   4.  BGP-Prefix-SID Attribute  . . . . . . . . . . . . . . . . . .   5
+     4.1.  Label-Index TLV . . . . . . . . . . . . . . . . . . . . .   6
+     4.2.  IPv6 SID  . . . . . . . . . . . . . . . . . . . . . . . .   7
+     4.3.  Originator SRGB TLV . . . . . . . . . . . . . . . . . . .   8
+   5.  Receiving BGP-Prefix-SID Attribute  . . . . . . . . . . . . .   9
+     5.1.  MPLS Dataplane: Labeled Unicast . . . . . . . . . . . . .   9
+     5.2.  IPv6 Dataplane  . . . . . . . . . . . . . . . . . . . . .  10
+   6.  Announcing BGP-Prefix-SID Attribute . . . . . . . . . . . . .  10
+     6.1.  MPLS Dataplane: Labeled Unicast . . . . . . . . . . . . .  11
+     6.2.  IPv6 Dataplane  . . . . . . . . . . . . . . . . . . . . .  11
+   7.  Error Handling of BGP-Prefix-SID Attribute  . . . . . . . . .  12
+   8.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  12
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  13
+   10. Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .  13
+   11. Change Log  . . . . . . . . . . . . . . . . . . . . . . . . .  13
+   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  13
+     12.1.  Normative References . . . . . . . . . . . . . . . . . .  13
+     12.2.  Informative References . . . . . . . . . . . . . . . . .  13
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 2]
+
+Internet-Draft                                             December 2016
+
+
+1.  Segment Routing Documents
+
+   The main references for this document are the SR architecture defined
+   in [I-D.ietf-spring-segment-routing] and the related use case
+   illustrated in [I-D.ietf-spring-segment-routing-msdc].
+
+   The Segment Routing Egress Peer Engineering architecture is described
+   in [I-D.ietf-spring-segment-routing-central-epe].
+
+   The Segment Routing Egress Peer Engineering BGPLS extensions are
+   described in [I-D.ietf-idr-bgpls-segment-routing-epe].
+
+2.  Introduction
+
+   Segment Routing (SR) architecture leverages the source routing
+   paradigm.  A group of inter-connected nodes that use SR forms a SR
+   domain.  The ingress node of the SR domain prepends a SR header
+   containing "segments" to an incoming packet.  Each segment represents
+   a topological instruction such as "go to prefix P following shortest
+   path" or a service instruction (e.g.: "pass through deep packet
+   inspection").  By inserting the desired sequence of instructions, the
+   ingress node is able to steer a packet via any topological path and/
+   or service chain; per-flow state is maintained only at the ingress
+   node of the SR domain.
+
+   Each segment is identified by a Segment Identifier (SID).  As
+   described in [I-D.ietf-spring-segment-routing], when SR is applied to
+   the MPLS dataplane the SID consists of a label while when SR is
+   applied to the IPv6 dataplane the SID consists of an IPv6 prefix (see
+   [I-D.ietf-6man-segment-routing-header]).
+
+   A BGP-Prefix Segment (aka BGP-Prefix-SID), is a BGP segment attached
+   to a BGP prefix.  A BGP-Prefix-SID is always global within the SR/BGP
+   domain and identifies an instruction to forward the packet over the
+   ECMP-aware best-path computed by BGP to the related prefix.  The BGP-
+   Prefix-SID is the identifier of the BGP prefix segment.
+
+   This document describes the BGP extension to signal the BGP-Prefix-
+   SID.  Specifically, this document defines a new BGP attribute known
+   as the BGP Prefix SID attribute and specifies the rules to originate,
+   receive and handle error conditions of the new attribute.
+
+   As described in [I-D.ietf-spring-segment-routing-msdc], the newly
+   proposed BGP Prefix-SID attribute can be attached to prefixes from
+   AFI/SAFI:
+
+      Multiprotocol BGP labeled IPv4/IPv6 Unicast ([RFC3107]).
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 3]
+
+Internet-Draft                                             December 2016
+
+
+      Multiprotocol BGP ([RFC4760]) unlabeled IPv6 Unicast.
+
+   [I-D.ietf-spring-segment-routing-msdc] describes use cases where the
+   Prefix-SID is used for the above AFI/SAFI.
+
+3.  BGP-Prefix-SID
+
+   The BGP-Prefix-SID attached to a BGP prefix P represents the
+   instruction "go to Prefix P" along its BGP bestpath (potentially
+   ECMP-enabled).
+
+3.1.  MPLS Prefix Segment
+
+   The BGP Prefix Segment is realized on the MPLS dataplane in the
+   following way:
+
+      As described in [I-D.ietf-spring-segment-routing-msdc] the
+      operator assigns a globally unique "index", L_I, to a locally
+      sourced prefix of a BGP speaker N which is advertised to all other
+      BGP speakers in the SR domain.
+
+      According to [I-D.ietf-spring-segment-routing], each BGP speaker
+      is configured with a label block called the Segment Routing Global
+      Block (SRGB).  While it is recommended to use the same SRGB across
+      all the nodes within the SR domain, the SRGB of a node is a local
+      property and could be different on different speakers.  The
+      drawbacks of the use case where BGP speakers have different SRGBs
+      are documented in [I-D.ietf-spring-segment-routing] and
+      [I-D.ietf-spring-segment-routing-msdc].
+
+      If traffic-engineering within the SR domain is required, each node
+      may also be required to advertise topological information and
+      Peering SID's for each of its links and peers.  This informations
+      is required in order to perform the explicit path computation and
+      to express any explicit path into a list of segments.  The
+      advertisement of topological information and Peer segments is
+      assumed to be done through
+      [I-D.ietf-idr-bgpls-segment-routing-epe].
+
+      If the BGP speakers are not all configured with the same SRGB, and
+      if traffic-engineering within the SR domain is required, each node
+      may be required to advertise its local SRGB in addition to the
+      topological information.
+
+      This documents assumes that BGP-LS is the preferred method for
+      collecting both topological, peer segments and SRGB information
+      through [RFC7752], [I-D.ietf-idr-bgpls-segment-routing-epe] and
+      [I-D.ietf-idr-bgp-ls-segment-routing-ext].  However, as an
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 4]
+
+Internet-Draft                                             December 2016
+
+
+      optional alternative for the advertisement of the local SRGB
+      without the topology nor the peer SID's, hence without
+      applicability for TE, the Originator SRGB TLV of the prefix-SID
+      attribute, is specified in Section 4.3 of this document.
+
+      The index L_I is a 32 bit offset in the SRGB.  Each BGP speaker
+      derives its local MPLS label, L, by adding L_I to the start value
+      of its own SRGB, and programs L in its MPLS dataplane as its
+      incoming/local label for the prefix.  See Section 5.1 for more
+      details.
+
+      The outgoing label for the prefix is found in the NLRI of the
+      Multiprotocol BGP labeled IPv4/IPv6 Unicast prefix advertisement.
+      The index L_I is only used as a hint to derive the local/incoming
+      label.
+
+      Section 4.1 of this document specifies the Label-Index TLV of the
+      BGP Prefix-SID attribute; this TLV can be used to advertise the
+      label index of a given prefix.
+
+   In order to advertise the label index of a given prefix P and,
+   optionally, the SRGB, a new extension to BGP is needed: the BGP
+   Prefix SID attribute.  This extension is described in subsequent
+   sections.
+
+3.2.  IPv6 Prefix Segment
+
+   As defined in [I-D.ietf-6man-segment-routing-header], and as
+   illustrated in [I-D.ietf-spring-segment-routing-msdc], when SR is
+   used over an IPv6 dataplane, the BGP Prefix Segment is instantiated
+   by an IPv6 prefix originated by the BGP speaker.
+
+   Each node advertises a globally unique IPv6 address representing
+   itself in the domain.  This prefix (e.g.: its loopback interface
+   address) is advertised to all other BGP speakers in the SR domain.
+
+   Also, each node MUST advertise its support of Segment Routing for
+   IPv6 dataplane.  This is realized using the flags contained in the
+   Prefix SID Attribute defined below.
+
+4.  BGP-Prefix-SID Attribute
+
+   The BGP Prefix SID attribute is an optional, transitive BGP path
+   attribute.  The attribute type code is to be assigned by IANA
+   (suggested value: 40).  The value field of the BGP-Prefix-SID
+   attribute has the following format:
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 5]
+
+Internet-Draft                                             December 2016
+
+
+   The value field of the BGP Prefix SID attribute is defined here to be
+   a set of elements encoded as "Type/Length/Value" (i.e., a set of
+   TLVs).  Following TLVs are defined:
+
+   o  Label-Index TLV
+
+   o  IPv6 SID TLV
+
+   o  Originator SRGB TLV
+
+   Label-Index and Originator SRGB TLVs are used only when SR is applied
+   to the MPLS dataplane.
+
+   IPv6 SID TLV is used only when SR is applied to the IPv6 dataplane.
+
+4.1.  Label-Index TLV
+
+   The Label-Index TLV MUST be present in the Prefix-SID attribute
+   attached to Labeled IPv4/IPv6 unicast prefixes ([RFC3107]) and has
+   the following format:
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |       Type    |             Length            |   RESERVED    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |            Flags              |       Label Index             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |          Label Index          |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   where:
+
+   o  Type is 1.
+
+   o  Length: is 7, the total length of the value portion of the TLV.
+
+   o  RESERVED: 8 bit field.  SHOULD be 0 on transmission and MUST be
+      ignored on reception.
+
+   o  Flags: 16 bits of flags.  None are defined at this stage of the
+      document.  The flag field SHOULD be clear on transmission and MUST
+      be ignored at reception.
+
+   o  Label Index: 32 bit value representing the index value in the SRGB
+      space.
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 6]
+
+Internet-Draft                                             December 2016
+
+
+4.2.  IPv6 SID
+
+   The IPv6-SID TLV MUST be present in the Prefix-SID attribute attached
+   to MP-BGP unlabeled IPv6 unicast prefixes ([RFC4760]) and has the
+   following format:
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |       Type    |             Length            |   RESERVED    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |            Flags              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   where:
+
+   o  Type is 2.
+
+   o  Length: is 3, the total length of the value portion of the TLV.
+
+   o  RESERVED: 8 bit field.  SHOULD be 0 on transmission and MUST be
+      ignored on reception.
+
+   o  Flags: 16 bits of flags defined as follow:
+
+    0                   1
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |S|                             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   where:
+
+      *  S flag: if set then it means that the BGP speaker attaching the
+         Prefix-SID Attribute to a prefix is capable of processing the
+         IPv6 Segment Routing Header (SRH,
+         [I-D.ietf-6man-segment-routing-header]) for the segment
+         corresponding to the originated IPv6 prefix.  The use case
+         leveraging the S flag is described in
+         [I-D.ietf-spring-segment-routing-msdc].
+
+      The other bits of the flag field SHOULD be clear on transmission
+      an MUST be ignored at reception.
+
+
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 7]
+
+Internet-Draft                                             December 2016
+
+
+4.3.  Originator SRGB TLV
+
+   The Originator SRGB TLV is an optional TLV and has the following
+   format:
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |     Type      |          Length               |    Flags      |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |     Flags     |
+    +-+-+-+-+-+-+-+-+
+
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |         SRGB 1 (6 octets)                                     |
+    |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |         SRGB n (6 octets)                                     |
+    |                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   where:
+
+   o  Type is 3.
+
+   o  Length is the total length of the value portion of the TLV: 2 +
+      multiple of 6.
+
+   o  Flags: 16 bits of flags.  None are defined in this document.
+      Flags SHOULD be clear on transmission an MUST be ignored at
+      reception.
+
+   o  SRGB: 3 octets of base followed by 3 octets of range.  Note that
+      the SRGB field MAY appear multiple times.  If the SRGB field
+      appears multiple times, the SRGB consists of multiple ranges.  The
+      meaning of an SRGB with multiple ranges is explained in
+      Section 3.2 ("SID/Label Range TLV") of
+      [I-D.ietf-ospf-segment-routing-extensions].
+
+   The Originator SRGB TLV contains the SRGB of the router originating
+   the prefix to which the BGP Prefix SID is attached and MUST be kept
+   in the Prefix-SID Attribute unchanged during the propagation of the
+   BGP update.
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 8]
+
+Internet-Draft                                             December 2016
+
+
+   The originator SRGB describes the SRGB of the node where the BGP
+   Prefix Segment end.  It is used to build SRTE policies when different
+   SRGB's are used in the fabric
+   ([I-D.ietf-spring-segment-routing-msdc]).
+
+   The originator SRGB may only appear on Prefix-SID attribute attached
+   to prefixes of SAFI 4 (labeled unicast, [RFC3107]).
+
+5.  Receiving BGP-Prefix-SID Attribute
+
+   A BGP speaker receiving a BGP Prefix-SID attribute from an EBGP
+   neighbor residing outside the boundaries of the SR domain, SHOULD
+   discard the attribute unless it is configured to accept the attribute
+   from the EBGP neighbor.  A BGP speaker MAY log an error for further
+   analysis when discarding an attribute.
+
+5.1.  MPLS Dataplane: Labeled Unicast
+
+   A Multiprotocol BGP labeled IPv4/IPv6 Unicast ([RFC3107]) session
+   type is required.
+
+   A BGP speaker may be locally configured with an SRGB=[GB_S, GB_E].
+   The preferred method for deriving the SRGB is a matter of local
+   router configuration.
+
+   Given a label index L_I, we call L = L_I + GB_S as the derived label.
+   A BGP Prefix-SID attribute is called "unacceptable" for a speaker M
+   if the derived label value L lies outside the SRGB configured on M.
+   Otherwise the Label Index attribute is called "acceptable" to speaker
+   M.
+
+   The mechanisms through which a given label_index value is assigned to
+   a given prefix are outside the scope of this document.  The label-
+   index value associated with a prefix is locally configured at the BGP
+   router originating the prefix.
+
+   The Prefix-SID attribute MUST contain the Label-Index TLV and MAY
+   contain the Originator SRGB TLV.  A BGP Prefix-SID attribute received
+   without a Label-Index TLV MUST be considered as "unacceptable" by the
+   receiving speaker.
+
+   When a BGP speaker receives a path from a neighbor with an acceptable
+   BGP Prefix-SID attribute, it MUST program the derived label as the
+   local label for the prefix in its MPLS dataplane.  In case of any
+   error, a BGP speaker MUST resort to the error handling rules
+   specified in Section 7.  A BGP speaker MAY log an error for further
+   analysis.
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                 [Page 9]
+
+Internet-Draft                                             December 2016
+
+
+   When a BGP speaker receives a path from a neighbor with an
+   unacceptable BGP Prefix-SID attribute or when a BGP speaker receives
+   a path from a neighbor with a BGP-Prefix-SID attribute but is unable
+   to process it (it does not have the capability or local policy
+   disables the capability), it MUST treat the path as if it came
+   without a Prefix-SID attribute.  For the purposes of local label
+   allocation, a BGP speaker MUST assign a local (also called dynamic)
+   label (non-SRGB) for such a prefix as per classic Multiprotocol BGP
+   labeled IPv4/IPv6 Unicast ([RFC3107]) operation.  A BGP speaker MAY
+   log an error for further analysis.
+
+   The outgoing label is always programmed as per classic Multiprotocol
+   BGP labeled IPv4/IPv6 Unicast (RFC3107 [RFC3107]) operation.
+
+   Specifically, a BGP speaker receiving a prefix with a Prefix-SID
+   attribute and a label NLRI field of implicit-null from a neighbor
+   MUST adhere to standard behavior and program its MPLS dataplane to
+   pop the top label when forwarding traffic to the prefix.  The label
+   NLRI defines the outbound label that MUST be used by the receiving
+   node.  The Label Index gives a hint to the receiving node on which
+   local/incoming label the BGP speaker SHOULD use.
+
+5.2.  IPv6 Dataplane
+
+   When a SR IPv6 BGP speaker receives a IPv6 Unicast BGP Update with a
+   prefix having the BGP Prefix SID attribute attached, it checks
+   whether the IPv6 SID TLV is present and if the S-flag is set.  If the
+   IPv6 SID TLV is present and if the S-flag is not set, then the
+   Prefix-SID attribute MUST be considered as "unacceptable" by the
+   receiving speaker.
+
+   The Originator SRGB MUST be ignored on reception.
+
+   A BGP speaker receiving a BGP Prefix-SID attribute from an EBGP
+   neighbor residing outside the boundaries of the SR domain, SHOULD
+   discard the attribute unless it is configured to accept the attribute
+   from the EBGP neighbor.  A BGP speaker MAY log an error for further
+   analysis when discarding an attribute.
+
+6.  Announcing BGP-Prefix-SID Attribute
+
+   The BGP Prefix-SID attribute MAY be attached to labeled BGP prefixes
+   (IPv4/IPv6) [RFC3107]or to IPv6 prefixes [RFC4760].  In order to
+   prevent distribution of the BGP Prefix-SID attribute beyond its
+   intended scope of applicability, attribute filtering MAY be deployed.
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 10]
+
+Internet-Draft                                             December 2016
+
+
+6.1.  MPLS Dataplane: Labeled Unicast
+
+   A BGP speaker that originates a prefix attaches the Prefix-SID
+   attribute when it advertises the prefix to its neighbors via
+   Multiprotocol BGP labeled IPv4/IPv6 Unicast ([RFC3107])The value of
+   the Label-Index in the Label-Index TLV is determined by
+   configuration.
+
+   A BGP speaker that originates a Prefix-SID attribute MAY optionally
+   announce Originator SRGB TLV along with the mandatory Label-Index
+   TLV.  The content of the Originator SRGB TLV is determined by the
+   configuration.
+
+   Since the Label-index value must be unique within an SR domain, by
+   default an implementation SHOULD NOT advertise the BGP Prefix-SID
+   attribute outside an Autonomous System unless it is explicitly
+   configured to do so.
+
+   A BGP speaker that advertises a path received from one of its
+   neighbors SHOULD advertise the Prefix-SID received with the path
+   without modification regardless of whether the Prefix-SID was
+   acceptable.  If the path did not come with a Prefix-SID attribute,
+   the speaker MAY attach a Prefix-SID to the path if configured to do
+   so.  The content of the TLVs present in the Prefix-SID is determined
+   by the configuration.
+
+   In all cases, the label field of the advertised NLRI ([RFC3107],
+   [RFC4364]) MUST be set to the local/incoming label programmed in the
+   MPLS dataplane for the given advertised prefix.  If the prefix is
+   associated with one of the BGP speakers interfaces, this label is the
+   usual MPLS label (such as the implicit or explicit NULL label).
+
+6.2.  IPv6 Dataplane
+
+   A BGP speaker that originates a prefix attaches the Prefix-SID
+   attribute when it advertises the prefix to its neighbors.  The IPv6
+   SID TLV MUST be present and the S-flag MUST be set.
+
+   A BGP speaker that advertises a path received from one of its
+   neighbors SHOULD advertise the Prefix-SID received with the path
+   without modification regardless of whether the Prefix-SID was
+   acceptable.  If the path did not come with a Prefix-SID attribute,
+   the speaker MAY attach a Prefix-SID to the path if configured to do
+   so.  The IPv6-SID TLV MUST be present in the Prefix-SID and with the
+   S-flag set.
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 11]
+
+Internet-Draft                                             December 2016
+
+
+7.  Error Handling of BGP-Prefix-SID Attribute
+
+   When a BGP Speaker receives a BGP Update message containing a
+   malformed BGP Prefix-SID attribute, it MUST ignore the received BGP
+   Prefix-SID attributes and not pass it to other BGP peers.  This is
+   equivalent to the -attribute discard- action specified in [RFC7606].
+   When discarding an attribute, a BGP speaker MAY log an error for
+   further analysis.
+
+   If the BGP Prefix-SID attribute appears more than once in an BGP
+   Update message, then, according to [RFC7606], all the occurrences of
+   the attribute other than the first one SHALL be discarded and the BGP
+   Update message shall continue to be processed.
+
+   When a BGP speaker receives an unacceptable Prefix-SID attribute, it
+   MAY log an error for further analysis.
+
+8.  IANA Considerations
+
+   This document defines a new BGP path attribute known as the BGP
+   Prefix-SID attribute.  This document requests IANA to assign a new
+   attribute code type (suggested value: 40) for BGP the Prefix-SID
+   attribute from the BGP Path Attributes registry.
+
+   Currently, IANA temporarily assigned the following:
+
+      40 BGP Prefix-SID (TEMPORARY - registered 2015-09-30, expires
+      2016-09-30) [draft-ietf-idr-bgp-prefix-sid]
+
+   This document defines 3 new TLVs for BGP Prefix-SID attribute.  These
+   TLVs need to be registered with IANA.  We request IANA to create a
+   new registry for BGP Prefix-SID Attribute TLVs as follows:
+
+   Under "Border Gateway Protocol (BGP) Parameters" registry, "BGP
+   Prefix SID attribute Types" Reference: draft-ietf-idr-bgp-prefix-sid
+   Registration Procedure(s): Values 1-254 First Come, First Served,
+   Value 0 and 255 reserved
+
+   Value Type            Reference
+   0     Reserved        this document
+   1     Label-Index     this document
+   2     IPv6 SID        this document
+   3     Originator SRGB this document
+   4-254 Unassigned
+   255   Reserved        this document
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 12]
+
+Internet-Draft                                             December 2016
+
+
+9.  Security Considerations
+
+   This document introduces no new security considerations above and
+   beyond those already specified in [RFC4271] and [RFC3107].
+
+10.  Acknowledgements
+
+   The authors would like to thanks Satya Mohanty for his contribution
+   to this document.
+
+11.  Change Log
+
+   Initial Version:  Sep 21 2014
+
+12.  References
+
+12.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <http://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC3107]  Rekhter, Y. and E. Rosen, "Carrying Label Information in
+              BGP-4", RFC 3107, DOI 10.17487/RFC3107, May 2001,
+              <http://www.rfc-editor.org/info/rfc3107>.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271,
+              DOI 10.17487/RFC4271, January 2006,
+              <http://www.rfc-editor.org/info/rfc4271>.
+
+   [RFC4364]  Rosen, E. and Y. Rekhter, "BGP/MPLS IP Virtual Private
+              Networks (VPNs)", RFC 4364, DOI 10.17487/RFC4364, February
+              2006, <http://www.rfc-editor.org/info/rfc4364>.
+
+   [RFC7606]  Chen, E., Ed., Scudder, J., Ed., Mohapatra, P., and K.
+              Patel, "Revised Error Handling for BGP UPDATE Messages",
+              RFC 7606, DOI 10.17487/RFC7606, August 2015,
+              <http://www.rfc-editor.org/info/rfc7606>.
+
+12.2.  Informative References
+
+
+
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 13]
+
+Internet-Draft                                             December 2016
+
+
+   [I-D.ietf-6man-segment-routing-header]
+              Previdi, S., Filsfils, C., Field, B., Leung, I., Linkova,
+              J., Aries, E., Kosugi, T., Vyncke, E., and D. Lebrun,
+              "IPv6 Segment Routing Header (SRH)", draft-ietf-6man-
+              segment-routing-header-02 (work in progress), September
+              2016.
+
+   [I-D.ietf-idr-bgp-ls-segment-routing-ext]
+              Previdi, S., Psenak, P., Filsfils, C., Gredler, H., Chen,
+              M., and j. jefftant@gmail.com, "BGP Link-State extensions
+              for Segment Routing", draft-ietf-idr-bgp-ls-segment-
+              routing-ext-00 (work in progress), November 2016.
+
+   [I-D.ietf-idr-bgpls-segment-routing-epe]
+              Previdi, S., Filsfils, C., Ray, S., Patel, K., Dong, J.,
+              and M. Chen, "Segment Routing BGP Egress Peer Engineering
+              BGP-LS Extensions", draft-ietf-idr-bgpls-segment-routing-
+              epe-06 (work in progress), November 2016.
+
+   [I-D.ietf-ospf-segment-routing-extensions]
+              Psenak, P., Previdi, S., Filsfils, C., Gredler, H.,
+              Shakir, R., Henderickx, W., and J. Tantsura, "OSPF
+              Extensions for Segment Routing", draft-ietf-ospf-segment-
+              routing-extensions-10 (work in progress), October 2016.
+
+   [I-D.ietf-spring-segment-routing]
+              Filsfils, C., Previdi, S., Decraene, B., Litkowski, S.,
+              and R. Shakir, "Segment Routing Architecture", draft-ietf-
+              spring-segment-routing-10 (work in progress), November
+              2016.
+
+   [I-D.ietf-spring-segment-routing-central-epe]
+              Filsfils, C., Previdi, S., Aries, E., and D. Afanasiev,
+              "Segment Routing Centralized BGP Peer Engineering", draft-
+              ietf-spring-segment-routing-central-epe-03 (work in
+              progress), November 2016.
+
+   [I-D.ietf-spring-segment-routing-msdc]
+              Filsfils, C., Previdi, S., Mitchell, J., Aries, E., and P.
+              Lapukhov, "BGP-Prefix Segment in large-scale data
+              centers", draft-ietf-spring-segment-routing-msdc-02 (work
+              in progress), October 2016.
+
+   [RFC4760]  Bates, T., Chandra, R., Katz, D., and Y. Rekhter,
+              "Multiprotocol Extensions for BGP-4", RFC 4760,
+              DOI 10.17487/RFC4760, January 2007,
+              <http://www.rfc-editor.org/info/rfc4760>.
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 14]
+
+Internet-Draft                                             December 2016
+
+
+   [RFC7752]  Gredler, H., Ed., Medved, J., Previdi, S., Farrel, A., and
+              S. Ray, "North-Bound Distribution of Link-State and
+              Traffic Engineering (TE) Information Using BGP", RFC 7752,
+              DOI 10.17487/RFC7752, March 2016,
+              <http://www.rfc-editor.org/info/rfc7752>.
+
+Authors' Addresses
+
+   Stefano Previdi (editor)
+   Cisco Systems
+   Via Del Serafico, 200
+   Rome  00142
+   Italy
+
+   Email: sprevidi@cisco.com
+
+
+   Clarence Filsfils
+   Cisco Systems
+   Brussels
+   Belgium
+
+   Email: cfilsfils@cisco.com
+
+
+   Acee Lindem
+   Cisco Systems
+   170 W. Tasman Drive
+   San Jose, CA 95124  95134
+   USA
+
+   Email: acee@cisco.com
+
+
+   Keyur Patel
+   Cisco Systems
+   170 W. Tasman Drive
+   San Jose, CA 95124  95134
+   USA
+
+   Email: keyupate@cisco.com
+
+
+
+
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 15]
+
+Internet-Draft                                             December 2016
+
+
+   Arjun Sreekantiah
+   Cisco Systems
+   170 W. Tasman Drive
+   San Jose, CA 95124  95134
+   USA
+
+   Email: asreekan@cisco.com
+
+
+   Saikat Ray
+   Unaffiliated
+
+   Email: raysaikat@gmail.com
+
+
+   Hannes Gredler
+   RtBrick Inc.
+
+   Email: hannes@rtbrick.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Previdi, et al.           Expires June 15, 2017                [Page 16]

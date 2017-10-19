@@ -1,0 +1,25 @@
+module test-leaf {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  leaf leaf-empty {
+    type empty;
+  }
+  leaf leaf-uint16-range {
+    type uint16 {
+      range "68..max";
+    }
+  }
+  leaf leaf-boolean {
+    type boolean;
+  }
+  leaf leaf-enum {
+    type enumeration {
+      enum orange;
+      enum apple;
+      enum banana;
+    }
+  }
+}

@@ -1,0 +1,47 @@
+module test-choice {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  container protocol {
+    choice name {
+      case a {
+        leaf udp {
+          type empty;
+        }
+      }
+      case b {
+        leaf tcp {
+          type empty;
+        }
+      }
+    }
+  }
+
+  container food {
+    choice snack {
+      case sports-arena {
+        leaf pretzel {
+          type empty;
+        }
+        leaf beer {
+          type string;
+        }
+      }
+      case late-night {
+        leaf chocolate {
+          type enumeration {
+            enum dark;
+            enum milk;
+            enum first-available;
+          }
+        }
+      }
+    }
+  }
+}

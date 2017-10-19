@@ -1,0 +1,2203 @@
+module quagga {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/quagga";
+  prefix "quagga";
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  grouping if-ipv4 {
+    container ospf {
+      description "Open Shortest Path First (OSPF) parameters";
+      container authentication {
+        description "OSPF interface authentication";
+        container md5 {
+          description "MD5 parameters";
+          list key-id {
+            key name;
+            description "MD5 key id";
+            leaf name {
+              type uint32;
+              description name;
+            }
+            leaf md5-key {
+              type string;
+              description "MD5 key";
+            }
+          }
+        }
+        leaf plaintext-password {
+          type string;
+          description "Plain text password";
+        }
+      }
+      leaf bandwidth {
+        type uint32;
+        description "Bandwidth of interface (kilobits/sec)";
+      }
+      leaf cost {
+        type uint32;
+        description "Interface cost";
+      }
+      leaf dead-interval {
+        type uint32;
+        description "Interval after which neighbor is dead";
+      }
+      leaf hello-interval {
+        type uint32;
+        description "Interval between hello packets";
+      }
+      leaf mtu-ignore {
+        type empty;
+        description "Disable Maximum Transmission Unit (MTU) mismatch detection";
+      }
+      leaf network {
+        type string;
+        description "Network type";
+      }
+      leaf priority {
+        type uint32;
+        description "Router priority";
+      }
+      leaf retransmit-interval {
+        type uint32;
+        description "Interval between retransmitting lost link state advertisements";
+      }
+      leaf transmit-delay {
+        type uint32;
+        description "Link state transmit delay";
+      }
+    }
+  }
+
+  grouping if-ipv6 {
+    container ospfv3 {
+      description "IPv6 Open Shortest Path First (OSPFv3)";
+      leaf cost {
+        type uint32;
+        description "Interface cost";
+      }
+      leaf dead-interval {
+        type uint32;
+        description "Interval after which neighbor is declared dead";
+      }
+      leaf hello-interval {
+        type uint32;
+        description "Interval between hello packets";
+      }
+      leaf ifmtu {
+        type uint32;
+        description "Interface MTU";
+      }
+      leaf instance-id {
+        type uint32;
+        description "Instance-id";
+      }
+      leaf mtu-ignore {
+        type empty;
+        description "Disable Maximum Transmission Unit mismatch detection";
+      }
+      leaf passive {
+        type empty;
+        description "Disable forming of adjacency";
+      }
+      leaf priority {
+        type uint32;
+        description "Router priority";
+      }
+      leaf retransmit-interval {
+        type uint32;
+        description "Interval between retransmitting lost link state advertisements";
+      }
+      leaf transmit-delay {
+        type uint32;
+        description "Link state transmit delay";
+      }
+    }
+  }
+
+  grouping protocols {
+    list bgp {
+      key name;
+      description "Border Gateway Protocol (BGP) parameters";
+      leaf name {
+        type uint32;
+        description name;
+      }
+      container address-family {
+        description "BGP address-family parameters";
+        container ipv6-unicast {
+          description "BGP IPv6 settings";
+          list aggregate-address {
+            key name;
+            description "BGP IPv6 aggregate network";
+            leaf name {
+              type inet:ipv6-prefix;
+              description name;
+            }
+            leaf summary-only {
+              type empty;
+              description "Announce the aggregate summary network only";
+            }
+          }
+          list network {
+            key name;
+            description "BGP IPv6 network";
+            leaf name {
+              type inet:ipv6-prefix;
+              description name;
+            }
+            leaf path-limit {
+              type uint32;
+              description "AS-path hopcount limit";
+            }
+            leaf route-map {
+              type string;
+              description "Route-map to modify route attributes";
+            }
+          }
+          container redistribute {
+            description "Redistribute routes from other protocols into BGP";
+            container connected {
+              presence "connected";
+              description "Redistribute connected routes into BGP";
+              leaf metric {
+                type uint32;
+                description "Metric for redistributed routes";
+              }
+              leaf route-map {
+                type string;
+                description "Route map to filter redistributed routes";
+              }
+            }
+            container kernel {
+              description "Redistribute kernel routes into BGP";
+              presence "kernel";
+              leaf metric {
+                type uint32;
+                description "Metric for redistributed routes";
+              }
+              leaf route-map {
+                type string;
+                description "Route map to filter redistributed routes";
+              }
+            }
+            container ospfv3 {
+              description "Redistribute OSPFv3 routes into BGP";
+              presence "ospfv3";
+              leaf metric {
+                type uint32;
+                description "Metric for redistributed routes";
+              }
+              leaf route-map {
+                type string;
+                description "Route map to filter redistributed routes";
+              }
+            }
+            /*
+            container ripng {
+              description "Redistribute RIPng routes into BGP";
+              presence "ripng";
+              leaf metric {
+                type uint32;
+                description "Metric for redistributed routes";
+              }
+              leaf route-map {
+                type string;
+                description "Route map to filter redistributed routes";
+              }
+            }
+            */
+            container static {
+              description "Redistribute static routes into BGP";
+              presence "static";
+              leaf metric {
+                type uint32;
+                description "Metric for redistributed routes";
+              }
+              leaf route-map {
+                type string;
+                description "Route map to filter redistributed routes";
+              }
+            }
+          }
+        }
+      }
+      list aggregate-address {
+        key name;
+        description "BGP aggregate network";
+        leaf name {
+          type inet:ipv4-prefix;
+          description name;
+        }
+        leaf as-set {
+          type empty;
+          description "Generate AS-set path information for this aggregate address";
+        }
+        leaf summary-only {
+          type empty;
+          description "Announce the aggregate summary network only";
+        }
+      }
+      container maximum-paths {
+        description "BGP multipaths";
+        leaf ebgp {
+          type uint32;
+          description "Maximum ebgp multipaths";
+        }
+        leaf ibgp {
+          type uint32;
+          description "Maximum ibgp multipaths";
+        }
+      }
+      list neighbor {
+        key name;
+        description "BGP neighbor";
+        leaf name {
+          type string;
+          description name;
+        }
+        container address-family {
+          description "Parameters relating to IPv4 or IPv6 routes";
+          container ipv6-unicast {
+            description "BGP neighbor IPv6 parameters";
+            container allowas-in {
+              description "Accept a route that contains the local-AS in the as-path";
+              presence "allowas-in";
+              leaf number {
+                type uint32;
+                description "Number of occurrences of AS number";
+              }
+            }
+            container attribute-unchanged {
+              description "Send BGP attributes unchanged";
+              presence "attribute-unchanged";
+              leaf as-path {
+                type empty;
+                description "Send AS path unchanged";
+              }
+              leaf med {
+                type empty;
+                description "Send multi-exit discriminator unchanged";
+              }
+              leaf next-hop {
+                type empty;
+                description "Send nexthop unchanged";
+              }
+            }
+            container capability {
+              description "Advertise capabilities to this neighbor";
+              leaf dynamic {
+                type empty;
+                description "Advertise dynamic capability to this neighbor";
+              }
+              container orf {
+                description "Advertise ORF capability to this neighbor";
+                container prefix-list {
+                  description "Advertise prefix-list ORF capability to this neighbor";
+                  leaf receive {
+                    type empty;
+                    description "Capability to receive the ORF";
+                  }
+                  leaf send {
+                    type empty;
+                    description "Capability to send the ORF";
+                  }
+                }
+              }
+            }
+            container default-originate {
+              description "Send default route to this neighbor";
+              presence "default-originate";
+              leaf route-map {
+                type string;
+                description "Route-map to specify criteria of the default";
+              }
+            }
+            container disable-send-community {
+              description "Disable sending community attributes to this neighbor";
+              leaf extended {
+                type empty;
+                description "Disable sending extended community attributes to this neighbor";
+              }
+              leaf standard {
+                type empty;
+                description "Disable sending standard community attributes to this neighbor";
+              }
+            }
+            container distribute-list {
+              description "Access-list to filter route updates to/from this neighbor";
+              leaf export {
+                type string;
+                description "Access-list to filter outgoing route updates to this neighbor";
+              }
+              leaf import {
+                type string;
+                description "Access-list to filter incoming route updates from this neighbor";
+              }
+            }
+            container filter-list {
+              description "As-path-list to filter route updates to/from this neighbor";
+              leaf export {
+                type string;
+                description "As-path-list to filter outgoing route updates to this neighbor";
+              }
+              leaf import {
+                type string;
+                description "As-path-list to filter incoming route updates from this neighbor";
+              }
+            }
+            leaf maximum-prefix {
+              type uint32;
+              description "Maximum number of prefixes to accept from this neighbor";
+            }
+            container nexthop-local {
+              description "Nexthop attributes";
+              leaf unchanged {
+                type empty;
+                description "Leave link-local nexthop unchanged for this peer";
+              }
+            }
+            leaf nexthop-self {
+              type empty;
+              description "Nexthop for routes sent to this neighbor to be the local router";
+            }
+            leaf peer-group {
+              type string;
+              description "IPv6 peer group for this peer";
+            }
+            container prefix-list {
+              description "Prefix-list to filter route updates to/from this neighbor";
+              leaf export {
+                type string;
+                description "Prefix-list to filter outgoing route updates to this neighbor";
+              }
+              leaf import {
+                type string;
+                description "Prefix-list to filter incoming route updates from this neighbor";
+              }
+            }
+            leaf remove-private-as {
+              type empty;
+              description "Remove private AS numbers from AS path in outbound route updates";
+            }
+            container route-map {
+              description "Route-map to filter route updates to/from this neighbor";
+              leaf export {
+                type string;
+                description "Route-map to filter outgoing route updates to this neighbor";
+              }
+              leaf import {
+                type string;
+                description "Route-map to filter incoming route updates from this neighbor";
+              }
+            }
+            leaf route-reflector-client {
+              type empty;
+              description "Neighbor as a route reflector client";
+            }
+            leaf route-server-client {
+              type empty;
+              description "Neighbor as route server client";
+            }
+            container soft-reconfiguration {
+              description "Soft reconfiguration for neighbor";
+              leaf inbound {
+                type empty;
+                description "Inbound soft reconfiguration for this neighbor [REQUIRED]";
+              }
+            }
+            leaf unsuppress-map {
+              type string;
+              description "Route-map to selectively unsuppress suppressed routes";
+            }
+          }
+        }
+        leaf advertisement-interval {
+          type uint32;
+          description "Minimum interval for sending routing updates";
+        }
+        container allowas-in {
+          description "Accept a route that contains the local-AS in the as-path";
+          presence "allowas-in";
+          leaf number {
+            type uint32;
+            description "Number of occurrences of AS number";
+          }
+        }
+        container attribute-unchanged {
+          description "BGP attributes are sent unchanged";
+          presence "attribute-unchanged";
+          leaf as-path {
+            type empty;
+            description "Send AS path unchanged";
+          }
+          leaf med {
+            type empty;
+            description "Send multi-exit discriminator unchanged";
+          }
+          leaf next-hop {
+            type empty;
+            description "Send nexthop unchanged";
+          }
+        }
+        container capability {
+          description "Advertise capabilities to this neighbor";
+          leaf dynamic {
+            type empty;
+            description "Advertise dynamic capability to this neighbor";
+          }
+          container orf {
+            description "Advertise ORF capability to this neighbor";
+            container prefix-list {
+              description "Advertise prefix-list ORF capability to this neighbor";
+              leaf receive {
+                type empty;
+                description "Capability to receive the ORF";
+              }
+              leaf send {
+                type empty;
+                description "Capability to send the ORF";
+              }
+            }
+          }
+        }
+        container default-originate {
+          description "Send default route to this neighbor";
+          presence "default-originate";
+          leaf route-map {
+            type string;
+            description "Route-map to specify criteria of the default";
+          }
+        }
+        leaf description {
+          type string;
+          description "Description for this neighbor";
+        }
+        leaf disable-capability-negotiation {
+          type empty;
+          description "Disable capability negotiation with this neighbor";
+        }
+        leaf disable-connected-check {
+          type empty;
+          description "Disable check to see if EBGP peer's address is a connected route";
+        }
+        container disable-send-community {
+          description "Disable sending community attributes to this neighbor";
+          leaf extended {
+            type empty;
+            description "Disable sending extended community attributes to this neighbor";
+          }
+          leaf standard {
+            type empty;
+            description "Disable sending standard community attributes to this neighbor";
+          }
+        }
+        container distribute-list {
+          description "Access-list to filter route updates to/from this neighbor";
+          leaf export {
+            type uint32;
+            description "Access-list to filter outgoing route updates to this neighbor";
+          }
+          leaf import {
+            type uint32;
+            description "Access-list to filter incoming route updates from this neighbor";
+          }
+        }
+        leaf ebgp-multihop {
+          type uint32;
+          description "Allow this EBGP neighbor to not be on a directly connected network";
+        }
+        container filter-list {
+          description "As-path-list to filter route updates to/from this neighbor";
+          leaf export {
+            type string;
+            description "As-path-list to filter outgoing route updates to this neighbor";
+          }
+          leaf import {
+            type string;
+            description "As-path-list to filter incoming route updates from this neighbor";
+          }
+        }
+        list local-as {
+          key name;
+          description "Local AS number";
+          leaf name {
+            type uint32;
+            description name;
+          }
+          leaf no-prepend {
+            type empty;
+            description "Do not prepend local-as to updates from EBGP peers";
+          }
+        }
+        leaf maximum-prefix {
+          type uint32;
+          description "Maximum number of prefixes to accept from this neighbor";
+        }
+        leaf nexthop-self {
+          type empty;
+          description "Nexthop for routes sent to this neighbor to be the local router";
+        }
+        leaf override-capability {
+          type empty;
+          description "Ignore capability negotiation with specified neighbor";
+        }
+        leaf passive {
+          type empty;
+          description "Do not initiate a session with this neighbor";
+        }
+        leaf password {
+          type string;
+          description "BGP MD5 password";
+        }
+        leaf peer-group {
+          type string;
+          description "IPv4 peer group for this peer";
+        }
+        leaf port {
+          type uint32;
+          description "Neighbor's BGP port";
+        }
+        container prefix-list {
+          description "Prefix-list to filter route updates to/from this neighbor";
+          leaf export {
+            type string;
+            description "Prefix-list to filter outgoing route updates to this neighbor";
+          }
+          leaf import {
+            type string;
+            description "Prefix-list to filter incoming route updates from this neighbor";
+          }
+        }
+        leaf remote-as {
+          type uint32;
+          description "Neighbor BGP AS number [REQUIRED]";
+        }
+        leaf remove-private-as {
+          type empty;
+          description "Remove private AS numbers from AS path in outbound route updates";
+        }
+        container route-map {
+          description "Route-map to filter route updates to/from this neighbor";
+          leaf export {
+            type string;
+            description "Route-map to filter outgoing route updates to this neighbor";
+          }
+          leaf import {
+            type string;
+            description "Route-map to filter incoming route updates from this neighbor";
+          }
+        }
+        leaf route-reflector-client {
+          type empty;
+          description "Neighbor as a route reflector client";
+        }
+        leaf route-server-client {
+          type empty;
+          description "Neighbor is route server client";
+        }
+        leaf shutdown {
+          type empty;
+          description "Administratively shut down neighbor";
+        }
+        container soft-reconfiguration {
+          description "Soft reconfiguration for neighbor";
+          leaf inbound {
+            type empty;
+            description "Inbound soft reconfiguration for this neighbor [REQUIRED]";
+          }
+        }
+        leaf strict-capability-match {
+          type empty;
+          description "Enable strict capability negotiation";
+        }
+        container timers {
+          description "Neighbor timers";
+          leaf connect {
+            type uint32;
+            description "BGP connect timer for this neighbor";
+          }
+          leaf holdtime {
+            type uint32;
+            description "BGP hold timer for this neighbor";
+          }
+          leaf keepalive {
+            type uint32;
+            description "BGP keepalive interval for this neighbor";
+          }
+        }
+        container ttl-security {
+          description "Ttl security mechanism for this BGP peer";
+          leaf hops {
+            type uint32;
+            description "Number of the maximum number of hops to the BGP peer";
+          }
+        }
+        leaf unsuppress-map {
+          type string;
+          description "Route-map to selectively unsuppress suppressed routes";
+        }
+        leaf update-source {
+          type string;
+          description "Source IP of routing updates";
+        }
+        leaf weight {
+          type uint32;
+          description "Default weight for routes from this neighbor";
+        }
+      }
+      list network {
+        key name;
+        description "BGP network";
+        leaf name {
+          type inet:ipv4-prefix;
+          description name;
+        }
+        leaf backdoor {
+          type empty;
+          description "Network as a backdoor route";
+        }
+        leaf route-map {
+          type string;
+          description "Route-map to modify route attributes";
+        }
+      }
+      container parameters {
+        description "BGP parameters";
+        leaf always-compare-med {
+          type empty;
+          description "Always compare MEDs from different neighbors";
+        }
+        container bestpath {
+          description "Default bestpath selection mechanism";
+          container as-path {
+            description "AS-path attribute comparison parameters";
+            leaf confed {
+              type empty;
+              description "Compare AS-path lengths including confederation sets & sequences";
+            }
+            leaf ignore {
+              type empty;
+              description "Ignore AS-path length in selecting a route";
+            }
+          }
+          leaf compare-routerid {
+            type empty;
+            description "Compare the router-id for identical EBGP paths";
+          }
+          container med {
+            description "MED attribute comparison parameters";
+            leaf confed {
+              type empty;
+              description "Compare MEDs among confederation paths";
+            }
+            leaf missing-as-worst {
+              type empty;
+              description "Treat missing route as a MED as the least preferred one";
+            }
+          }
+        }
+        leaf cluster-id {
+          type inet:ipv4-address;
+          description "Route-reflector cluster-id";
+        }
+        container confederation {
+          description "AS confederation parameters";
+          leaf identifier {
+            type uint32;
+            description "Confederation AS identifier [REQUIRED]";
+          }
+          leaf-list peers {
+            type uint32;
+            description "Peer ASs in the BGP confederation";
+          }
+        }
+        container dampening {
+          description "Enable route-flap dampening";
+          leaf half-life {
+            type uint32;
+            description "Half-life time for dampening [REQUIRED]";
+          }
+          leaf max-suppress-time {
+            type uint32;
+            description "Maximum duration to suppress a stable route [REQUIRED]";
+          }
+          leaf re-use {
+            type uint32;
+            description "Time to start reusing a route [REQUIRED]";
+          }
+          leaf start-suppress-time {
+            type uint32;
+            description "When to start suppressing a route [REQUIRED]";
+          }
+        }
+        container default {
+          description "BGP defaults";
+          leaf local-pref {
+            type uint32;
+            description "Default local preference (higher=more preferred)";
+          }
+          leaf no-ipv4-unicast {
+            type empty;
+            description "Deactivate IPv4 unicast for a peer by default";
+          }
+        }
+        leaf deterministic-med {
+          type empty;
+          description "Compare MEDs between different peers in the same AS";
+        }
+        leaf disable-network-import-check {
+          type empty;
+          description "Disable IGP route check for network statements";
+        }
+        container distance {
+          description "Administratives distances for BGP routes";
+          container global {
+            description "Global administratives distances for BGP routes";
+            leaf external {
+              type uint32;
+              description "Administrative distance for external BGP routes";
+            }
+            leaf internal {
+              type uint32;
+              description "Administrative distance for internal BGP routes";
+            }
+            leaf local {
+              type uint32;
+              description "Administrative distance for local BGP routes";
+            }
+          }
+          list prefix {
+            key name;
+            description "Administrative distance for a specific BGP prefix";
+            leaf name {
+              type inet:ipv4-prefix;
+              description name;
+            }
+            leaf distance {
+              type uint32;
+              description "Administrative distance for prefix";
+            }
+          }
+        }
+        leaf enforce-first-as {
+          type empty;
+          description "Require first AS in the path to match peer's AS";
+        }
+        container graceful-restart {
+          description "Graceful restart capability parameters";
+          leaf stalepath-time {
+            type uint32;
+            description "Maximum time to hold onto restarting peer's stale paths";
+          }
+        }
+        leaf log-neighbor-changes {
+          type empty;
+          description "Log neighbor up/down changes and reset reason";
+        }
+        leaf no-client-to-client-reflection {
+          type empty;
+          description "Disable client to client route reflection";
+        }
+        leaf no-fast-external-failover {
+          type empty;
+          description "Disable immediate sesison reset if peer's connected link goes down";
+        }
+        leaf router-id {
+          type inet:ipv4-address;
+          description "BGP router id";
+        }
+        leaf scan-time {
+          type uint32;
+          description "BGP route scanner interval";
+        }
+      }
+      list peer-group {
+        key name;
+        description "BGP peer-group";
+        leaf name {
+          type string;
+          description name;
+        }
+        container address-family {
+          description "BGP peer-group address-family parameters";
+          container ipv6-unicast {
+            description "BGP peer-group IPv6 parameters";
+            container allowas-in {
+              description "Accept a route that contains the local-AS in the as-path";
+              presence "allowas-in";
+              leaf number {
+                type uint32;
+                description "Number of occurrences of AS number";
+              }
+            }
+            container attribute-unchanged {
+              description "Send BGP attributes unchanged";
+              presence "attribute-unchanged";
+              leaf as-path {
+                type empty;
+                description "Send AS path unchanged";
+              }
+              leaf med {
+                type empty;
+                description "Send multi-exit discriminator unchanged";
+              }
+              leaf next-hop {
+                type empty;
+                description "Send nexthop unchanged";
+              }
+            }
+            container capability {
+              description "Advertise capabilities to this peer-group";
+              leaf dynamic {
+                type empty;
+                description "Advertise dynamic capability to this peer-group";
+              }
+              container orf {
+                description "Advertise ORF capability to this peer-group";
+                container prefix-list {
+                  description "Advertise prefix-list ORF capability to this peer-group";
+                  leaf receive {
+                    type empty;
+                    description "Capability to receive the ORF";
+                  }
+                  leaf send {
+                    type empty;
+                    description "Capability to send the ORF";
+                  }
+                }
+              }
+            }
+            container default-originate {
+              description "Send default route to this peer-group";
+              presence "default-originate";
+              leaf route-map {
+                type string;
+                description "Route-map to specify criteria of the default";
+              }
+            }
+            container disable-send-community {
+              description "Disable sending community attributes to this peer-group";
+              leaf extended {
+                type empty;
+                description "Disable sending extended community attributes to this peer-group";
+              }
+              leaf standard {
+                type empty;
+                description "Disable sending standard community attributes to this peer-group";
+              }
+            }
+            container distribute-list {
+              description "Access-list to filter route updates to/from this peer-group";
+              leaf export {
+                type string;
+                description "Access-list to filter outgoing route updates to this peer-group";
+              }
+              leaf import {
+                type string;
+                description "Access-list to filter incoming route updates from this peer-group";
+              }
+            }
+            container filter-list {
+              description "As-path-list to filter route updates to/from this peer-group";
+              leaf export {
+                type string;
+                description "As-path-list to filter outgoing route updates to this peer-group";
+              }
+              leaf import {
+                type string;
+                description "As-path-list to filter incoming route updates from this peer-group";
+              }
+            }
+            leaf maximum-prefix {
+              type uint32;
+              description "Maximum number of prefixes to accept from this peer-group";
+            }
+            container nexthop-local {
+              description "Nexthop attributes";
+              leaf unchanged {
+                type empty;
+                description "Leave link-local nexthop unchanged for this peer";
+              }
+            }
+            leaf nexthop-self {
+              type empty;
+              description "Nexthop for routes sent to this peer-group to be the local router";
+            }
+            container prefix-list {
+              description "Prefix-list to filter route updates to/from this peer-group";
+              leaf export {
+                type string;
+                description "Prefix-list to filter outgoing route updates to this peer-group";
+              }
+              leaf import {
+                type string;
+                description "Prefix-list to filter incoming route updates from this peer-group";
+              }
+            }
+            leaf remove-private-as {
+              type empty;
+              description "Remove private AS numbers from AS path in outbound route updates";
+            }
+            container route-map {
+              description "Route-map to filter route updates to/from this peer-group";
+              leaf export {
+                type string;
+                description "Route-map to filter outgoing route updates to this peer-group";
+              }
+              leaf import {
+                type string;
+                description "Route-map to filter incoming route updates from this peer-group";
+              }
+            }
+            leaf route-reflector-client {
+              type empty;
+              description "Peer-group as a route reflector client";
+            }
+            leaf route-server-client {
+              type empty;
+              description "Peer-group as route server client";
+            }
+            container soft-reconfiguration {
+              description "Soft reconfiguration for peer-group";
+              leaf inbound {
+                type empty;
+                description "Inbound soft reconfiguration for this peer-group [REQUIRED]";
+              }
+            }
+            leaf unsuppress-map {
+              type string;
+              description "Route-map to selectively unsuppress suppressed routes";
+            }
+          }
+        }
+        container allowas-in {
+          description "Accept a route that contains the local-AS in the as-path";
+          presence "allowas-in";
+          leaf number {
+            type uint32;
+            description "Number of occurrences of AS number";
+          }
+        }
+        container attribute-unchanged {
+          description "BGP attributes are sent unchanged";
+          presence "attribute-unchanged";
+          leaf as-path {
+            type empty;
+            description "Send AS path unchanged";
+          }
+          leaf med {
+            type empty;
+            description "Send multi-exit discriminator unchanged";
+          }
+          leaf next-hop {
+            type empty;
+            description "Send nexthop unchanged";
+          }
+        }
+        container capability {
+          description "Advertise capabilities to this peer-group";
+          leaf dynamic {
+            type empty;
+            description "Advertise dynamic capability to this peer-group";
+          }
+          container orf {
+            description "Advertise ORF capability to this peer-group";
+            container prefix-list {
+              description "Advertise prefix-list ORF capability to this peer-group";
+              leaf receive {
+                type empty;
+                description "Capability to receive the ORF";
+              }
+              leaf send {
+                type empty;
+                description "Capability to send the ORF";
+              }
+            }
+          }
+        }
+        container default-originate {
+          description "Send default route to this peer-group";
+          presence "default-originate";
+          leaf route-map {
+            type string;
+            description "Route-map to specify criteria of the default";
+          }
+        }
+        leaf description {
+          type string;
+          description "Description for this peer-group";
+        }
+        leaf disable-capability-negotiation {
+          type empty;
+          description "Disable capability negotiation with this peer-group";
+        }
+        leaf disable-connected-check {
+          type empty;
+          description "Disable check to see if EBGP peer's address is a connected route";
+        }
+        container disable-send-community {
+          description "Disable sending community attributes to this peer-group";
+          leaf extended {
+            type empty;
+            description "Disable sending extended community attributes to this peer-group";
+          }
+          leaf standard {
+            type empty;
+            description "Disable sending standard community attributes to this peer-group";
+          }
+        }
+        container distribute-list {
+          description "Access-list to filter route updates to/from this peer-group";
+          leaf export {
+            type uint32;
+            description "Access-list to filter outgoing route updates to this peer-group";
+          }
+          leaf import {
+            type uint32;
+            description "Access-list to filter incoming route updates from this peer-group";
+          }
+        }
+        leaf ebgp-multihop {
+          type uint32;
+          description "Allow this EBGP peer-group to not be on a directly connected network";
+        }
+        container filter-list {
+          description "As-path-list to filter route updates to/from this peer-group";
+          leaf export {
+            type string;
+            description "As-path-list to filter outgoing route updates to this peer-group";
+          }
+          leaf import {
+            type string;
+            description "As-path-list to filter incoming route updates from this peer-group";
+          }
+        }
+        list local-as {
+          key name;
+          description "Local AS number [REQUIRED]";
+          leaf name {
+            type uint32;
+            description name;
+          }
+          leaf no-prepend {
+            type empty;
+            description "Disable prepending local-as to updates from EBGP peers";
+          }
+        }
+        leaf maximum-prefix {
+          type uint32;
+          description "Maximum number of prefixes to accept from this peer-group";
+        }
+        leaf nexthop-self {
+          type empty;
+          description "Nexthop for routes sent to this peer-group to be the local router";
+        }
+        leaf override-capability {
+          type empty;
+          description "Ignore capability negotiation with specified peer-group";
+        }
+        leaf passive {
+          type empty;
+          description "Don not intiate a session with this peer-group";
+        }
+        leaf password {
+          type string;
+          description "BGP MD5 password";
+        }
+        container prefix-list {
+          description "Prefix-list to filter route updates to/from this peer-group";
+          leaf export {
+            type string;
+            description "Prefix-list to filter outgoing route updates to this peer-group";
+          }
+          leaf import {
+            type string;
+            description "Prefix-list to filter incoming route updates from this peer-group";
+          }
+        }
+        leaf remote-as {
+          type uint32;
+          description "Peer-group BGP AS number [REQUIRED]";
+        }
+        leaf remove-private-as {
+          type empty;
+          description "Remove private AS numbers from AS path in outbound route updates";
+        }
+        container route-map {
+          description "Route-map to filter route updates to/from this peer-group";
+          leaf export {
+            type string;
+            description "Route-map to filter outgoing route updates to this peer-group";
+          }
+          leaf import {
+            type string;
+            description "Route-map to filter incoming route updates from this peer-group";
+          }
+        }
+        leaf route-reflector-client {
+          type empty;
+          description "Peer-group as a route reflector client";
+        }
+        leaf route-server-client {
+          type empty;
+          description "Peer-group as route server client";
+        }
+        leaf shutdown {
+          type empty;
+          description "Administratively shut down peer-group";
+        }
+        container soft-reconfiguration {
+          description "Soft reconfiguration for peer-group";
+          leaf inbound {
+            type empty;
+            description "Inbound soft reconfiguration for this peer-group [REQUIRED]";
+          }
+        }
+        container ttl-security {
+          description "Ttl security mechanism";
+          leaf hops {
+            type uint32;
+            description "Number of the maximum number of hops to the BGP peer";
+          }
+        }
+        leaf unsuppress-map {
+          type string;
+          description "Route-map to selectively unsuppress suppressed routes";
+        }
+        leaf update-source {
+          type string;
+          description "Source IP of routing updates";
+        }
+        leaf weight {
+          type uint32;
+          description "Default weight for routes from this peer-group";
+        }
+      }
+      container redistribute {
+        description "Redistribute routes from other protocols into BGP";
+        container connected {
+          description "Redistribute connected routes into BGP";
+          presence "connected";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map to filter redistributed routes";
+          }
+        }
+        container kernel {
+          description "Redistribute kernel routes into BGP";
+          presence "kernel";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map to filter redistributed routes";
+          }
+        }
+        container ospf {
+          description "Redistribute OSPF routes into BGP";
+          presence "ospf";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map to filter redistributed routes";
+          }
+        }
+        /*
+        container rip {
+          description "Redistribute RIP routes into BGP";
+          presence "rip";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map to filter redistributed routes";
+          }
+        }
+        */
+        container static {
+          description "Redistribute static routes into BGP";
+          presence "static";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map to filter redistributed routes";
+          }
+        }
+      }
+      container timers {
+        description "BGP protocol timers";
+        leaf holdtime {
+          type uint32;
+          description "BGP holdtime interval";
+        }
+        leaf keepalive {
+          type uint32;
+          description "Keepalive interval";
+        }
+      }
+    }
+    container ospf {
+      description "Open Shortest Path First protocol (OSPF) parameters";
+      list access-list {
+        key name;
+        description "Access list to filter networks in routing updates";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf-list export {
+          type string;
+          description "Filter for outgoing routing updates [REQUIRED]";
+        }
+      }
+      list area {
+        key name;
+        description "OSPF Area";
+        leaf name {
+          type string;
+          description name;
+        }
+        container area-type {
+          description "Area type";
+          leaf normal {
+            type empty;
+            description "Normal OSPF area";
+          }
+          container nssa {
+            description "Nssa OSPF area";
+            leaf default-cost {
+              type uint32;
+              description "Summary-default cost of nssa area";
+            }
+            leaf no-summary {
+              type empty;
+              description "Do not inject inter-area routes into stub";
+            }
+            leaf translate {
+              type string;
+              description "Nssa-abr";
+            }
+          }
+          container stub {
+            description "Stub OSPF area";
+            leaf default-cost {
+              type uint32;
+              description "Summary-default cost of stub area";
+            }
+            leaf no-summary {
+              type empty;
+              description "Do not inject inter-area routes into stub";
+            }
+          }
+        }
+        leaf authentication {
+          type string;
+          description "OSPF area authentication type";
+        }
+        leaf-list network {
+          type inet:ipv4-prefix;
+          description "OSPF network [REQUIRED]";
+        }
+        list range {
+          key name;
+          description "Summarize routes matching prefix (border routers only)";
+          leaf name {
+            type inet:ipv4-prefix;
+            description name;
+          }
+          leaf cost {
+            type uint32;
+            description "Metric for this range";
+          }
+          leaf not-advertise {
+            type empty;
+            description "Do not advertise this range";
+          }
+          leaf substitute {
+            type inet:ipv4-prefix;
+            description "Announce area range as another prefix";
+          }
+        }
+        leaf shortcut {
+          type string;
+          description "Area's shortcut mode";
+        }
+        list virtual-link {
+          key name;
+          description "Virtual link";
+          leaf name {
+            type inet:ipv4-address;
+            description name;
+          }
+          container authentication {
+            description "Authentication";
+            container md5 {
+              description "MD5 key id";
+              list key-id {
+                key name;
+                description "MD5 key id";
+                leaf name {
+                  type uint32;
+                  description name;
+                }
+                leaf md5-key {
+                  type string;
+                  description "MD5 key";
+                }
+              }
+            }
+            leaf plaintext-password {
+              type string;
+              description "Plain text password";
+            }
+          }
+          leaf dead-interval {
+            type uint32;
+            description "Interval after which a neighbor is declared dead";
+          }
+          leaf hello-interval {
+            type uint32;
+            description "Interval between hello packets";
+          }
+          leaf retransmit-interval {
+            type uint32;
+            description "Interval between retransmitting lost link state advertisements";
+          }
+          leaf transmit-delay {
+            type uint32;
+            description "Link state transmit delay";
+          }
+        }
+      }
+      container auto-cost {
+        description "Calculate OSPF interface cost according to bandwidth";
+        leaf reference-bandwidth {
+          type uint32;
+          description "Reference bandwidth method to assign OSPF cost";
+        }
+      }
+      container default-information {
+        description "Control distribution of default information";
+        container originate {
+          description "Distribute a default route";
+          leaf always {
+            type empty;
+            description "Always advertise default route";
+          }
+          leaf metric {
+            type uint32;
+            description "OSPF default metric";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type for default routes";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+      }
+      leaf default-metric {
+        type uint32;
+        description "Metric of redistributed routes";
+      }
+      container distance {
+        description "Administrative distance";
+        leaf global {
+          type uint32;
+          description "OSPF administrative distance";
+        }
+        container ospf {
+          description "OSPF administrative distance";
+          leaf external {
+            type uint32;
+            description "Distance for external routes";
+          }
+          leaf inter-area {
+            type uint32;
+            description "Distance for inter-area routes";
+          }
+          leaf intra-area {
+            type uint32;
+            description "Distance for intra-area routes";
+          }
+        }
+      }
+      container log-adjacency-changes {
+        description "Log changes in adjacency state";
+        leaf detail {
+          type empty;
+          description "Log all state changes";
+        }
+      }
+      container max-metric {
+        description "OSPF maximum/infinite-distance metric";
+        container router-lsa {
+          description "Advertise own Router-LSA with infinite distance (stub router)";
+          leaf administrative {
+            type empty;
+            description "Administratively apply, for an indefinite period";
+          }
+          leaf on-shutdown {
+            type uint32;
+            description "Advertise stub-router prior to full shutdown of OSPF";
+          }
+          leaf on-startup {
+            type uint32;
+            description "Automatically advertise stub Router-LSA on startup of OSPF";
+          }
+        }
+      }
+      container mpls-te {
+        description "MultiProtocol Label Switching-Traffic Engineering (MPLS-TE) parameters";
+        leaf enable {
+          type empty;
+          description "Enable MPLS-TE functionality";
+        }
+        leaf router-address {
+          type inet:ipv4-address;
+          description "Stable IP address of the advertising router";
+        }
+      }
+      list neighbor {
+        key name;
+        description "Neighbor IP address";
+        leaf name {
+          type inet:ipv4-address;
+          description name;
+        }
+        leaf poll-interval {
+          type uint32;
+          description "Dead neighbor polling interval";
+        }
+        leaf priority {
+          type uint32;
+          description "Neighbor priority in seconds";
+        }
+      }
+      container parameters {
+        description "OSPF specific parameters";
+        leaf abr-type {
+          type string;
+          description "OSPF ABR type";
+        }
+        leaf opaque-lsa {
+          type empty;
+          description "Enable the Opaque-LSA capability (rfc2370)";
+        }
+        leaf rfc1583-compatibility {
+          type empty;
+          description "Enable rfc1583 criteria for handling AS external routes";
+        }
+        leaf router-id {
+          type inet:ipv4-address;
+          description "Override the default router identifier";
+        }
+      }
+      leaf-list passive-interface {
+        type string;
+        description "Suppress routing updates on an interface";
+      }
+      leaf-list passive-interface-exclude {
+        type string;
+        description "Interface to exclude when using 'passive-interface default'";
+      }
+      container redistribute {
+        description "Redistribute information from another routing protocol";
+        container bgp {
+          description "Redistribute BGP routes";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        container connected {
+          description "Redistribute connected routes";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        container kernel {
+          description "Redistribute kernel routes";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        /*
+        container rip {
+          description "Redistribute RIP routes";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        */
+        container static {
+          description "Redistribute static routes";
+          leaf metric {
+            type uint32;
+            description "Metric for redistributed routes";
+          }
+          leaf metric-type {
+            type uint32;
+            description "OSPF metric type";
+          }
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+      }
+      container refresh {
+        description "Adjust refresh parameters";
+        leaf timers {
+          type uint32;
+          description "Refresh timer";
+        }
+      }
+      container timers {
+        description "Adjust routing timers";
+        container throttle {
+          description "Throttling adaptive timers";
+          container spf {
+            description "OSPF SPF timers";
+            leaf delay {
+              type uint32;
+              description "Delay (msec) from first change received till SPF calculation";
+            }
+            leaf initial-holdtime {
+              type uint32;
+              description "Initial hold time(msec) between consecutive SPF calculations";
+            }
+            leaf max-holdtime {
+              type uint32;
+              description "Maximum hold time (msec)";
+            }
+          }
+        }
+      }
+    }
+    container ospfv3 {
+      description "IPv6 Open Shortest Path First protocol (OSPFv3) parameters";
+      list area {
+        key name;
+        description "OSPFv3 Area";
+        leaf name {
+          type string;
+          description name;
+        }
+        leaf export-list {
+          type string;
+          description "Name of export-list";
+        }
+        leaf import-list {
+          type string;
+          description "Name of import-list";
+        }
+        leaf-list interface {
+          type string;
+          description "OSPFv3 area interface";
+        }
+        list range {
+          key name;
+          description "Specify IPv6 prefix (border routers only)";
+          leaf name {
+            type inet:ipv6-prefix;
+            description name;
+          }
+          leaf advertise {
+            type empty;
+            description "Advertise this range";
+          }
+          leaf not-advertise {
+            type empty;
+            description "Do not advertise this range";
+          }
+        }
+      }
+      container parameters {
+        description "OSPFv3 specific parameters";
+        leaf router-id {
+          type inet:ipv4-address;
+          description "Router identifier";
+        }
+      }
+      container redistribute {
+        description "Redistribute information from another routing protocol";
+        container bgp {
+          description "Redistribute bgp routes";
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        container connected {
+          description "Redistribute connected routes";
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        container kernel {
+          description "Redistribute kernel routes";
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        /*
+        container ripng {
+          description "Redistribute RIPNG routes";
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+        */
+        container static {
+          description "Redistribute static routes";
+          leaf route-map {
+            type string;
+            description "Route map reference";
+          }
+        }
+      }
+    }
+  }
+
+  grouping policy {
+    list access-list {
+      key name;
+      description "IP access-list filter";
+      leaf name {
+        type uint32;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this access-list";
+      }
+      list rule {
+        key name;
+        description "Rule for this access-list";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on networks matching this rule [REQUIRED]";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        container destination {
+          description "Destination network or address";
+          leaf any {
+            type empty;
+            description "Any IP address to match";
+          }
+          leaf host {
+            type inet:ipv4-address;
+            description "Single host IP address to match";
+          }
+          leaf inverse-mask {
+            type inet:ipv4-address;
+            description "Network/netmask to match (requires network be defined)";
+          }
+          leaf network {
+            type inet:ipv4-address;
+            description "Network/netmask to match (requires inverse-mask be defined)";
+          }
+        }
+        container source {
+          description "Source network or address to match";
+          leaf any {
+            type empty;
+            description "Any IP address to match";
+          }
+          leaf host {
+            type inet:ipv4-address;
+            description "Single host IP address to match";
+          }
+          leaf inverse-mask {
+            type inet:ipv4-address;
+            description "Network/netmask to match (requires network be defined)";
+          }
+          leaf network {
+            type inet:ipv4-address;
+            description "Network/netmask to match (requires inverse-mask be defined)";
+          }
+        }
+      }
+    }
+    list access-list6 {
+      key name;
+      description "IPv6 access-list filter";
+      leaf name {
+        type string;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this IPv6 access-list";
+      }
+      list rule {
+        key name;
+        description "Rule for this access-list6";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on networks matching this rule [REQUIRED]";
+        }
+        leaf description {
+          type string;
+          description "Description for this IPv6 access-list rule";
+        }
+        container source {
+          description "Source IPv6 network to match";
+          leaf any {
+            type empty;
+            description "Any IPv6 address to match";
+          }
+          leaf exact-match {
+            type empty;
+            description "Exact match of the network prefixes";
+          }
+          leaf network {
+            type inet:ipv6-prefix;
+            description "Network/netmask to match (requires inverse-mask be defined)";
+          }
+        }
+      }
+    }
+    list prefix-list {
+      key name;
+      description "IP prefix-list filter";
+      leaf name {
+        type string;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this prefix-list";
+      }
+      list rule {
+        key name;
+        description "Rule for this prefix-list";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on prefixes matching this rule [REQUIRED]";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        leaf ge {
+          type uint32;
+          description "Prefix length to match a netmask greater than or equal to it";
+        }
+        leaf le {
+          type uint32;
+          description "Prefix length to match a netmask less than or equal to it";
+        }
+        leaf prefix {
+          type inet:ipv4-prefix;
+          description "Prefix to match";
+        }
+      }
+    }
+    list prefix-list6 {
+      key name;
+      description "IPv6 prefix-list filter";
+      leaf name {
+        type string;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this prefix-list6";
+      }
+      list rule {
+        key name;
+        description "Rule for this prefix-list6";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on prefixes matching this rule";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        leaf ge {
+          type uint32;
+          description "Prefix length to match a netmask greater than or equal to it";
+        }
+        leaf le {
+          type uint32;
+          description "Prefix length to match a netmask less than or equal to it";
+        }
+        leaf prefix {
+          type inet:ipv6-prefix;
+          description "Prefix to match";
+        }
+      }
+    }
+    list community-list {
+      key name;
+      description "Border Gateway Protocol (BGP) community-list filter";
+      leaf name {
+        type uint32;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this community list";
+      }
+      list rule {
+        key name;
+        description "create a rule for this BGP community list";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on communities matching this rule [REQUIRED]";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        leaf regex {
+          type string;
+          description "Regular expression to match against a community list";
+        }
+      }
+    }
+    list as-path-list {
+      key name;
+      description "Border Gateway Protocol (BGP) autonomous system path filter";
+      leaf name {
+        type string;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this as-path-list";
+      }
+      list rule {
+        key name;
+        description "Rule for this as-path-list";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on AS paths matching this rule [REQUIRED]";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        leaf regex {
+          type string;
+          description "Regular expression to match against an AS path";
+        }
+      }
+    }
+    list route-map {
+      key name;
+      description "IP route-map";
+      leaf name {
+        type string;
+        description name;
+      }
+      leaf description {
+        type string;
+        description "Description for this route-map";
+      }
+      list rule {
+        key name;
+        description "Rule for this route-map";
+        leaf name {
+          type uint32;
+          description name;
+        }
+        leaf action {
+          type string;
+          description "Action to take on prefixes matching this rule [REQUIRED]";
+        }
+        leaf call {
+          type string;
+          description "Call another route-map on match";
+        }
+        leaf continue {
+          type uint32;
+          description "Jump to a different rule in this route-map on a match";
+        }
+        leaf description {
+          type string;
+          description "Description for this rule";
+        }
+        container match {
+          description "Route parameters to match";
+          leaf as-path {
+            type string;
+            description "BGP as-path-list to match";
+          }
+          container community {
+            description "BGP community-list to match";
+            leaf community-list {
+              type uint32;
+              description "BGP community-list to match";
+            }
+            leaf exact-match {
+              type empty;
+              description "Community-list to exactly match";
+            }
+          }
+          leaf interface {
+            type string;
+            description "First hop interface of a route to match";
+          }
+          container ip {
+            description "IP prefix parameters to match";
+            container address {
+              description "IP address of route to match";
+              leaf access-list {
+                type uint32;
+                description "IP access-list to match";
+              }
+              leaf prefix-list {
+                type string;
+                description "IP prefix-list to match";
+              }
+            }
+            container nexthop {
+              description "IP next-hop of route to match";
+              leaf access-list {
+                type uint32;
+                description "IP access-list to match";
+              }
+              leaf prefix-list {
+                type string;
+                description "IP prefix-list to match";
+              }
+            }
+            container route-source {
+              description "IP route-source to match";
+              leaf access-list {
+                type uint32;
+                description "IP access-list to match";
+              }
+              leaf prefix-list {
+                type string;
+                description "IP prefix-list to match";
+              }
+            }
+          }
+          container ipv6 {
+            description "IPv6 prefix parameters to match";
+            container address {
+              description "IPv6 address of route to match";
+              leaf access-list {
+                type string;
+                description "IPv6 access-list6 to match";
+              }
+              leaf prefix-list {
+                type string;
+                description "IPv6 prefix-list to match";
+              }
+            }
+            container nexthop {
+              description "IP next-hop of route to match";
+              leaf access-list {
+                type string;
+                description "IPv6 access-list6 to match";
+              }
+              leaf prefix-list {
+                type string;
+                description "IPv6 prefix-list to match";
+              }
+            }
+          }
+          leaf metric {
+            type uint32;
+            description "Metric of route to match";
+          }
+          leaf origin {
+            type string;
+            description "Border Gateway Protocol (BGP) origin code to match";
+          }
+          leaf peer {
+            type string;
+            description "Peer address to match";
+          }
+          leaf tag {
+            type uint32;
+            description "Route tag to match";
+          }
+        }
+        container on-match {
+          description "Exit policy on matches";
+          leaf goto {
+            type uint32;
+            description "Rule number to goto on match";
+          }
+          leaf next {
+            type empty;
+            description "Next sequence number to goto on match";
+          }
+        }
+        container set {
+          description "Route parameters";
+          container aggregator {
+            description "Border Gateway Protocol (BGP) aggregator attribute";
+            leaf as {
+              type uint32;
+              description "AS number of an aggregation";
+            }
+            leaf ip {
+              type inet:ipv4-address;
+              description "IP address of an aggregation";
+            }
+          }
+          leaf as-path-prepend {
+            type string;
+            description "Prepend string for a Border Gateway Protocol (BGP) AS-path attribute";
+          }
+          leaf atomic-aggregate {
+            type empty;
+            description "Border Gateway Protocol (BGP) atomic aggregate attribute";
+          }
+          container comm-list {
+            description "Border Gateway Protocol (BGP) communities matching a community-list";
+            leaf comm-list {
+              type uint32;
+              description "BGP communities with a community-list";
+            }
+            leaf delete {
+              type empty;
+              description "Delete BGP communities matching the community-list";
+            }
+          }
+          leaf community {
+            type string;
+            description "Border Gateway Protocl (BGP) community attribute";
+          }
+          leaf ip-next-hop {
+            type inet:ipv4-address;
+            description "Nexthop IP address";
+          }
+          container ipv6-next-hop {
+            description "Nexthop IPv6 address";
+            leaf global {
+              type inet:ipv6-address;
+              description "Nexthop IPv6 global address";
+            }
+            leaf local {
+              type inet:ipv6-address;
+              description "Nexthop IPv6 local address";
+            }
+          }
+          leaf local-preference {
+            type uint32;
+            description "Border Gateway Protocol (BGP) local preference attribute";
+          }
+          leaf metric {
+            type string;
+            description "Destination routing protocol metric";
+          }
+          leaf metric-type {
+            type string;
+            description "Open Shortest Path First (OSPF) external metric-type";
+          }
+          leaf origin {
+            type string;
+            description "Border Gateway Protocl (BGP) origin code";
+          }
+          leaf originator-id {
+            type inet:ipv4-address;
+            description "Border Gateway Protocol (BGP) originator ID attribute";
+          }
+          leaf tag {
+            type uint32;
+            description "Tag value for routing protocol";
+          }
+          leaf weight {
+            type uint32;
+            description "Border Gateway Protocol (BGP) weight attribute";
+          }
+        }
+      }
+    }
+  }
+
+}

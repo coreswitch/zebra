@@ -1,0 +1,242 @@
+module dhcp {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-dhcp";
+  prefix "dhcp";
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  organization "IETF dhc (Dynamic Host Configuration Protocol)
+                   Working Group";
+  contact      "leo.liubing@huawei.com
+                   loukunkun@huawei.com
+                   chin.chen@ericsson.com";
+  description  "The module for implementing DHCP protocol";
+
+  revision "2016-08-25" {
+    description   "initial draft revision";
+    reference     "rfc6020";
+  }
+
+  grouping dhcp-option {
+    description "Configuration option";
+    leaf dhcp-server-identifier {
+      type  inet:ipv4-address;
+      description "DHCP server identifier";
+    }
+    leaf domain-name {
+      type  string;
+      description "Name of the domain";
+    }
+    list domain-name-servers {
+      key "server";
+      leaf server {
+        type  inet:ipv4-address;
+        description "IPv4 address of domain name server";
+      }
+    }
+    list ntp-servers {
+      key "server";
+      leaf server {
+        type  inet:ipv4-address;
+        description "IPv4 address of NTP server";
+      }
+    }
+    leaf interface-mtu {
+      type  uint32 {
+        range "0..65535";
+      }
+      description "Minimum Transmission Unit (MTU) of the interface";
+    }
+    leaf netbios-name-server {
+      type  inet:ip-address;
+      description "NETBIOS name server";
+    }
+
+    leaf netbios-node-type {
+      type  uint32 {
+        range "0..65535";
+      }
+      description "NETBIOS node type";
+    }
+    leaf netbios-scope {
+      type  string;
+      description "NETBIOS scope";
+    }
+    leaf tftp-server-name {
+      type string;
+      description "Option 66: TFTP server name";
+    }
+    leaf bootfile-name {
+      type string;
+      description "Option 67: boot file name";
+    }
+    list voip-tftp-servers {
+      key "server";
+      leaf server {
+        type  inet:ipv4-address;
+        description "Option 150: VoIP TFTP server name";
+      }
+    }
+    list sip-servers {
+      key "server";
+      leaf server {
+        type  inet:ipv4-address;
+        description "Option 120: SIP server name";
+      }
+    }
+    list classless-routes {
+      key "prefix";
+      leaf prefix {
+        type  inet:ipv4-prefix;
+        description "Option 121: Classless routes prefix";
+      }
+      leaf nexthop {
+        type  inet:ipv4-address;
+        description "Option 121: Classless routes nexthop";
+      }
+    }
+    leaf time-offset {
+      type int32;
+      description "Time offset";
+    }
+  }
+  grouping dhcp {
+    description
+      "DHCP configuration";
+    container server {
+      description
+        "DHCP server configuration";
+      leaf default-lease-time {
+        type uint32{
+          range "180..31536000";
+        }
+        description
+          "Default network address lease time assigned to DHCP clients";
+      }
+      leaf max-lease-time {
+        type uint32{
+          range "180..31536000";
+        }
+        description
+          "Default network address lease time assigned to DHCP clients";
+      }
+      leaf ping-check {
+        type boolean;
+        description "Enable ping check before lease";
+      }
+      container option {
+        description "Configuration option";
+        uses dhcp-option;
+      }
+      list dhcp-ip-pool {
+        key "ip-pool-name";
+        description   "Global IP pool configuration";
+
+        leaf ip-pool-name {
+          type string {
+            length "1..64";
+          }
+          description "Name of the IP pool";
+        }
+        leaf interface {
+          type string;
+          description
+            "Name of the interface";
+        }
+        leaf subnet {
+          type inet:ipv4-prefix;
+          description "Network subnet of the interface";
+        }
+        leaf gateway-ip {
+          type inet:ipv4-address;
+          description "IPv4 address of the gateway";
+        }
+        leaf default-lease-time {
+          type uint32{
+            range "180..31536000";
+          }
+          description
+            "Default network address lease time assigned to DHCP clients";
+        }
+        leaf max-lease-time {
+          type uint32{
+            range "180..31536000";
+          }
+          description
+            "Default network address lease time assigned to DHCP clients";
+        }
+        list host {
+          // key "mac-address ip-address";
+          key "host-name";
+          description "Mapping from MAC address to IP address";
+          leaf host-name {
+            type string;
+            description "Host name which statically assign MAC address to IP address";
+          }
+          leaf mac-address {
+            type string;
+            description "MAC address of the host";
+          }
+          leaf ip-address {
+            type inet:ipv4-address;
+            description "IPv4 address of the host";
+          }
+        }
+        list range {
+          key "range-index";
+          description "IPv4 address for the range";
+          leaf range-index {
+            type uint16 {
+              range "0..255";
+            }
+            description "Index of IPv4 address range";
+          }
+          leaf range-start-ip {
+            type inet:ipv4-address;
+            mandatory "true";
+            description "Starting IPv4 Address of a section";
+          }
+          leaf range-end-ip {
+            type inet:ipv4-address;
+            description "Last IPv4 Address of a section";
+          }
+        }
+        container option {
+          description "Configuration option";
+          uses dhcp-option;
+        }
+        leaf failover-role {
+          type string;
+          description "DHCP fail over role.  master or backup";
+        }
+        leaf failover-peer-address {
+          type inet:ipv4-address;
+          description "DHCP fail over peer IPv4 address";
+        }
+      }
+    }
+    container relay {
+      description
+        "DHCP relay agent configuration";
+
+      list server-group {
+        key "server-group-name";
+        description
+          "DHCP server group configuration that DHCP relays to";
+        leaf server-group-name {
+          type string;
+          description "Name of a DHCP server group";
+        }
+        list server-address {
+          key "address";
+          leaf address {
+            type inet:ipv4-address;
+            description
+              "IPv4 address of the server";
+          }
+        }
+      }
+    }
+  }
+}

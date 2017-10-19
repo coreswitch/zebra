@@ -1,0 +1,47 @@
+module static {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-dhcp";
+  prefix "static";
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  organization "IETF dhc (Dynamic Host Configuration Protocol)
+                   Working Group";
+  contact      "leo.liubing@huawei.com
+                   loukunkun@huawei.com
+                   chin.chen@ericsson.com";
+  description  "The module for implementing DHCP protocol";
+
+  revision "2016-08-25" {
+    description   "initial draft revision";
+    reference     "rfc6020";
+  }
+
+  container static {
+    list route {
+      key "prefix";
+      leaf prefix {
+        type inet:ipv4-prefix;
+      }
+      list nexthop {
+        key "address";
+        leaf "address" {
+          type inet:ipv4-address;
+          description "Nexthop of the route";
+          mandatory true;
+        }
+      }
+      list interface {
+        key "ifname";
+        leaf "ifname" {
+          type string;
+        }
+      }
+      leaf distance {
+        type uint8;
+        description "Distance of the route.";
+      }
+    }
+  }
+}

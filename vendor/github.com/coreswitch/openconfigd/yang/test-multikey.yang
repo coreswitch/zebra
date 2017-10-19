@@ -1,0 +1,33 @@
+module test-multikey {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  list multikey {
+    key "first second";
+    leaf first {
+      type string;
+    }
+    leaf second {
+      type string;
+    }
+    leaf third {
+      type string;
+    }
+  }
+
+  list multikey2 {
+    key "first second";
+    leaf first {
+      type string;
+    }
+    leaf second {
+      type string;
+    }
+    leaf third {
+      type string;
+      mandatory true;
+    }
+  }
+}

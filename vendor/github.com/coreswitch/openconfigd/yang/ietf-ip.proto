@@ -1,0 +1,578 @@
+syntax = "proto2";
+
+package ietfip;
+
+// This module contains a collection of YANG definitions for
+// managing network interfaces.
+// Copyright (c) 2014 IETF Trust and the persons identified as
+// authors of the code.  All rights reserved.
+// Redistribution and use in source and binary forms, with or
+// without modification, is permitted pursuant to, and subject
+// to the license terms contained in, the Simplified BSD License
+// set forth in Section 4.c of the IETF Trust's Legal Provisions
+// Relating to IETF Documents
+// (http://trustee.ietf.org/license-info).
+// This version of this YANG module is part of RFC 7223; see
+// the RFC itself for full legal notices.
+message IETFInterfaces {
+  // Interface configuration parameters.
+  optional Interfaces Interfaces = 1; // ietf-interfaces.yang:89:3
+  // Data nodes for the operational state of interfaces.
+  optional InterfacesState InterfacesState = 2; // ietf-interfaces.yang:222:3
+}
+
+// Interface configuration parameters.
+message Interfaces {
+  // The list of configured interfaces on the device.
+  // The operational state of an interface is available in the
+  // /interfaces-state/interface list.  If the configuration of a
+  // system-controlled interface cannot be used by the system
+  // (e.g., the interface hardware present does not match the
+  // interface type), then the configuration is not applied to
+  // the system-controlled interface shown in the
+  // /interfaces-state/interface list.  If the configuration
+  // of a user-controlled interface cannot be used by the system,
+  // the configured interface is not instantiated in the
+  // /interfaces-state/interface list.
+  repeated Interface Interface = 1; // ietf-interfaces.yang:92:5
+}
+
+// The list of configured interfaces on the device.
+// The operational state of an interface is available in the
+// /interfaces-state/interface list.  If the configuration of a
+// system-controlled interface cannot be used by the system
+// (e.g., the interface hardware present does not match the
+// interface type), then the configuration is not applied to
+// the system-controlled interface shown in the
+// /interfaces-state/interface list.  If the configuration
+// of a user-controlled interface cannot be used by the system,
+// the configured interface is not instantiated in the
+// /interfaces-state/interface list.
+message Interface {
+  // A textual description of the interface.
+  // A server implementation MAY map this leaf to the ifAlias
+  // MIB object.  Such an implementation needs to use some
+  // mechanism to handle the differences in size and characters
+  // allowed between this leaf and ifAlias.  The definition of
+  // such a mechanism is outside the scope of this document.
+  // Since ifAlias is defined to be stored in non-volatile
+  // storage, the MIB implementation MUST map ifAlias to the
+  // value of 'description' in the persistently stored
+  // datastore.
+  // Specifically, if the device supports ':startup', when
+  // ifAlias is read the device MUST return the value of
+  // 'description' in the 'startup' datastore, and when it is
+  // written, it MUST be written to the 'running' and 'startup'
+  // datastores.  Note that it is up to the implementation to
+  // decide whether to modify this single leaf in 'startup' or
+  // perform an implicit copy-config from 'running' to
+  // 'startup'.
+  // If the device does not support ':startup', ifAlias MUST
+  // be mapped to the 'description' leaf in the 'running'
+  // datastore.
+  optional string Description = 1; // ietf-interfaces.yang:133:7
+  // This leaf contains the configured, desired state of the
+  // interface.
+  // Systems that implement the IF-MIB use the value of this
+  // leaf in the 'running' datastore to set
+  // IF-MIB.ifAdminStatus to 'up' or 'down' after an ifEntry
+  // has been initialized, as described in RFC 2863.
+  // Changes in this leaf in the 'running' datastore are
+  // reflected in ifAdminStatus, but if ifAdminStatus is
+  // changed over SNMP, this leaf is not affected.
+  optional bool Enabled = 2; // ietf-interfaces.yang:180:7
+  // Parameters for the IPv4 address family.
+  optional Ipv4 Ipv4 = 3; // ietf-ip.yang:132:4
+  // Parameters for the IPv6 address family.
+  optional Ipv6 Ipv6 = 4; // ietf-ip.yang:223:4
+  // Controls whether linkUp/linkDown SNMP notifications
+  // should be generated for this interface.
+  // If this node is not configured, the value 'enabled' is
+  // operationally used by the server for interfaces that do
+  // not operate on top of any other interface (i.e., there are
+  // no 'lower-layer-if' entries), and 'disabled' otherwise.
+  optional TODO-enum LinkUpDownTrapEnable = 5; // ietf-interfaces.yang:196:7
+  // The name of the interface.
+  // A device MAY restrict the allowed values for this leaf,
+  // possibly depending on the type of the interface.
+  // For system-controlled interfaces, this leaf is the
+  // device-specific name of the interface.  The 'config false'
+  // list /interfaces-state/interface contains the currently
+  // existing interfaces on the device.
+  // If a client tries to create configuration for a
+  // system-controlled interface that is not present in the
+  // /interfaces-state/interface list, the server MAY reject
+  // the request if the implementation does not support
+  // pre-provisioning of interfaces or if the name refers to
+  // an interface that can never exist in the system.  A
+  // NETCONF server MUST reply with an rpc-error with the
+  // error-tag 'invalid-value' in this case.
+  // If the device supports pre-provisioning of interface
+  // configuration, the 'pre-provisioning' feature is
+  // advertised.
+  // If the device allows arbitrarily named user-controlled
+  // interfaces, the 'arbitrary-names' feature is advertised.
+  // When a configured user-controlled interface is created by
+  // the system, it is instantiated with the same name in the
+  // /interface-state/interface list.
+  optional string Name = 6; // ietf-interfaces.yang:106:6
+  // The type of the interface.
+  // When an interface entry is created, a server MAY
+  // initialize the type leaf with a valid value, e.g., if it
+  // is possible to derive the type from the name of the
+  // interface.
+  // If a client tries to set the type of an interface to a
+  // value that can never be used by the system, e.g., if the
+  // type is not supported or if the type does not match the
+  // name of the interface, the server MUST reject the request.
+  // A NETCONF server MUST reply with an rpc-error with the
+  // error-tag 'invalid-value' in this case.
+  optional string Type = 7; // ietf-interfaces.yang:160:7
+}
+
+// Parameters for the IPv4 address family.
+message Ipv4 {
+  // The list of configured IPv4 addresses on the interface.
+  repeated Address Address = 1; // ietf-ip.yang:171:6
+  // Controls whether IPv4 is enabled or disabled on this
+  // interface.  When IPv4 is enabled, this interface is
+  // connected to an IPv4 stack, and the interface can send
+  // and receive IPv4 packets.
+  optional bool Enabled = 2; // ietf-ip.yang:138:6
+  // Controls IPv4 packet forwarding of datagrams received by,
+  // but not addressed to, this interface.  IPv4 routers
+  // forward datagrams.  IPv4 hosts do not (except those
+  // source-routed via the host).
+  optional bool Forwarding = 3; // ietf-ip.yang:147:6
+  // The size, in octets, of the largest IPv4 packet that the
+  // interface will send and receive.
+  // The server may restrict the allowed values for this leaf,
+  // depending on the interface's type.
+  // If this leaf is not configured, the operationally used MTU
+  // depends on the interface's type.
+  optional uint32 Mtu = 4; // ietf-ip.yang:156:6
+  // A list of mappings from IPv4 addresses to
+  // link-layer addresses.
+  // Entries in this list are used as static entries in the
+  // ARP Cache.
+  repeated Neighbor Neighbor = 5; // ietf-ip.yang:201:6
+}
+
+// The list of configured IPv4 addresses on the interface.
+message Address {
+  // The IPv4 address on the interface.
+  optional string Ip = 1; // ietf-ip.yang:175:8
+  // The subnet can be specified as a prefix-length, or,
+  // if the server supports non-contiguous netmasks, as
+  // a netmask.
+  optional Subnet Subnet = 2; // ietf-ip.yang:180:8
+}
+
+// The subnet can be specified as a prefix-length, or,
+// if the server supports non-contiguous netmasks, as
+// a netmask.
+message Subnet {
+  optional Netmask Netmask = 1; // ietf-ip.yang:193:10
+  optional PrefixLength PrefixLength = 2; // ietf-ip.yang:186:10
+}
+
+message Netmask {
+  // The subnet specified as a netmask.
+  optional string Netmask = 1; // ietf-ip.yang:193:10
+}
+
+message PrefixLength {
+  // The length of the subnet prefix.
+  optional uint32 PrefixLength = 1; // ietf-ip.yang:186:10
+}
+
+// A list of mappings from IPv4 addresses to
+// link-layer addresses.
+// Entries in this list are used as static entries in the
+// ARP Cache.
+message Neighbor {
+  // The IPv4 address of the neighbor node.
+  optional string Ip = 1; // ietf-ip.yang:210:8
+  // The link-layer address of the neighbor node.
+  optional string LinkLayerAddress = 2; // ietf-ip.yang:215:8
+}
+
+// Parameters for the IPv6 address family.
+message Ipv6 {
+  // The list of configured IPv6 addresses on the interface.
+  repeated Address Address = 1; // ietf-ip.yang:266:6
+  // Parameters to control the autoconfiguration of IPv6
+  // addresses, as described in RFC 4862.
+  optional Autoconf Autoconf = 2; // ietf-ip.yang:318:6
+  // The number of consecutive Neighbor Solicitation messages
+  // sent while performing Duplicate Address Detection on a
+  // tentative address.  A value of zero indicates that
+  // Duplicate Address Detection is not performed on
+  // tentative addresses.  A value of one indicates a single
+  // transmission with no follow-up retransmissions.
+  optional uint32 DupAddrDetectTransmits = 3; // ietf-ip.yang:305:6
+  // Controls whether IPv6 is enabled or disabled on this
+  // interface.  When IPv6 is enabled, this interface is
+  // connected to an IPv6 stack, and the interface can send
+  // and receive IPv6 packets.
+  optional bool Enabled = 4; // ietf-ip.yang:229:6
+  // Controls IPv6 packet forwarding of datagrams received by,
+  // but not addressed to, this interface.  IPv6 routers
+  // forward datagrams.  IPv6 hosts do not (except those
+  // source-routed via the host).
+  optional bool Forwarding = 5; // ietf-ip.yang:238:6
+  // The size, in octets, of the largest IPv6 packet that the
+  // interface will send and receive.
+  // The server may restrict the allowed values for this leaf,
+  // depending on the interface's type.
+  // If this leaf is not configured, the operationally used MTU
+  // depends on the interface's type.
+  optional uint32 Mtu = 6; // ietf-ip.yang:250:6
+  // A list of mappings from IPv6 addresses to
+  // link-layer addresses.
+  // Entries in this list are used as static entries in the
+  // Neighbor Cache.
+  repeated Neighbor Neighbor = 7; // ietf-ip.yang:284:6
+}
+
+// The list of configured IPv6 addresses on the interface.
+message Address {
+  // The IPv6 address on the interface.
+  optional string Ip = 1; // ietf-ip.yang:270:8
+  // The length of the subnet prefix.
+  optional uint32 PrefixLength = 2; // ietf-ip.yang:275:8
+}
+
+// Parameters to control the autoconfiguration of IPv6
+// addresses, as described in RFC 4862.
+message Autoconf {
+  // If enabled, the host creates global addresses as
+  // described in RFC 4862.
+  optional bool CreateGlobalAddresses = 1; // ietf-ip.yang:324:8
+  // If enabled, the host creates temporary addresses as
+  // described in RFC 4941.
+  optional bool CreateTemporaryAddresses = 2; // ietf-ip.yang:334:8
+  // The time period during which the temporary address is
+  // preferred.
+  optional uint32 TemporaryPreferredLifetime = 3; // ietf-ip.yang:358:8
+  // The time period during which the temporary address
+  // is valid.
+  optional uint32 TemporaryValidLifetime = 4; // ietf-ip.yang:345:8
+}
+
+// A list of mappings from IPv6 addresses to
+// link-layer addresses.
+// Entries in this list are used as static entries in the
+// Neighbor Cache.
+message Neighbor {
+  // The IPv6 address of the neighbor node.
+  optional string Ip = 1; // ietf-ip.yang:293:8
+  // The link-layer address of the neighbor node.
+  optional string LinkLayerAddress = 2; // ietf-ip.yang:298:8
+}
+
+// Data nodes for the operational state of interfaces.
+message InterfacesState {
+  // The list of interfaces on the device.
+  // System-controlled interfaces created by the system are
+  // always present in this list, whether they are configured or
+  // not.
+  repeated Interface Interface = 1; // ietf-interfaces.yang:226:5
+}
+
+// The list of interfaces on the device.
+// System-controlled interfaces created by the system are
+// always present in this list, whether they are configured or
+// not.
+message Interface {
+  // The desired state of the interface.
+  // This leaf has the same read semantics as ifAdminStatus.
+  optional TODO-enum AdminStatus = 1; // ietf-interfaces.yang:255:7
+  // A list of references to interfaces layered on top of this
+  // interface.
+  repeated string HigherLayerIf = 2; // ietf-interfaces.yang:362:7
+  // The ifIndex value for the ifEntry represented by this
+  // interface.
+  optional int32 IfIndex = 3; // ietf-interfaces.yang:337:7
+  // Interface-specific parameters for the IPv4 address family.
+  optional Ipv4 Ipv4 = 4; // ietf-ip.yang:380:4
+  // Parameters for the IPv6 address family.
+  optional Ipv6 Ipv6 = 5; // ietf-ip.yang:461:4
+  // The time the interface entered its current operational
+  // state.  If the current state was entered prior to the
+  // last re-initialization of the local network management
+  // subsystem, then this node is not present.
+  optional string LastChange = 6; // ietf-interfaces.yang:327:7
+  // A list of references to interfaces layered underneath this
+  // interface.
+  repeated string LowerLayerIf = 7; // ietf-interfaces.yang:370:7
+  // The name of the interface.
+  // A server implementation MAY map this leaf to the ifName
+  // MIB object.  Such an implementation needs to use some
+  // mechanism to handle the differences in size and characters
+  // allowed between this leaf and ifName.  The definition of
+  // such a mechanism is outside the scope of this document.
+  optional string Name = 8; // ietf-interfaces.yang:233:7
+  // The current operational state of the interface.
+  // This leaf has the same semantics as ifOperStatus.
+  optional TODO-enum OperStatus = 9; // ietf-interfaces.yang:281:7
+  // The interface's address at its protocol sub-layer.  For
+  // example, for an 802.x interface, this object normally
+  // contains a Media Access Control (MAC) address.  The
+  // interface's media-specific modules must define the bit
+  // and byte ordering and the format of the value of this
+  // object.  For interfaces that do not have such an address
+  // (e.g., a serial line), this node is not present.
+  optional string PhysAddress = 10; // ietf-interfaces.yang:349:7
+  // An estimate of the interface's current bandwidth in bits
+  // per second.  For interfaces that do not vary in
+  // bandwidth or for those where no accurate estimation can
+  // be made, this node should contain the nominal bandwidth.
+  // For interfaces that have no concept of bandwidth, this
+  // node is not present.
+  optional uint64 Speed = 11; // ietf-interfaces.yang:378:7
+  // A collection of interface-related statistics objects.
+  optional Statistics Statistics = 12; // ietf-interfaces.yang:392:7
+  // The type of the interface.
+  optional string Type = 13; // ietf-interfaces.yang:245:7
+}
+
+// Interface-specific parameters for the IPv4 address family.
+message Ipv4 {
+  // The list of IPv4 addresses on the interface.
+  repeated Address Address = 1; // ietf-ip.yang:402:6
+  // Indicates whether IPv4 packet forwarding is enabled or
+  // disabled on this interface.
+  optional bool Forwarding = 2; // ietf-ip.yang:385:6
+  // The size, in octets, of the largest IPv4 packet that the
+  // interface will send and receive.
+  optional uint32 Mtu = 3; // ietf-ip.yang:391:6
+  // A list of mappings from IPv4 addresses to
+  // link-layer addresses.
+  // This list represents the ARP Cache.
+  repeated Neighbor Neighbor = 4; // ietf-ip.yang:436:6
+}
+
+// The list of IPv4 addresses on the interface.
+message Address {
+  // The IPv4 address on the interface.
+  optional string Ip = 1; // ietf-ip.yang:406:8
+  // The origin of this address.
+  optional TODO-enum Origin = 2; // ietf-ip.yang:430:8
+  // The subnet can be specified as a prefix-length, or,
+  // if the server supports non-contiguous netmasks, as
+  // a netmask.
+  optional Subnet Subnet = 3; // ietf-ip.yang:411:8
+}
+
+// The subnet can be specified as a prefix-length, or,
+// if the server supports non-contiguous netmasks, as
+// a netmask.
+message Subnet {
+  optional Netmask Netmask = 1; // ietf-ip.yang:423:10
+  optional PrefixLength PrefixLength = 2; // ietf-ip.yang:416:10
+}
+
+message Netmask {
+  // The subnet specified as a netmask.
+  optional string Netmask = 1; // ietf-ip.yang:423:10
+}
+
+message PrefixLength {
+  // The length of the subnet prefix.
+  optional uint32 PrefixLength = 1; // ietf-ip.yang:416:10
+}
+
+// A list of mappings from IPv4 addresses to
+// link-layer addresses.
+// This list represents the ARP Cache.
+message Neighbor {
+  // The IPv4 address of the neighbor node.
+  optional string Ip = 1; // ietf-ip.yang:444:8
+  // The link-layer address of the neighbor node.
+  optional string LinkLayerAddress = 2; // ietf-ip.yang:449:8
+  // The origin of this neighbor entry.
+  optional TODO-enum Origin = 3; // ietf-ip.yang:454:8
+}
+
+// Parameters for the IPv6 address family.
+message Ipv6 {
+  // The list of IPv6 addresses on the interface.
+  repeated Address Address = 1; // ietf-ip.yang:488:6
+  // Indicates whether IPv6 packet forwarding is enabled or
+  // disabled on this interface.
+  optional bool Forwarding = 2; // ietf-ip.yang:466:6
+  // The size, in octets, of the largest IPv6 packet that the
+  // interface will send and receive.
+  optional uint32 Mtu = 3; // ietf-ip.yang:476:6
+  // A list of mappings from IPv6 addresses to
+  // link-layer addresses.
+  // This list represents the Neighbor Cache.
+  repeated Neighbor Neighbor = 4; // ietf-ip.yang:569:6
+}
+
+// The list of IPv6 addresses on the interface.
+message Address {
+  // The IPv6 address on the interface.
+  optional string Ip = 1; // ietf-ip.yang:492:8
+  // The origin of this address.
+  optional TODO-enum Origin = 2; // ietf-ip.yang:505:8
+  // The length of the subnet prefix.
+  optional uint32 PrefixLength = 3; // ietf-ip.yang:497:8
+  // The status of an address.  Most of the states correspond
+  // to states from the IPv6 Stateless Address
+  // Autoconfiguration protocol.
+  optional TODO-enum Status = 4; // ietf-ip.yang:510:8
+}
+
+// A list of mappings from IPv6 addresses to
+// link-layer addresses.
+// This list represents the Neighbor Cache.
+message Neighbor {
+  // The IPv6 address of the neighbor node.
+  optional string Ip = 1; // ietf-ip.yang:577:8
+  // Indicates that the neighbor node acts as a router.
+  optional  IsRouter = 2; // ietf-ip.yang:592:8
+  // The link-layer address of the neighbor node.
+  optional string LinkLayerAddress = 3; // ietf-ip.yang:582:8
+  // The origin of this neighbor entry.
+  optional TODO-enum Origin = 4; // ietf-ip.yang:587:8
+  // The Neighbor Unreachability Detection state of this
+  // entry.
+  optional TODO-enum State = 5; // ietf-ip.yang:597:8
+}
+
+// A collection of interface-related statistics objects.
+message Statistics {
+  // The time on the most recent occasion at which any one or
+  // more of this interface's counters suffered a
+  // discontinuity.  If no such discontinuities have occurred
+  // since the last re-initialization of the local management
+  // subsystem, then this node contains the time the local
+  // management subsystem re-initialized itself.
+  optional string DiscontinuityTime = 1; // ietf-interfaces.yang:395:9
+  // The number of packets, delivered by this sub-layer to a
+  // higher (sub-)layer, that were addressed to a broadcast
+  // address at this sub-layer.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 InBroadcastPkts = 2; // ietf-interfaces.yang:431:9
+  // The number of inbound packets that were chosen to be
+  // discarded even though no errors had been detected to
+  // prevent their being deliverable to a higher-layer
+  // protocol.  One possible reason for discarding such a
+  // packet could be to free up buffer space.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint32 InDiscards = 3; // ietf-interfaces.yang:460:9
+  // For packet-oriented interfaces, the number of inbound
+  // packets that contained errors preventing them from being
+  // deliverable to a higher-layer protocol.  For character-
+  // oriented or fixed-length interfaces, the number of
+  // inbound transmission units that contained errors
+  // preventing them from being deliverable to a higher-layer
+  // protocol.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint32 InErrors = 4; // ietf-interfaces.yang:475:9
+  // The number of packets, delivered by this sub-layer to a
+  // higher (sub-)layer, that were addressed to a multicast
+  // address at this sub-layer.  For a MAC-layer protocol,
+  // this includes both Group and Functional addresses.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 InMulticastPkts = 5; // ietf-interfaces.yang:445:9
+  // The total number of octets received on the interface,
+  // including framing characters.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 InOctets = 6; // ietf-interfaces.yang:406:9
+  // The number of packets, delivered by this sub-layer to a
+  // higher (sub-)layer, that were not addressed to a
+  // multicast or broadcast address at this sub-layer.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 InUnicastPkts = 7; // ietf-interfaces.yang:418:9
+  // For packet-oriented interfaces, the number of packets
+  // received via the interface that were discarded because
+  // of an unknown or unsupported protocol.  For
+  // character-oriented or fixed-length interfaces that
+  // support protocol multiplexing, the number of
+  // transmission units received via the interface that were
+  // discarded because of an unknown or unsupported protocol.
+  // For any interface that does not support protocol
+  // multiplexing, this counter is not present.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint32 InUnknownProtos = 8; // ietf-interfaces.yang:492:9
+  // The total number of packets that higher-level protocols
+  // requested be transmitted, and that were addressed to a
+  // broadcast address at this sub-layer, including those
+  // that were discarded or not sent.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 OutBroadcastPkts = 9; // ietf-interfaces.yang:537:9
+  // The number of outbound packets that were chosen to be
+  // discarded even though no errors had been detected to
+  // prevent their being transmitted.  One possible reason
+  // for discarding such a packet could be to free up buffer
+  // space.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint32 OutDiscards = 10; // ietf-interfaces.yang:569:9
+  // For packet-oriented interfaces, the number of outbound
+  // packets that could not be transmitted because of errors.
+  // For character-oriented or fixed-length interfaces, the
+  // number of outbound transmission units that could not be
+  // transmitted because of errors.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint32 OutErrors = 11; // ietf-interfaces.yang:584:9
+  // The total number of packets that higher-level protocols
+  // requested be transmitted, and that were addressed to a
+  // multicast address at this sub-layer, including those
+  // that were discarded or not sent.  For a MAC-layer
+  // protocol, this includes both Group and Functional
+  // addresses.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 OutMulticastPkts = 12; // ietf-interfaces.yang:552:9
+  // The total number of octets transmitted out of the
+  // interface, including framing characters.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 OutOctets = 13; // ietf-interfaces.yang:511:9
+  // The total number of packets that higher-level protocols
+  // requested be transmitted, and that were not addressed
+  // to a multicast or broadcast address at this sub-layer,
+  // including those that were discarded or not sent.
+  // Discontinuities in the value of this counter can occur
+  // at re-initialization of the management system, and at
+  // other times as indicated by the value of
+  // 'discontinuity-time'.
+  optional uint64 OutUnicastPkts = 14; // ietf-interfaces.yang:523:9
+}

@@ -1,0 +1,38 @@
+package: github.com/coreswitch/openconfigd
+import:
+- package: github.com/coreos/etcd
+  version: v3.2.7
+  subpackages:
+  - clientv3
+  - clientv3/concurrency
+- package: github.com/coreswitch/cmd
+  version: 39afb7adac20fdbec5bc09cbfe748b5f1f01baa2
+- package: github.com/coreswitch/component
+- package: github.com/coreswitch/goyang
+  subpackages:
+  - pkg/yang
+- package: github.com/coreswitch/netutil
+- package: github.com/coreswitch/process
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+- package: github.com/jessevdk/go-flags
+- package: github.com/mitchellh/mapstructure
+- package: github.com/osrg/gobgp
+  repo: git@github.com:hash-set/gobgp.git
+  subpackages:
+  - client
+  - config
+  - packet/bgp
+  - table
+- package: github.com/sirupsen/logrus
+  subpackages:
+  - hooks/syslog
+- package: github.com/twinj/uuid
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: google.golang.org/grpc
+  version: v1.2.1
+  subpackages:
+  - grpclog

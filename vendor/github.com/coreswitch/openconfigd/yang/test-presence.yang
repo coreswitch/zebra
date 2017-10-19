@@ -1,0 +1,26 @@
+module test-presence {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  container normal-container {
+  }
+
+  container normal-container-leaf {
+      leaf name {
+        type string;
+      }
+  }
+
+  container presence-container {
+    presence;
+  }
+
+  container presence-container-leaf {
+    presence;
+    leaf name {
+      type string;
+    }
+  }
+}

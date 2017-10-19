@@ -1,0 +1,44 @@
+[
+    {
+        "name": "show_interface",
+        "line": "show interface (:fea:interface|)",
+        "mode": "exec",
+        "helps": [
+            "Show running system information",
+            "Interface information",
+            "Interface name"
+        ]
+    },
+    {
+        "name": "show_ip_route",
+        "line": "show ip route",
+        "mode": "exec",
+        "helps": [
+            "Show running system information",
+			      "Internet Protocol (IP)",
+			      "IP routing table"
+        ]
+    },
+    {
+        "name": "show_ipv6_route",
+        "line": "show ipv6 route",
+        "mode": "exec",
+        "helps": [
+            "Show running system information",
+			      "Internet Protocol version 6 (IPv6)",
+			      "IP routing table"
+        ]
+    },
+    {
+        "name": "ip_route",
+        "line": "ip route A.B.C.D/M (A.B.C.D|:fea:interface)",
+        "mode": "config",
+        "helps": [
+            "Internet Protocol (IP)",
+            "Establish static routes",
+            "IP destination prefix (e.g. 10.0.0.0/8)",
+            "IP gateway address",
+            "IP gateway interface name or pseudo interface Null"
+        ]
+    }
+]

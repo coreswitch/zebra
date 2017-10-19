@@ -1,0 +1,53 @@
+module coreswitch-ntp {
+  namespace "http://coreswitch.io/yang/coreswitch-ntp";
+
+  prefix "coreswitch-ntp";
+
+  organization "Coreswitch Inc.";
+  contact "ishi@coreswitch.io";
+  description  "The module for NTP configuration";
+
+  revision "2017-10-03" {
+    description "Initial version";
+    reference "rfc6020";
+  }
+  
+  grouping ntp {
+    list pool {
+      key "name";
+      leaf name {
+        type string;
+      }
+      leaf dynamic {
+        type empty;
+      }
+      leaf noselect {
+        type empty;
+      }
+      leaf preempt {
+        type empty;
+      }
+      leaf prefer {
+        type empty;
+      }
+    }
+    list server {
+      key "name";
+      leaf name {
+        type string;
+      }
+      leaf dynamic {
+        type empty;
+      }
+      leaf noselect {
+        type empty;
+      }
+      leaf preempt {
+        type empty;
+      }
+      leaf prefer {
+        type empty;
+      }
+    }
+  }
+}

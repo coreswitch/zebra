@@ -1,0 +1,11 @@
+module coreswitch-ext {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  extension {
+    description "help";
+    argument "help";
+  }
+}

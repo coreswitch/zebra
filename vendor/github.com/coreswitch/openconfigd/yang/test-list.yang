@@ -1,0 +1,33 @@
+module test-list {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  container top {
+    list key {
+      key "first";
+      leaf first {
+        type string;
+      }
+      leaf value {
+        type string;
+      }
+    }
+  }
+  container lists {
+    list key {
+      key "first";
+      leaf first {
+        type string;
+      }
+      leaf one {
+        type string;
+      }
+      leaf two {
+        type string;
+        mandatory true;
+      }
+    }
+  }
+}

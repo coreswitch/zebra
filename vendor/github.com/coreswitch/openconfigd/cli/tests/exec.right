@@ -1,0 +1,63 @@
+before exec1.sub: one two three
+calling exec1.sub
+aa bb cc dd ee
+after exec1.sub with args: 0
+
+after exec1.sub without args: 0
+after exec1.sub: one two three
+./execscript: line 21: notthere: command not found
+127
+/tmp/bash: notthere: No such file or directory
+127
+/bin/sh: /bin/sh: cannot execute binary file
+126
+./execscript: line 40: /: Is a directory
+126
+/: /: is a directory
+126
+./execscript: line 47: .: /: is a directory
+1
+126
+0
+this is bashenv
+./exec3.sub: line 3: /tmp/bash-notthere: No such file or directory
+127
+./execscript: line 71: notthere: No such file or directory
+127
+./execscript: line 74: notthere: No such file or directory
+127
+./execscript: line 77: notthere: command not found
+127
+this is sh
+this is sh
+unset
+ok
+5
+./exec5.sub: line 4: exec: bash-notthere: not found
+127
+this is ohio-state
+0
+1
+1
+0
+42
+42
+0
+1
+1
+0
+0
+1
+0
+1
+testb
+expand_aliases 	on
+1
+1
+1
+1
+0
+0
+0
+0
+after

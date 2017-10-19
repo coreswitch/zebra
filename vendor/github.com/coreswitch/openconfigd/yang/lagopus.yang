@@ -1,0 +1,61 @@
+module lagopus {
+	yang-version "1";
+
+	namespace "http://www.lagopus.org/";
+	prefix "lagopus";
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+  
+	container interfaces {
+		list interface {
+			key "name";
+			leaf name {
+				type string;
+			}
+			leaf port-number {
+				type uint32;
+			}
+			leaf type {
+				type string;
+			}
+		}
+	}
+	container ports {
+		list port {
+			key "name";
+			leaf name {
+				type string;
+			}
+			leaf interface {
+				type string;
+			}
+		}
+	}
+	container channels {
+		list channel {
+			key "name";
+			leaf name {
+				type string;
+			}
+			leaf dst-addr {
+				type inet:ipv4-address;
+			}
+		}
+	}
+	container bridges {
+		list bridge {
+			key "name";
+			leaf name {
+				type string;
+			}
+			leaf dpid {
+				type uint64;
+			}
+			leaf controller {
+				type string;
+			}
+		}
+	}
+}

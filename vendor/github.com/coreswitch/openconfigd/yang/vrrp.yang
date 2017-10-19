@@ -1,0 +1,78 @@
+module vrrp {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-vrrp";
+  // replace with IANA namespace when assigned
+  prefix "vrrp";
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  list vrrp {
+    key vrid;
+
+    leaf vrid {
+      type uint8 {
+        range 1..255;
+      }
+      description "Virtual router ID.";
+    }
+
+    leaf interface {
+      type string;
+      description "Interface name";
+    }
+
+    leaf state {
+      type enumeration {
+        enum master;
+        enum backup;
+      }
+    }
+
+    leaf virtual-address {
+      type inet:ipv4-address;
+      description "Virtual IPv4 address";
+    }
+
+    leaf priority {
+      type uint8 {
+        range 1..255;
+      }
+      default 100;
+      description
+        "Configures the Virtual Router Redundancy Protocol (VRRP)
+         election priority for the backup virtual router.";
+    }
+
+    leaf advertisement-interval {
+      type uint8 {
+        range 1..255;
+      }
+      default 1;
+      description
+        "Configures the interval that Virtual Router
+         Redundancy Protocol Version 2 (VRRPv2) advertisements
+         are sent from the specified interface.";
+    }
+
+    list unicast-peer {
+      key address;
+      leaf "address" {
+        type inet:ipv4-address;
+        description "Other VRRP router's IP address";
+      }
+    }
+
+    leaf authentication-key {
+      type string;
+      description
+        "VRRP authentication key.  When this is specified, VRRP authentication is enabled.";
+    }
+
+    leaf preempt {
+      type empty;
+      description
+        "Enable VRRP preemption.";
+    }
+  }
+}

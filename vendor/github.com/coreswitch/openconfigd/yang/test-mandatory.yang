@@ -1,0 +1,34 @@
+module test-mandatory {
+  yang-version "1";
+
+  namespace "http://coreswitch.io/";
+  prefix "coreswitch";
+
+  container top {
+    leaf mandatory {
+      type string;
+      mandatory true;
+    }
+  }
+
+  container top-presence {
+    presence;
+    leaf mandatory {
+      type string;
+      mandatory true;
+    }
+  }
+
+  container top-key {
+    list key {
+      key "first";
+      leaf first {
+        type string;
+      }
+      leaf mandatory {
+        type string;
+        mandatory true;
+      }
+    }
+  }
+}
