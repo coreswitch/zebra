@@ -6,8 +6,7 @@ or virtual machine environment.
 
 ## Getting started
 
-zebra depends upon [OpenConfigd](https://github.com/coreswitch/openconfigd) so
-before installing zebra, openconfigd should be installed.
+zebra uses [openconfigd](https://github.com/coreswitch/openconfigd) as configuration manager.  Please install openconfigd before installing zebra.
 
 ### Install
 
