@@ -18,11 +18,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"github.com/vishvananda/netlink"
 )
+
+type EncapSEG6 struct {
+	Mode     int
+	Segments []net.IP
+}
+
+func (e EncapSEG6) String() string {
+	//seg := netlink.SEG6Encap{ Mode: e.Mode, Segments: e.Segments }
+	seg := netlink.SEG6Encap{Mode: e.Mode}
+	seg.Srh.Segments = e.Segments
+	return seg.String()
+}
 
 type Nexthop struct {
 	net.IP
-	Index IfIndex
+	Index     IfIndex
+	EncapType int
+	EncapSeg6 EncapSEG6
 }
 
 func (n *Nexthop) AddressString() string {
@@ -94,6 +110,7 @@ func (n *Nexthop) Equal(nn *Nexthop) bool {
 	if n.IP.Equal(nn.IP) {
 		return true
 	}
+	// TODO: Add SEG6 related changes (ebiken)
 	return false
 }
 
