@@ -192,13 +192,14 @@ func (b *RouterIDUpdateBody) String() string {
 
 func Hello(conn net.Conn, h *Header, data []byte) error {
 	fmt.Println("[zapi]HELLO handler", len(data), data)
+
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
 	if client, ok := ClientMap[conn]; ok {
 		fmt.Println("[zapi]Register version", h.Version, "and vrfId", h.VrfId)
 		client.Version = h.Version
 		client.VrfId = int(h.VrfId)
-	}
-	for pos, client := range ClientMap {
-		fmt.Println("[zapi]client", pos, "vesrion", client.Version, "vrfid", client.VrfId)
 	}
 	return nil
 }
@@ -518,6 +519,9 @@ func RedistIPv4Route(command COMMAND_TYPE, conn net.Conn, version uint8, vrfId i
 }
 
 func ClientVersion(conn net.Conn) uint8 {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
 	if client, ok := ClientMap[conn]; ok {
 		return client.Version
 	}
@@ -548,6 +552,10 @@ func RedistIPv4Add(vrfId int, p *netutil.Prefix, rib *Rib, conn net.Conn) {
 		//fmt.Println("RedistIPv4Add: non IPv4 length", len(p.IP))
 		return
 	}
+
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
 	if conn == nil {
 		fmt.Println("RedistIPv4Add: client len", len(ClientMap))
 		for conn, client := range ClientMap {
@@ -580,7 +588,12 @@ func RedistIPv4Add(vrfId int, p *netutil.Prefix, rib *Rib, conn net.Conn) {
 	} else {
 		// Syncer part.
 		if rib.Src != conn {
-			ver := ClientVersion(conn)
+			var ver uint8
+			if client, ok := ClientMap[conn]; ok {
+				ver = client.Version
+			} else {
+				ver = 2
+			}
 			if ver == 0 {
 				fmt.Println("RedistIPv4Add: skip bogus client")
 				return
@@ -624,6 +637,10 @@ func RedistIPv4Delete(vrfId int, p *netutil.Prefix, rib *Rib) {
 		fmt.Println("RedistIPv4Delete: non IPv4 length", len(p.IP))
 		return
 	}
+
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
 	fmt.Println("RedistIPv4Delete: client len", len(ClientMap))
 	for conn, client := range ClientMap {
 		if client.Version == 0 {
@@ -875,9 +892,6 @@ func ClientRegister(conn net.Conn) {
 	defer ClientMutex.Unlock()
 	fmt.Println("ClientRegister", conn)
 	ClientMap[conn] = &Client{}
-	for pos, client := range ClientMap {
-		fmt.Println("[zapi]client", pos, "vesrion", client.Version, "vrfid", client.VrfId)
-	}
 }
 
 func ClientUnregister(conn net.Conn) {
@@ -885,9 +899,6 @@ func ClientUnregister(conn net.Conn) {
 	defer ClientMutex.Unlock()
 	fmt.Println("ClientUnregister", conn)
 	delete(ClientMap, conn)
-	for pos, client := range ClientMap {
-		fmt.Println("[zapi]client", pos, "vesrion", client.Version, "vrfid", client.VrfId)
-	}
 }
 
 type IPv4NexthopLookupBody struct {
