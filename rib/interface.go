@@ -372,6 +372,20 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 		}
 	}
 
+	// Handle interface name change.
+	if ifi.Name != ifp.Name {
+		vrf := VrfLookupByIndex(ifp.VrfIndex)
+		if vrf != nil {
+			IfUnregister(ifp)
+			vrf.IfUnregister(ifp)
+
+			ifp.Name = ifi.Name
+
+			IfRegister(ifp)
+			vrf.IfRegister(ifp)
+		}
+	}
+
 	if ifp.Flags != ifi.Flags {
 		if ifp.IsUp() {
 			if (ifi.Flags & syscall.IFF_UP) == 0 {
