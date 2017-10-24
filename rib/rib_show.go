@@ -21,8 +21,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/vishvananda/netlink/nl"
 	"github.com/coreswitch/netutil"
+	"github.com/vishvananda/netlink/nl"
 )
 
 var RibShowHeader = `Codes: K - kernel, C - connected, S - static, R - RIP, B - BGP

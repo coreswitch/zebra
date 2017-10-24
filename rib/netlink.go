@@ -263,7 +263,7 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 						}
 						info.EncapType = nl.LWTUNNEL_ENCAP_SEG6
 						info.EncapSeg6.Mode = seg6.Mode
-						info.EncapSeg6.Segments = seg6.Srh.Segments
+						info.EncapSeg6.Segments = seg6.Segments
 					}
 				}
 				return info, value[int(nh.RtNexthop.Len):], nil
@@ -293,14 +293,13 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 		switch typ {
 		// List more LWTUNNEL_ENCAP_XXX here
 		case nl.LWTUNNEL_ENCAP_SEG6:
-			//fmt.Println("debug: LWTUNNEL_ENCAP_SEG6")
 			seg6 := &netlink.SEG6Encap{}
 			if err := seg6.Decode(encap.Value); err != nil {
 				return nil, err
 			}
 			nexthop.EncapType = nl.LWTUNNEL_ENCAP_SEG6
 			nexthop.EncapSeg6.Mode = seg6.Mode
-			nexthop.EncapSeg6.Segments = seg6.Srh.Segments
+			nexthop.EncapSeg6.Segments = seg6.Segments
 		}
 	}
 
@@ -892,6 +891,13 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
 	if rib.Nexthop != nil {
 		route.Gw = rib.Nexthop.IP
 		route.LinkIndex = int(rib.Nexthop.Index)
+		switch rib.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			seg6 := &netlink.SEG6Encap{}
+			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
+			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			route.Encap = seg6
+		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
 		for _, nexthop := range rib.Nexthops {
@@ -920,6 +926,13 @@ func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId int) error {
 	if rib.Nexthop != nil {
 		route.Gw = rib.Nexthop.IP
 		route.LinkIndex = int(rib.Nexthop.Index)
+		switch rib.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			seg6 := &netlink.SEG6Encap{}
+			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
+			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			route.Encap = seg6
+		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
 		for _, nexthop := range rib.Nexthops {

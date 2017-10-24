@@ -18,8 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 )
 
 type EncapSEG6 struct {
@@ -30,8 +32,22 @@ type EncapSEG6 struct {
 func (e EncapSEG6) String() string {
 	//seg := netlink.SEG6Encap{ Mode: e.Mode, Segments: e.Segments }
 	seg := netlink.SEG6Encap{Mode: e.Mode}
-	seg.Srh.Segments = e.Segments
+	seg.Segments = e.Segments
 	return seg.String()
+}
+func (e EncapSEG6) Equal(x EncapSEG6) bool {
+	if e.Mode != x.Mode {
+		return false
+	}
+	if len(e.Segments) != len(x.Segments) {
+		return false
+	}
+	for i := range e.Segments {
+		if !e.Segments[i].Equal(x.Segments[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 type Nexthop struct {
@@ -69,11 +85,16 @@ func (n *Nexthop) MarshalJSON() ([]byte, error) {
 }
 
 func (n Nexthop) String() string {
-	if n.IP == nil {
-		return fmt.Sprintf("ifindex %d", n.Index)
-	} else {
-		return n.IP.String() + " " + fmt.Sprintf("ifindex %d", n.Index)
+	strs := []string{}
+	if n.IP != nil {
+		strs = append(strs, n.IP.String())
 	}
+	strs = append(strs, fmt.Sprintf("ifindex %d", n.Index))
+	switch n.EncapType {
+	case nl.LWTUNNEL_ENCAP_SEG6:
+		strs = append(strs, fmt.Sprintf("encap seg6 %s", n.EncapSeg6.String()))
+	}
+	return fmt.Sprintf("%s", strings.Join(strs, " "))
 }
 
 func (n *Nexthop) IsIfOnly() bool {
@@ -107,11 +128,17 @@ func (n *Nexthop) Equal(nn *Nexthop) bool {
 	if n.IP == nil || nn.IP == nil {
 		return false
 	}
-	if n.IP.Equal(nn.IP) {
-		return true
+	if !n.IP.Equal(nn.IP) {
+		return false
 	}
-	// TODO: Add SEG6 related changes (ebiken)
-	return false
+
+	switch n.EncapType {
+	case nl.LWTUNNEL_ENCAP_SEG6:
+		if !n.EncapSeg6.Equal(nn.EncapSeg6) {
+			return false
+		}
+	}
+	return true
 }
 
 func NewNexthopIf(index IfIndex) *Nexthop {
