@@ -58,22 +58,12 @@ func IPv4RouteApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
-func IPv4RouteSeg6ModeApi(Cmd int, Args cmd.Args) int {
-	prefix := Args[0].(*netutil.Prefix)
-	nexthop := Args[1].(net.IP)
-	mode := Args[2].(string)
-	fmt.Println("Static IPv4 seg6 mode:", prefix, nexthop, mode)
-	if Cmd == cmd.Set {
-	} else {
-	}
-	return cmd.Success
-}
-
 func IPv4RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	prefix := Args[0].(*netutil.Prefix)
 	nexthop := Args[1].(net.IP)
-	Args = Args[2:]
-	fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, Args)
+	mode := Args[2].(string)
+	Args = Args[3:]
+	fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, mode, Args)
 	if Cmd == cmd.Set {
 	} else {
 	}
@@ -90,22 +80,12 @@ func IPv6RouteApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
-func IPv6RouteSeg6ModeApi(Cmd int, Args cmd.Args) int {
-	prefix := Args[0].(*netutil.Prefix)
-	nexthop := Args[1].(net.IP)
-	mode := Args[2].(string)
-	fmt.Println("Static IPv6 seg6 mode:", prefix, nexthop, mode)
-	if Cmd == cmd.Set {
-	} else {
-	}
-	return cmd.Success
-}
-
 func IPv6RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	prefix := Args[0].(*netutil.Prefix)
 	nexthop := Args[1].(net.IP)
-	Args = Args[2:]
-	fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, Args)
+	mode := Args[2].(string)
+	Args = Args[3:]
+	fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, mode, Args)
 	if Cmd == cmd.Set {
 	} else {
 	}
@@ -263,12 +243,10 @@ func InitAPI() {
 	Parser.InstallCmd([]string{"interfaces", "interface", "WORD", "mtu", "<68-65535>"}, InterfaceMtu)
 	Parser.InstallCmd([]string{"routing-options", "router-id", "A.B.C.D"}, RouterIdApi)
 	Parser.InstallCmd([]string{"routing-options", "ipv4", "route", "A.B.C.D/M", "nexthop", "A.B.C.D"}, IPv4RouteApi)
-	Parser.InstallCmd([]string{"routing-options", "ipv4", "route", "A.B.C.D/M", "nexthop", "A.B.C.D", "seg6", "mode", "WORD"}, IPv4RouteSeg6ModeApi)
-	Parser.InstallCmd([]string{"routing-options", "ipv4", "route", "A.B.C.D/M", "nexthop", "A.B.C.D", "seg6", "segments", "X:X::X:X", "&"}, IPv4RouteSeg6SegmentsApi)
+	Parser.InstallCmd([]string{"routing-options", "ipv4", "route-srv6", "A.B.C.D/M", "nexthop", "A.B.C.D", "seg6", "WORD", "segments", "X:X::X:X", "&"}, IPv4RouteSeg6SegmentsApi)
 
 	Parser.InstallCmd([]string{"routing-options", "ipv6", "route", "X:X::X:X/M", "nexthop", "X:X::X:X"}, IPv6RouteApi)
-	Parser.InstallCmd([]string{"routing-options", "ipv6", "route", "X:X::X:X/M", "nexthop", "X:X::X:X", "seg6", "mode", "WORD"}, IPv6RouteSeg6ModeApi)
-	Parser.InstallCmd([]string{"routing-options", "ipv6", "route", "X:X::X:X/M", "nexthop", "X:X::X:X", "seg6", "segments", "X:X::X:X", "&"}, IPv6RouteSeg6SegmentsApi)
+	Parser.InstallCmd([]string{"routing-options", "ipv6", "route-srv6", "X:X::X:X/M", "nexthop", "X:X::X:X", "seg6", "WORD", "segments", "X:X::X:X", "&"}, IPv6RouteSeg6SegmentsApi)
 
 	Parser.InstallCmd([]string{"vrf", "name", "WORD", "hub-node", "WORD"}, VrfHubNodeApi)
 	Parser.InstallCmd([]string{"vrf", "name", "WORD", "static", "route", "A.B.C.D/M", "nexthop", "A.B.C.D"}, IPv4VrfRouteApi)
