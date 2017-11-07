@@ -29,16 +29,24 @@ func SendMessage(conn net.Conn, msg *Message) {
 
 func Dial() (net.Conn, error) {
 	// Connect to server
-	conn, err := net.Dial("unix", "/var/run/zserv.api")
+	//conn, err := net.Dial("unix", "/var/run/zserv.api")
+	conn, err := net.Dial("tcp", ":9000")
 	if err != nil {
 		return nil, err
 	}
 	return conn, err
 }
 
+// ZAPI TCP server start.
+func ZAPIServerStart() {
+	// Start ZAPI server at port 9000 for VRF 0.
+	ZServerStart("tcp", ":9000", 0)
+}
+
 // ZAPI version 2.
 func TestV2Hello(t *testing.T) {
 	fmt.Println("Hello")
+	ZAPIServerStart()
 
 	conn, err := Dial()
 	if err != nil {
@@ -66,6 +74,26 @@ func TestV2Nexthop(t *testing.T) {
 	msg := Message{
 		Header: Header{Command: IPV4_NEXTHOP_LOOKUP},
 		Body:   body,
+	}
+	SendMessage(conn, &msg)
+}
+
+func TestV2Redistribute(t *testing.T) {
+	conn, err := Dial()
+	if err != nil {
+		t.Error("Connection to ZAPI server failed", err)
+		return
+	}
+	defer conn.Close()
+
+	msg := Message{
+		Header: Header{Command: REDISTRIBUTE_ADD},
+		Body:   &RedistributeBody{Type: uint8(ROUTE_STATIC)},
+	}
+	SendMessage(conn, &msg)
+	msg = Message{
+		Header: Header{Command: REDISTRIBUTE_DELETE},
+		Body:   &RedistributeBody{Type: uint8(ROUTE_BGP)},
 	}
 	SendMessage(conn, &msg)
 }

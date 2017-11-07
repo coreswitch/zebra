@@ -92,11 +92,8 @@ func NewVrf(name string, index int) *Vrf {
 	VrfTable[v.Index] = v
 	VrfMap[v.Name] = v
 
-	if index == 0 {
-		// Start after FIB dump is finished.
-		// v.ZServer = ZServerStart("/var/run/zserv.api", 0)
-	} else {
-		v.ZServer = ZServerStart(fmt.Sprintf("/var/run/zserv-vrf%d.api", index), index)
+	if index != 0 {
+		v.ZServer = ZServerStart("unix", fmt.Sprintf("/var/run/zserv-vrf%d.api", index), index)
 	}
 
 	return v
@@ -105,7 +102,7 @@ func NewVrf(name string, index int) *Vrf {
 func VrfDefaultZservStart() {
 	vrf := VrfDefault()
 	if vrf != nil {
-		vrf.ZServer = ZServerStart("/var/run/zserv.api", 0)
+		vrf.ZServer = ZServerStart("unix", "/var/run/zserv.api", 0)
 	}
 }
 

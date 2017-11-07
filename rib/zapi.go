@@ -1,4 +1,4 @@
-// Copyright 2016, 2017 Zebra Project
+// Copyright 2016, 2017 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,6 +53,58 @@ import (
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |           VRF ID (2)          |          Command (2)          |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+// ZAPI version 2 message types.
+//
+// #define ZEBRA_INTERFACE_ADD                1
+// #define ZEBRA_INTERFACE_DELETE             2
+// #define ZEBRA_INTERFACE_ADDRESS_ADD        3
+// #define ZEBRA_INTERFACE_ADDRESS_DELETE     4
+// #define ZEBRA_INTERFACE_UP                 5
+// #define ZEBRA_INTERFACE_DOWN               6
+// #define ZEBRA_IPV4_ROUTE_ADD               7
+// #define ZEBRA_IPV4_ROUTE_DELETE            8
+// #define ZEBRA_IPV6_ROUTE_ADD               9
+// #define ZEBRA_IPV6_ROUTE_DELETE           10
+// #define ZEBRA_REDISTRIBUTE_ADD            11
+// #define ZEBRA_REDISTRIBUTE_DELETE         12
+// #define ZEBRA_REDISTRIBUTE_DEFAULT_ADD    13
+// #define ZEBRA_REDISTRIBUTE_DEFAULT_DELETE 14
+// #define ZEBRA_IPV4_NEXTHOP_LOOKUP         15
+// #define ZEBRA_IPV6_NEXTHOP_LOOKUP         16
+// #define ZEBRA_IPV4_IMPORT_LOOKUP          17
+// #define ZEBRA_IPV6_IMPORT_LOOKUP          18
+// #define ZEBRA_INTERFACE_RENAME            19
+// #define ZEBRA_ROUTER_ID_ADD               20
+// #define ZEBRA_ROUTER_ID_DELETE            21
+// #define ZEBRA_ROUTER_ID_UPDATE            22
+// #define ZEBRA_HELLO                       23
+// #define ZEBRA_IPV4_NEXTHOP_LOOKUP_MRIB    24
+// #define ZEBRA_MESSAGE_MAX                 25
+
+type Client struct {
+	Version uint8
+	VrfId   int
+}
+
+var (
+	ClientMap   = map[net.Conn]*Client{}
+	ClientMutex sync.RWMutex
+)
+
+func ClientRegister(conn net.Conn) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+	fmt.Println("ClientRegister", conn)
+	ClientMap[conn] = &Client{}
+}
+
+func ClientUnregister(conn net.Conn) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+	fmt.Println("ClientUnregister", conn)
+	delete(ClientMap, conn)
+}
 
 type Message struct {
 	Header Header
@@ -154,6 +205,7 @@ func (h *Header) DecodeFromBytes(data []byte) error {
 type Body interface {
 	DecodeFromBytes([]byte) error
 	Serialize() ([]byte, error)
+	Process(net.Conn, *Header) error
 }
 
 // ROUTER_ID_ADD
@@ -188,6 +240,10 @@ func (b *RouterIDUpdateBody) DecodeFromBytes(data []byte) error {
 
 func (b *RouterIDUpdateBody) String() string {
 	return fmt.Sprintf("id: %s/%d", b.IP, b.Length)
+}
+
+func (b *RouterIDUpdateBody) Process(net.Conn, *Header) error {
+	return nil
 }
 
 func Hello(conn net.Conn, h *Header, data []byte) error {
@@ -295,6 +351,10 @@ func (b *InterfaceUpdateBody) DecodeFromBytes([]byte) error {
 	return nil
 }
 
+func (b *InterfaceUpdateBody) Process(net.Conn, *Header) error {
+	return nil
+}
+
 type InterfaceAddressUpdateBody struct {
 	Index  uint32
 	Flags  uint8
@@ -337,6 +397,10 @@ func (b *InterfaceAddressUpdateBody) Serialize() ([]byte, error) {
 	buf = append(buf, b.Length)
 	buf = append(buf, make([]byte, 4)...)
 	return buf, nil
+}
+
+func (b *InterfaceAddressUpdateBody) Process(net.Conn, *Header) error {
+	return nil
 }
 
 func interfaceAddressAdd(conn net.Conn, version byte, ifp *Interface, addr *IfAddr) {
@@ -832,6 +896,10 @@ func (b *IPRouteBody) DecodeFromBytes(data []byte) error {
 	return nil
 }
 
+func (b *IPRouteBody) Process(net.Conn, *Header) error {
+	return nil
+}
+
 func IPv4Route(command COMMAND_TYPE, version uint8, conn net.Conn, data []byte, vrfId uint16) {
 	// Parse IPv4Route.
 	body := &IPRouteBody{Api: command}
@@ -877,28 +945,29 @@ func IPv4Route(command COMMAND_TYPE, version uint8, conn net.Conn, data []byte, 
 	}
 }
 
-type Client struct {
-	Version uint8
-	VrfId   int
+// Redistribute message for:
+//
+// ZEBRA_REDISTRIBUTE_ADD            11
+// ZEBRA_REDISTRIBUTE_DELETE         12
+//
+type RedistributeBody struct {
+	Type uint8
 }
 
-var (
-	ClientMap   = map[net.Conn]*Client{}
-	ClientMutex sync.RWMutex
-)
-
-func ClientRegister(conn net.Conn) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-	fmt.Println("ClientRegister", conn)
-	ClientMap[conn] = &Client{}
+func (b *RedistributeBody) Serialize() ([]byte, error) {
+	buf := make([]byte, 1)
+	buf[0] = b.Type
+	return buf, nil
 }
 
-func ClientUnregister(conn net.Conn) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-	fmt.Println("ClientUnregister", conn)
-	delete(ClientMap, conn)
+func (b *RedistributeBody) DecodeFromBytes(data []byte) error {
+	b.Type = data[0]
+	return nil
+}
+
+func (b *RedistributeBody) Process(conn net.Conn, h *Header) error {
+	fmt.Println("Processing", h.Command.String(), RouteTypeStringMap[ROUTE_TYPE(b.Type)])
+	return nil
 }
 
 type IPv4NexthopLookupBody struct {
@@ -914,6 +983,10 @@ func (b *IPv4NexthopLookupBody) Serialize() ([]byte, error) {
 func (b *IPv4NexthopLookupBody) DecodeFromBytes(data []byte) error {
 	b.Addr = make([]byte, 4)
 	copy(b.Addr, data[:4])
+	return nil
+}
+
+func (b *IPv4NexthopLookupBody) Process(net.Conn, *Header) error {
 	return nil
 }
 
@@ -945,6 +1018,10 @@ func (b *IPv4NexthopReplyBody) Serialize() ([]byte, error) {
 }
 
 func (b *IPv4NexthopReplyBody) DecodeFromBytes([]byte) error {
+	return nil
+}
+
+func (b *IPv4NexthopReplyBody) Process(net.Conn, *Header) error {
 	return nil
 }
 
@@ -1019,8 +1096,6 @@ func IPv4NexthopLookup(conn net.Conn, version byte, data []byte, vrfId uint16) {
 }
 
 func HandleRequest(conn net.Conn, vrfId int) {
-	fmt.Println("HandleRequest: Num goroutine", runtime.NumGoroutine())
-
 	defer conn.Close()
 
 	var version byte
@@ -1029,7 +1104,6 @@ func HandleRequest(conn net.Conn, vrfId int) {
 		data := make([]byte, HeaderSize(version))
 		_, err := conn.Read(data)
 		if err != nil {
-			fmt.Println("Error reading:", err.Error())
 			break
 		}
 		// Peek version information.
@@ -1039,7 +1113,6 @@ func HandleRequest(conn net.Conn, vrfId int) {
 				d := make([]byte, 2)
 				_, err = conn.Read(d)
 				if err != nil {
-					fmt.Println("Error reading:", err.Error())
 					break
 				}
 				data = append(data, d...)
@@ -1096,7 +1169,25 @@ func HandleMessage(conn net.Conn, h *Header, payloadLen int) error {
 	case IPV4_NEXTHOP_LOOKUP:
 		IPv4NexthopLookup(conn, h.Version, data, h.VrfId)
 	case REDISTRIBUTE_ADD:
+		body := RedistributeBody{}
+		err := body.DecodeFromBytes(data)
+		if err != nil {
+			return err
+		}
+		err = body.Process(conn, h)
+		if err != nil {
+			return err
+		}
 	case REDISTRIBUTE_DELETE:
+		body := RedistributeBody{}
+		err := body.DecodeFromBytes(data)
+		if err != nil {
+			return err
+		}
+		err = body.Process(conn, h)
+		if err != nil {
+			return err
+		}
 	case REDISTRIBUTE_DEFAULT_ADD:
 	case REDISTRIBUTE_DEFAULT_DELETE:
 	}
@@ -1109,15 +1200,41 @@ type ZServer struct {
 	VrfId  int
 }
 
-func ZServerStart(path string, vrfId int) *ZServer {
-	os.Remove(path)
+func ZServerStart(typ string, path string, vrfId int) *ZServer {
+	var lis net.Listener
+	var err error
 
-	lis, err := net.Listen("unix", path)
-	if err != nil {
-		fmt.Println("Error listening:", err.Error())
+	switch typ {
+	case "tcp":
+		// e.g. path: ":9000"
+		tcpAddr, err := net.ResolveTCPAddr("tcp", path)
+		if err != nil {
+			fmt.Println("Error listening:", err.Error())
+			return nil
+		}
+		lis, err = net.ListenTCP("tcp", tcpAddr)
+		if err != nil {
+			fmt.Println("Error listening:", err.Error())
+			return nil
+		}
+	case "unix", "unix-writable":
+		// e.g. path: "/var/run/zapi.serv"
+		os.Remove(path)
+		lis, err = net.Listen("unix", path)
+		if err != nil {
+			fmt.Println("Error listening:", err.Error())
+			return nil
+		}
+		if typ == "unix-writable" {
+			err = os.Chmod(path, 0777)
+			if err != nil {
+				return nil
+			}
+		}
+	default:
+		fmt.Println("ZServerStart type is not unix nor tcp.")
 		return nil
 	}
-	//defer lis.Close()
 
 	server := &ZServer{
 		Path:   path,
@@ -1128,14 +1245,12 @@ func ZServerStart(path string, vrfId int) *ZServer {
 	go func() {
 		fmt.Println("ZAPI Server started at", path)
 		for {
-			fmt.Println("Before accept: Num goroutine", runtime.NumGoroutine())
 			// Listen for an incoming connection.
 			conn, err := lis.Accept()
 			if err != nil {
 				fmt.Println("Error accepting: ", err.Error())
 				return
 			}
-			fmt.Println("After accept: Num goroutine", runtime.NumGoroutine())
 
 			// Register client.
 			ClientRegister(conn)
