@@ -1,19 +1,20 @@
 package quagga
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"math/rand"
-	"net"
-	"strings"
-	"time"
-
 	"github.com/coreswitch/cmd"
 	rpc "github.com/coreswitch/openconfigd/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"io"
+	"math/rand"
+	"net"
+	"strings"
+	"time"
 )
 
 const (
@@ -190,12 +191,18 @@ func grpcLoop() {
 				//quaggaConfigStateDump()
 			case rpc.ConfigType_VALIDATE_END:
 				fmt.Println("VALIDATE_END:", conf.Path)
+
+				b := bytes.NewBuffer(make([]byte, 0))
+				f := bufio.NewWriter(b)
+
 				request := &rpc.ConfigRequest{}
-				if quaggaConfigValid() {
+				if quaggaConfigValid(f) {
 					request.Type = rpc.ConfigType_VALIDATE_SUCCESS
 				} else {
 					request.Type = rpc.ConfigType_VALIDATE_FAILED
 				}
+				f.Flush()
+				fmt.Print(b.String())
 				err := stream.Send(request)
 				if err != nil {
 					fmt.Println(err)

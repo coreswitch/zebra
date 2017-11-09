@@ -120,7 +120,7 @@ const (
 	ROUTE_MAX
 )
 
-var routeTypeStringMap = map[ROUTE_TYPE]string{
+var RouteTypeStringMap = map[ROUTE_TYPE]string{
 	ROUTE_SYSTEM:  "system",
 	ROUTE_KERNEL:  "kernel",
 	ROUTE_CONNECT: "connect",

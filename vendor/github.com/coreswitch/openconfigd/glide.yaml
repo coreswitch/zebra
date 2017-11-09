@@ -8,6 +8,9 @@ import:
 - package: github.com/coreswitch/cmd
   version: 39afb7adac20fdbec5bc09cbfe748b5f1f01baa2
 - package: github.com/coreswitch/component
+  version: v1.0.0
+- package: github.com/coreswitch/dependency
+  version: v1.0.0
 - package: github.com/coreswitch/goyang
   subpackages:
   - pkg/yang
@@ -29,6 +32,12 @@ import:
   subpackages:
   - hooks/syslog
 - package: github.com/twinj/uuid
+- package: github.com/vishvananda/netlink
+  version: 177f1ceba557262b3f1c3aba4df93a29199fb4eb
+  subpackages:
+  - nl
+- package: github.com/vishvananda/netns
+  version: 86bef332bfc3b59b7624a600bd53009ce91a9829
 - package: golang.org/x/net
   subpackages:
   - context

@@ -306,6 +306,31 @@ func TestLeaf(t *testing.T) {
 	}
 }
 
+func TestLeafList(t *testing.T) {
+	// Load leaf-list YANG.
+	entry, err := YangSetUp("test-leaf-list.yang")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Empty value. Set test.
+	config := &Config{}
+	path := []string{"top", "segments", "a::1", "b::1"}
+	ret, _, _, _ := Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("Leaf parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+
+	// Empty value. JSON test.
+	jsonStr := config.JsonMarshal()
+	targetStr := `{"top":{"segments":["a::1","b::1"]}}`
+	var result bool
+	result, err = EqualJSON(jsonStr, targetStr)
+	if err != nil || !result {
+		t.Error("List JSON error for", config.JsonMarshal(), targetStr)
+	}
+}
+
 // Multiple key.
 func TestMultiKey(t *testing.T) {
 	// Load multiple key YANG.
@@ -639,4 +664,90 @@ func TestMandatoryMultiKey(t *testing.T) {
 
 	// jsonStr = config.JsonMarshal()
 	// fmt.Println(jsonStr)
+}
+
+func TestMandatoryNestKey(t *testing.T) {
+	// Load multiple key YANG.
+	entry, err := YangSetUp("test-mandatory.yang")
+	if err != nil {
+		t.Error("Parse error", err)
+		return
+	}
+
+	// Parse success test.
+	config := &Config{}
+	path := []string{"static", "route", "10.0.0.0/24", "nexthop", "10.0.0.1"}
+	ret, _, _, _ := Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("List parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+	// jsonStr = config.JsonMarshal()
+	// fmt.Println(jsonStr)
+
+	err = config.MandatoryCheck()
+	if err != nil {
+		t.Error("Mandatory error should not happen", err)
+	}
+
+	path = []string{"static", "route", "10.0.0.0/24", "nexthop", "10.0.0.1"}
+	ret, _, _, _ = ParseDelete(path, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("Delete failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+
+	// jsonStr = config.JsonMarshal()
+	// fmt.Println(jsonStr)
+
+	err = config.MandatoryCheck()
+	if err == nil {
+		t.Error("Mandatory error should happen")
+	}
+}
+
+func TestContainerMandatory(t *testing.T) {
+	// Load mandatory YANG.
+	entry, err := YangSetUp("test-mandatory.yang")
+	if err != nil {
+		t.Error("Parse error", err)
+		return
+	}
+
+	// Parse success test with missing mandatory.
+	config := &Config{}
+	path := []string{"top", "mandatory", "value"}
+	ret, _, _, _ := Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("List parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+	err = config.MandatoryCheck()
+	if err != nil {
+		t.Error("Mandatory error", err)
+	}
+
+	path = []string{"top", "value", "node"}
+	ret, _, _, _ = Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("List parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+	path = []string{"top", "mandatory", "value"}
+	ret, _, _, _ = ParseDelete(path, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("List parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+	err = config.MandatoryCheck()
+	if err == nil {
+		t.Error("Mandatory error should occur")
+	}
+
+	// presence container check.
+	config = &Config{}
+	path = []string{"top-presence", "value", "node"}
+	ret, _, _, _ = Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("List parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+	err = config.MandatoryCheck()
+	if err != nil {
+		t.Error("Mandatory should not occur for presence container", err)
+	}
 }

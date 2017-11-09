@@ -1,4 +1,7 @@
-component
+Component
 =========
 
-Component dependencies library inspired by Stuart Sierra's Clojure component.
+[![CircleCI](https://circleci.com/gh/coreswitch/component/tree/master.svg?style=svg)](https://circleci.com/gh/coreswitch/component/tree/master)
+
+Go version of Component dependencies library originally made as Stuart Sierra's
+[Component](https://github.com/stuartsierra/component).

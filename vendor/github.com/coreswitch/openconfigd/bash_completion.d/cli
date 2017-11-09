@@ -93,9 +93,9 @@ _cli_print_help ()
   elif [ ${#help} -eq 0 ] ; then
     echo -ne "\n$pre $label"
   elif [ ${#label} -lt 6 ] ; then
-    echo -ne "\n$pre $label\t\t$help"
+    echo -ne "\n$pre $label\t\t\t$help"
   elif [ ${#label} -lt 14 ] ; then
-    echo -ne "\n$pre $label\t$help"
+    echo -ne "\n$pre $label\t\t$help"
   else
     echo -ne "\n$pre $label\t$help"
   fi

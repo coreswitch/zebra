@@ -613,7 +613,7 @@ func mandatoryFindList(c *Config, e *yang.Entry, depth int) error {
 			}
 		}
 		// Couldn't find mandatory node.
-		return fmt.Errorf("Missing mandatory node %s under %s", e.Name, c.Name)
+		return fmt.Errorf("Mandatory node '%s' is necessary under %s.", e.Name, c.Name)
 	} else {
 		for _, cfg := range c.Keys {
 			err := mandatoryFindList(cfg, e, depth-1)
@@ -625,31 +625,41 @@ func mandatoryFindList(c *Config, e *yang.Entry, depth int) error {
 	return nil
 }
 
-func mandatoryFind(c *Config, e *yang.Entry) error {
-	if c.Entry.IsList() {
-		return mandatoryFindList(c, e, KeyLength(c.Entry))
+func mandatoryCheck(c *Config, e *yang.Entry) error {
+	// Check list only.
+	if e.IsList() {
+		for _, ent := range e.Dir {
+			if ent.IsList() {
+				// Need to check the List has mandatory leaf key.
+				for _, leaf := range ent.Dir {
+					if IsMandatory(leaf) && KeyIncludeValue(ent.Key, leaf.Name) {
+						err := mandatoryFindList(c, ent, KeyLength(c.Entry))
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+			if ent.IsLeaf() {
+				// Need to check non key mandatory leaf.
+				if IsMandatory(ent) && !KeyIncludeValue(e.Key, ent.Name) {
+					err := mandatoryFindList(c, ent, KeyLength(c.Entry))
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
 	}
-	return nil
-}
-
-func mandatoryCheck(c *Config) error {
-	fmt.Println("mandatoryCheck", c.Name)
-	e := c.Entry
-
-	if e == nil {
-		return nil
-	}
-
-	if e.Kind != yang.DirectoryEntry {
-		return nil
-	}
-
-	for _, ent := range e.Dir {
-		if IsMandatory(ent) {
-			fmt.Println("XXX Mandatory")
-			err := mandatoryFind(c, ent)
-			if err != nil {
-				return err
+	if e.IsContainer() && !IsPresenceContainer(e) {
+		for _, ent := range e.Dir {
+			if ent.IsLeaf() {
+				if IsMandatory(ent) {
+					err := mandatoryFindList(c, ent, 0)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
@@ -657,18 +667,20 @@ func mandatoryCheck(c *Config) error {
 }
 
 func (c *Config) MandatoryCheck() error {
-	err := mandatoryCheck(c)
-	if err != nil {
-		return err
+	if c.Entry != nil {
+		err := mandatoryCheck(c, c.Entry)
+		if err != nil {
+			return err
+		}
 	}
 	for _, k := range c.Keys {
-		err = k.MandatoryCheck()
+		err := k.MandatoryCheck()
 		if err != nil {
 			return err
 		}
 	}
 	for _, c := range c.Configs {
-		err = c.MandatoryCheck()
+		err := c.MandatoryCheck()
 		if err != nil {
 			return err
 		}
@@ -694,6 +706,21 @@ func (c *Config) jsonQuotedString(name, value string) string {
 	}
 }
 
+func (c *Config) jsonMarshalLeafList() string {
+	str := ""
+	for pos, val := range c.ValueList {
+		if pos != 0 {
+			str += ","
+		}
+		if c.needQuote() {
+			str += fmt.Sprintf(`"%s"`, val)
+		} else {
+			str += fmt.Sprintf(`%s`, val)
+		}
+	}
+	return fmt.Sprintf(`"%s":[%s]`, c.Name, str)
+}
+
 func (c *Config) jsonMarshal(pos int) (str string) {
 	if pos != 0 {
 		str += ","
@@ -708,10 +735,12 @@ func (c *Config) jsonMarshal(pos int) (str string) {
 			}
 			str += c.jsonQuotedString(c.Entry.Name, c.Name)
 		} else {
-			if c.Value == "" {
-				str += fmt.Sprintf(`"%s":%s`, c.Name, YEntryJson(c.Entry))
-			} else {
+			if c.Value != "" {
 				str += c.jsonQuotedString(c.Name, c.Value)
+			} else if len(c.ValueList) > 0 {
+				str += c.jsonMarshalLeafList()
+			} else {
+				str += fmt.Sprintf(`"%s":%s`, c.Name, YEntryJson(c.Entry))
 			}
 		}
 	}
@@ -882,11 +911,7 @@ func (this *ConfigComponent) Start() component.Component {
 
 // Config component stop method.
 func (this *ConfigComponent) Stop() component.Component {
-	fmt.Println("component config: stop")
-
-	// Clean up etcd config.
-	//EtcdVrfClean()
-	Commit()
+	DiscardConfigChange()
 	DhcpExitFunc()
 	VrrpServerStopAll()
 	RelayExitFunc()
@@ -894,7 +919,5 @@ func (this *ConfigComponent) Stop() component.Component {
 	OspfVrfExit()
 	GobgpWanExit()
 
-	configActive = nil
-	configCandidate = nil
 	return this
 }

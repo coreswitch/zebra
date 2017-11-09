@@ -4,7 +4,14 @@ module test-mandatory {
   namespace "http://coreswitch.io/";
   prefix "coreswitch";
 
+  import ietf-inet-types {
+    prefix inet;
+  }
+
   container top {
+    leaf value {
+      type string;
+    }
     leaf mandatory {
       type string;
       mandatory true;
@@ -13,6 +20,9 @@ module test-mandatory {
 
   container top-presence {
     presence;
+    leaf value {
+      type string;
+    }
     leaf mandatory {
       type string;
       mandatory true;
@@ -28,6 +38,22 @@ module test-mandatory {
       leaf mandatory {
         type string;
         mandatory true;
+      }
+    }
+  }
+
+  container static {
+    list route {
+      key "prefix";
+      leaf prefix {
+        type inet:ipv4-prefix;
+      }
+      list nexthop {
+        key "address";
+        leaf "address" {
+          type inet:ipv4-address;
+          mandatory true;
+        }
       }
     }
   }

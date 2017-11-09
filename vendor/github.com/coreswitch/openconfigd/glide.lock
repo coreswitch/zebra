@@ -1,5 +1,5 @@
-hash: 2b20eb4e5888bdd32761578e72b59bd5d7c39b6403b387702f67fdbd634983e6
-updated: 2017-10-08T23:56:20.710873768-07:00
+hash: 5e585408e968544f9e4c27f1ea003ac764d0c57b36d490f95a37cbc7da2610f7
+updated: 2017-11-02T06:23:54.442032566-07:00
 imports:
 - name: github.com/armon/go-radix
   version: 1fca145dffbcaa8fe914309b1ec0cfc67500fe61
@@ -15,9 +15,9 @@ imports:
 - name: github.com/coreswitch/cmd
   version: 39afb7adac20fdbec5bc09cbfe748b5f1f01baa2
 - name: github.com/coreswitch/component
-  version: f69bd1e010d5ce47f9ed2fbf092998b2e00b143a
+  version: 139dd937653e32f3e1cf7c792537eed810e44ed9
 - name: github.com/coreswitch/dependency
-  version: 0b454913211ec6c99d0910e3edda88892239ae5f
+  version: 3e49398de080327bd53102f1c6ad74eaf4219d16
 - name: github.com/coreswitch/goyang
   version: e42647ee0bf7bdc8d961b8f5a6ef282a5ed949f3
   subpackages:

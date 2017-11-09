@@ -57,7 +57,6 @@ module coreswitch {
             leaf "address" {
               type inet:ipv4-address;
               description "Nexthop of the route";
-              mandatory true;
             }
           }
           list interface {
@@ -253,7 +252,6 @@ module coreswitch {
           leaf "address" {
             type inet:ipv4-address;
             description "Nexthop of the route";
-            mandatory true;
           }
         }
         list interface {
