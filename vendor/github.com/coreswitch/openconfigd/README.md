@@ -1,10 +1,10 @@
-# OpenConfigd
+# openconfigd
 
-OpenConfigd is software which manages [OpenConfig](http://www.openconfig.net/)
+openconfigd is software which manages [OpenConfig](http://www.openconfig.net/)
 common data models for networking. It handles networking protocol configuration
 of switch, router, DNS, DHCP, NAT and Firewall.
 
-OpenConfigd reads YANG model definition then generate configuration schema from
+openconfigd reads YANG model definition then generate configuration schema from
 it.
 
 ### Install
@@ -50,10 +50,10 @@ ubuntu>
 
 ### Options
 
-`openconfigd` takes YANG module names as arguments.  When no YANG module is specified, default `coreswitch.yang` is used.  '.yang' saffix is optional.  Use can specify multiple YANG file.  So
+`openconfigd` takes YANG module names as arguments.  When no YANG module is specified, default `coreswitch.yang` is used.  '.yang' suffix is optional.  Use can specify multiple YANG file.  So
 
 ``` bash
-$ openconfig lagopus ietf-ip
+$ openconfigd lagopus ietf-ip
 ```
 
 will load both `lagopus.yang` and `ietf-ip.yang` modules.
@@ -62,22 +62,28 @@ There are several other options.
 
 *  -c, --config-file= active config file name (default: coreswitch.conf)
 *  -p, --config-dir=  config file directory (default: /usr/local/etc)
-*  -y, --yang-paths=  comma separated YANG load path directories
+*  -y, --yang-paths=  colon separated YANG load path directories
+*  -2, --two-phase    enable two phase commit
+*  -z, --zero-config  do not save or load config other than openconfigd.conf
 *  -h, --help         Show this help message
 
 `-c` option specify active config file name.  `-p` option specify config file save directory.  When full path is specified to `-c` option's base directory overrides the `-p` option config file directory.
 
 `-y` option specify YANG file load path.  Use can specify multiple YANG load path with colon separated list.
 
+`-2` option enables two phase commit.  It send validate start and end message to protocol modules.
+
+When `-z` option is specified, only openconfigd.conf file is loaded on start up.  Configuraion is never saved to the config file.
+
 ``` bash
-$ openconfig -y /usr/shared/yang:/opt/yang
+$ openconfigd -y /usr/shared/yang:/opt/yang
 ```
 
-will search both `/usr/shared/yang` and `/opt/yang` directory.  Default YANG laod path `$GOPATH/src/github.com/coreswitch/openconfigd/yang` is automatically added.
+will search both `/usr/shared/yang` and `/opt/yang` directory.  Default YANG load path `$GOPATH/src/github.com/coreswitch/openconfigd/yang` is automatically added.
 
-### OpenConfigd scripting
+### openconfigd scripting
 
-OpenConfigd support CLI scripting. All operational and configuration mode
+openconfigd support CLI scripting. All operational and configuration mode
 commands can run from script.
 
 Here is an example:
@@ -89,3 +95,4 @@ source /etc/bash_completion.d/cli
 
 show version
 ```
+

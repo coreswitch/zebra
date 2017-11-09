@@ -7,6 +7,9 @@ import:
   - clientv3
 - package: github.com/coreswitch/cmd
 - package: github.com/coreswitch/component
+  version: v1.0.0
+- package: github.com/coreswitch/dependency
+  version: v1.0.0
 - package: github.com/coreswitch/netutil
 - package: github.com/golang/protobuf
   subpackages:

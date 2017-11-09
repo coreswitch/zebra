@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -123,8 +122,6 @@ func complete(Cmd *cmd.Cmd, mode string, args []string, line string, trailing bo
 	case cmd.ParseAmbiguous:
 		ret = "Ambiguous\n"
 	}
-
-	sort.Sort(comps)
 
 	for _, comp := range comps {
 		var pre string

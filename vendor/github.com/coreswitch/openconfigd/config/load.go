@@ -329,7 +329,7 @@ func LoadConfig(reader io.Reader) error {
 		case itemSemiColon:
 			s = append(s, a)
 			a = make([]string, 0)
-			YangProcess(flatten(s), rootEntry, configCandidate)
+			Parse(flatten(s), rootEntry, configCandidate, nil)
 			s = pop(s)
 		case itemError:
 			return fmt.Errorf("Parse error")

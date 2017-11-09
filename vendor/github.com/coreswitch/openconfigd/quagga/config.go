@@ -56,7 +56,13 @@ func quaggaInterfacesInterfaceIpv4OspfAuthenticationMd5KeyIdMd5Key(Cmd int, Args
 	//interfaces interface WORD ipv4 ospf authentication md5 key-id WORD md5-key WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf message-digest-key ", Args[1], " md5 ", Args[2]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("no ip ospf message-digest-key ", Args[1]))
 	}
 	return cmd.Success
 }
@@ -77,7 +83,14 @@ func quaggaInterfacesInterfaceIpv4OspfAuthenticationMd5(Cmd int, Args cmd.Args) 
 	//interfaces interface WORD ipv4 ospf authentication md5
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf authentication",
+			"ip ospf authentication message-digest")
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf authentication")
 	}
 	return cmd.Success
 }
@@ -111,7 +124,16 @@ func quaggaInterfacesInterfaceIpv4OspfAuthenticationPlaintextPassword(Cmd int, A
 	//interfaces interface WORD ipv4 ospf authentication plaintext-password WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf authentication",
+			"ip ospf authentication",
+			fmt.Sprint("ip ospf authentication-key ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf authentication",
+			"no ip ospf authentication-key")
 	}
 	return cmd.Success
 }
@@ -129,7 +151,13 @@ func quaggaInterfacesInterfaceIpv4OspfBandwidth(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf bandwidth WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("bandwidth ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no bandwidth ")
 	}
 	return cmd.Success
 }
@@ -151,7 +179,13 @@ func quaggaInterfacesInterfaceIpv4OspfCost(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf cost WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf cost ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf cost")
 	}
 	return cmd.Success
 }
@@ -170,7 +204,13 @@ func quaggaInterfacesInterfaceIpv4OspfDeadInterval(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf dead-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf dead-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf dead-interval")
 	}
 	return cmd.Success
 }
@@ -189,7 +229,13 @@ func quaggaInterfacesInterfaceIpv4OspfHelloInterval(Cmd int, Args cmd.Args) int 
 	//interfaces interface WORD ipv4 ospf hello-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf hello-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf hello-interval")
 	}
 	return cmd.Success
 }
@@ -203,7 +249,13 @@ func quaggaInterfacesInterfaceIpv4OspfMtuIgnore(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf mtu-ignore
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ip ospf mtu-ignore")
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf mtu-ignore")
 	}
 	return cmd.Success
 }
@@ -225,7 +277,13 @@ func quaggaInterfacesInterfaceIpv4OspfNetwork(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf network WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf network ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf network")
 	}
 	return cmd.Success
 }
@@ -256,7 +314,13 @@ func quaggaInterfacesInterfaceIpv4OspfPriority(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv4 ospf priority WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf priority ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf priority")
 	}
 	return cmd.Success
 }
@@ -277,7 +341,13 @@ func quaggaInterfacesInterfaceIpv4OspfRetransmitInterval(Cmd int, Args cmd.Args)
 	//interfaces interface WORD ipv4 ospf retransmit-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf retransmit-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf retransmit-interval")
 	}
 	return cmd.Success
 }
@@ -296,7 +366,13 @@ func quaggaInterfacesInterfaceIpv4OspfTransmitDelay(Cmd int, Args cmd.Args) int 
 	//interfaces interface WORD ipv4 ospf transmit-delay WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ip ospf transmit-delay ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ip ospf transmit-delay")
 	}
 	return cmd.Success
 }
@@ -315,7 +391,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3Cost(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 cost WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 cost ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ipv6 ospf6 cost")
 	}
 	return cmd.Success
 }
@@ -336,7 +418,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3DeadInterval(Cmd int, Args cmd.Args) int
 	//interfaces interface WORD ipv6 ospfv3 dead-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 dead-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 dead-interval 40")
 	}
 	return cmd.Success
 }
@@ -357,7 +445,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3HelloInterval(Cmd int, Args cmd.Args) in
 	//interfaces interface WORD ipv6 ospfv3 hello-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 hello-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 hello-interval 10")
 	}
 	return cmd.Success
 }
@@ -375,7 +469,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3Ifmtu(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 ifmtu WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 ifmtu ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ipv6 ospf6 ifmtu")
 	}
 	return cmd.Success
 }
@@ -394,7 +494,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3InstanceId(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 instance-id WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 instance-id ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 instance-id 0")
 	}
 	return cmd.Success
 }
@@ -409,7 +515,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3MtuIgnore(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 mtu-ignore
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 mtu-ignore")
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ipv6 ospf6 mtu-ignore")
 	}
 	return cmd.Success
 }
@@ -435,7 +547,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3Passive(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 passive
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 passive")
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"no ipv6 ospf6 passive")
 	}
 	return cmd.Success
 }
@@ -454,7 +572,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3Priority(Cmd int, Args cmd.Args) int {
 	//interfaces interface WORD ipv6 ospfv3 priority WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 priority ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 priority 1")
 	}
 	return cmd.Success
 }
@@ -475,7 +599,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3RetransmitInterval(Cmd int, Args cmd.Arg
 	//interfaces interface WORD ipv6 ospfv3 retransmit-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 retransmit-interval ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 retransmit-interval 5")
 	}
 	return cmd.Success
 }
@@ -496,7 +626,13 @@ func quaggaInterfacesInterfaceIpv6Ospfv3TransmitDelay(Cmd int, Args cmd.Args) in
 	//interfaces interface WORD ipv6 ospfv3 transmit-delay WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			fmt.Sprint("ipv6 ospf6 transmit-delay ", Args[1]))
 	case cmd.Delete:
+		quaggaVtysh("configure terminal",
+			fmt.Sprint("interface ", Args[0]),
+			"ipv6 ospf6 transmit-delay 1")
 	}
 	return cmd.Success
 }
@@ -11092,7 +11228,17 @@ func quaggaProtocolsOspfAccessListExport(Cmd int, Args cmd.Args) int {
 	//protocols ospf access-list WORD export WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("distribute-list ", Args[0], " out ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "access-list", fmt.Sprint(Args[0]),
+				"export", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no distribute-list ", Args[0], " out ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11144,6 +11290,10 @@ func quaggaProtocolsOspfAreaAreaTypeNormal(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD area-type normal
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " stub"),
+			fmt.Sprint("no area ", Args[0], " nssa"))
 	case cmd.Delete:
 	}
 	return cmd.Success
@@ -11172,7 +11322,18 @@ func quaggaProtocolsOspfAreaAreaTypeNssaDefaultCost(Cmd int, Args cmd.Args) int 
 	//protocols ospf area WORD area-type nssa default-cost WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " nssa"),
+			fmt.Sprint("area ", Args[0], " default-cost ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"default-cost", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " default-cost ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11185,6 +11346,27 @@ func quaggaProtocolsOspfAreaAreaTypeNssaNoSummary(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	translate := configCandidate.value(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "translate"})
+	noSummary := configCandidate.lookup(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "no-summary"})
+	if translate != nil {
+		parm += " translate-" + *translate
+	}
+	if noSummary != nil {
+		parm += " no-summary"
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"),
+			fmt.Sprint("area ", Args[0], " nssa", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"))
 	}
 	return cmd.Success
 }
@@ -11223,6 +11405,30 @@ func quaggaProtocolsOspfAreaAreaTypeNssa(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa"}) != nil {
+		}
+	}
+	parm := ""
+	translate := configCandidate.value(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "translate"})
+	noSummary := configCandidate.lookup(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "no-summary"})
+	if translate != nil {
+		parm += " translate-" + *translate
+	}
+	if noSummary != nil {
+		parm += " no-summary"
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"),
+			fmt.Sprint("area ", Args[0], " nssa", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"))
 	}
 	return cmd.Success
 }
@@ -11242,6 +11448,27 @@ func quaggaProtocolsOspfAreaAreaTypeNssaTranslate(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	translate := configCandidate.value(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "translate"})
+	noSummary := configCandidate.lookup(
+		[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]), "area-type", "nssa", "no-summary"})
+	if translate != nil {
+		parm += " translate-" + *translate
+	}
+	if noSummary != nil {
+		parm += " no-summary"
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"),
+			fmt.Sprint("area ", Args[0], " nssa", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " nssa"))
 	}
 	return cmd.Success
 }
@@ -11269,7 +11496,18 @@ func quaggaProtocolsOspfAreaAreaTypeStubDefaultCost(Cmd int, Args cmd.Args) int 
 	//protocols ospf area WORD area-type stub default-cost WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " stub"),
+			fmt.Sprint("area ", Args[0], " default-cost ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"area-type", "stub", "default-cost", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " default-cost ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11291,7 +11529,17 @@ func quaggaProtocolsOspfAreaAreaTypeStubNoSummary(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD area-type stub no-summary
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " stub no-summary"))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"area-type", "stub", "no-summary"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " stub no-summary"))
+		}
 	}
 	return cmd.Success
 }
@@ -11319,7 +11567,17 @@ func quaggaProtocolsOspfAreaAreaTypeStub(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD area-type stub
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " stub"))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"area-type", "stub"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " stub"))
+		}
 	}
 	return cmd.Success
 }
@@ -11356,7 +11614,26 @@ func quaggaProtocolsOspfAreaAuthentication(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD authentication WORD
 	switch Cmd {
 	case cmd.Set:
+		authentication := fmt.Sprint(Args[1])
+		if authentication == "plaintext-password" {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " authentication"),
+				fmt.Sprint("area ", Args[0], " authentication"))
+		} else {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " authentication"),
+				fmt.Sprint("area ", Args[0], " authentication message-digest"))
+		}
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"authentication", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " authentication"))
+		}
 	}
 	return cmd.Success
 }
@@ -11375,7 +11652,17 @@ func quaggaProtocolsOspfAreaNetwork(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD network A.B.C.D/M
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("network ", Args[1], " area ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"network", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no network ", Args[1], " area ", Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -11431,7 +11718,47 @@ func quaggaProtocolsOspfAreaRange(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD range A.B.C.D/M
 	switch Cmd {
 	case cmd.Set:
+		area := fmt.Sprint(Args[0])
+		range_ := fmt.Sprint(Args[1])
+		notAdvertise := configCandidate.lookup(
+			[]string{"protocols", "ospf", "area", area, "range", range_, "not-advertise"})
+		if notAdvertise != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1]))
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("area ", Args[0], " range ", Args[1], " not-advertise"))
+		} else {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1]))
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("area ", Args[0], " range ", Args[1]))
+			cost := configCandidate.value(
+				[]string{"protocols", "ospf", "area", area, "range", range_, "cost"})
+			if cost != nil {
+				quaggaVtysh("configure terminal",
+					"router ospf",
+					fmt.Sprint("area ", Args[0], " range ", Args[1], " cost ", *cost))
+			}
+			substitute := configCandidate.value(
+				[]string{"protocols", "ospf", "area", area, "range", range_, "substitute"})
+			if substitute != nil {
+				quaggaVtysh("configure terminal",
+					"router ospf",
+					fmt.Sprint("area ", Args[0], " range ", Args[1], " substitute ", *substitute))
+			}
+		}
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"range", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11446,7 +11773,17 @@ func quaggaProtocolsOspfAreaRangeCost(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD range A.B.C.D/M cost WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " range ", Args[1], " cost ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"range", fmt.Sprint(Args[1]), "cost", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1], " cost ", Args[2]))
+		}
 	}
 	return cmd.Success
 }
@@ -11464,7 +11801,17 @@ func quaggaProtocolsOspfAreaRangeNotAdvertise(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD range A.B.C.D/M not-advertise
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " range ", Args[1], " not-advertise"))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"range", fmt.Sprint(Args[1]), "not-advertise"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1], " not-advertise"))
+		}
 	}
 	return cmd.Success
 }
@@ -11478,7 +11825,17 @@ func quaggaProtocolsOspfAreaRangeSubstitute(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD range A.B.C.D/M substitute A.B.C.D/M
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " range ", Args[1], " substitute ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"range", fmt.Sprint(Args[1]), "substitute", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " range ", Args[1], " substitute ", Args[2]))
+		}
 	}
 	return cmd.Success
 }
@@ -11504,7 +11861,17 @@ func quaggaProtocolsOspfAreaShortcut(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD shortcut WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " shortcut ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"shortcut", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " shortcut ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11525,7 +11892,17 @@ func quaggaProtocolsOspfAreaVirtualLink(Cmd int, Args cmd.Args) int {
 	//protocols ospf area WORD virtual-link A.B.C.D
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1]))
+		}
 	}
 	return cmd.Success
 }
@@ -11559,7 +11936,27 @@ func quaggaProtocolsOspfAreaVirtualLinkAuthenticationMd5KeyId(Cmd int, Args cmd.
 	//protocols ospf area WORD virtual-link A.B.C.D authentication md5 key-id WORD
 	switch Cmd {
 	case cmd.Set:
+		area := fmt.Sprint(Args[0])
+		virtualLink := fmt.Sprint(Args[1])
+		keyId := fmt.Sprint(Args[2])
+		md5Key := configCandidate.value(
+			[]string{"protocols", "ospf", "area", area, "virtual-link", virtualLink,
+				"authentication", "md5", "key-id", keyId, "md5-key"})
+		if md5Key != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+					" message-digest-key ", Args[2], " md5 ", *md5Key))
+		}
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"authentication", "md5", "key-id", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1], " message-digest-key ", Args[2]))
+		}
 	}
 	return cmd.Success
 }
@@ -11604,7 +12001,19 @@ func quaggaProtocolsOspfAreaVirtualLinkAuthenticationMd5(Cmd int, Args cmd.Args)
 	//protocols ospf area WORD virtual-link A.B.C.D authentication md5
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1], " authentication-key"),
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1], " authentication message-digest"))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"authentication", "md5"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("area ", Args[0], " virtual-link ", Args[1], " authentication null"))
+		}
 	}
 	return cmd.Success
 }
@@ -11646,7 +12055,20 @@ func quaggaProtocolsOspfAreaVirtualLinkAuthenticationPlaintextPassword(Cmd int, 
 	//protocols ospf area WORD virtual-link A.B.C.D authentication plaintext-password WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+				" authentication authentication-key ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"authentication", "plaintext-password", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1],
+					" authentication authentication-key"))
+		}
 	}
 	return cmd.Success
 }
@@ -11670,7 +12092,20 @@ func quaggaProtocolsOspfAreaVirtualLinkDeadInterval(Cmd int, Args cmd.Args) int 
 	//protocols ospf area WORD virtual-link A.B.C.D dead-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+				" dead-interval ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"dead-interval", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1],
+					" dead-interval"))
+		}
 	}
 	return cmd.Success
 }
@@ -11694,7 +12129,20 @@ func quaggaProtocolsOspfAreaVirtualLinkHelloInterval(Cmd int, Args cmd.Args) int
 	//protocols ospf area WORD virtual-link A.B.C.D hello-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+				" hello-interval ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"hello-interval", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1],
+					" hello-interval"))
+		}
 	}
 	return cmd.Success
 }
@@ -11720,7 +12168,20 @@ func quaggaProtocolsOspfAreaVirtualLinkRetransmitInterval(Cmd int, Args cmd.Args
 	//protocols ospf area WORD virtual-link A.B.C.D retransmit-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+				" retransmit-interval ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"etransmit-interval", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1],
+					" retransmit-interval"))
+		}
 	}
 	return cmd.Success
 }
@@ -11744,7 +12205,20 @@ func quaggaProtocolsOspfAreaVirtualLinkTransmitDelay(Cmd int, Args cmd.Args) int
 	//protocols ospf area WORD virtual-link A.B.C.D transmit-delay WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("area ", Args[0], " virtual-link ", Args[1],
+				" transmit-delay ", Args[2]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "area", fmt.Sprint(Args[0]),
+				"virtual-link", fmt.Sprint(Args[1]),
+				"transmit-delay", fmt.Sprint(Args[2])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no area ", Args[0], " virtual-link ", Args[1],
+					" transmit-delay"))
+		}
 	}
 	return cmd.Success
 }
@@ -11787,7 +12261,16 @@ func quaggaProtocolsOspfAutoCostReferenceBandwidth(Cmd int, Args cmd.Args) int {
 	//protocols ospf auto-cost reference-bandwidth WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("auto-cost reference-bandwidth ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "auto-cost", "reference-bandwidth", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no auto-cost reference-bandwidth")
+		}
 	}
 	return cmd.Success
 }
@@ -11813,6 +12296,37 @@ func quaggaProtocolsOspfDefaultInformationOriginateAlways(Cmd int, Args cmd.Args
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	always := configCandidate.lookup(
+		[]string{"protocols", "ospf", "default-information", "originate", "always"})
+	if always != nil {
+		parm += " always"
+	}
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate",
+			fmt.Sprint("default-information originate", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate")
+	}
 	return cmd.Success
 }
 
@@ -11829,6 +12343,37 @@ func quaggaProtocolsOspfDefaultInformationOriginateMetricType(Cmd int, Args cmd.
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	always := configCandidate.lookup(
+		[]string{"protocols", "ospf", "default-information", "originate", "always"})
+	if always != nil {
+		parm += " always"
+	}
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate",
+			fmt.Sprint("default-information originate", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate")
+	}
 	return cmd.Success
 }
 
@@ -11843,6 +12388,37 @@ func quaggaProtocolsOspfDefaultInformationOriginateMetric(Cmd int, Args cmd.Args
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	always := configCandidate.lookup(
+		[]string{"protocols", "ospf", "default-information", "originate", "always"})
+	if always != nil {
+		parm += " always"
+	}
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate",
+			fmt.Sprint("default-information originate", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate")
 	}
 	return cmd.Success
 }
@@ -11885,6 +12461,37 @@ func quaggaProtocolsOspfDefaultInformationOriginate(Cmd int, Args cmd.Args) int 
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	always := configCandidate.lookup(
+		[]string{"protocols", "ospf", "default-information", "originate", "always"})
+	if always != nil {
+		parm += " always"
+	}
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate",
+			fmt.Sprint("default-information originate", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate")
+	}
 	return cmd.Success
 }
 
@@ -11897,6 +12504,37 @@ func quaggaProtocolsOspfDefaultInformationOriginateRouteMap(Cmd int, Args cmd.Ar
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	always := configCandidate.lookup(
+		[]string{"protocols", "ospf", "default-information", "originate", "always"})
+	if always != nil {
+		parm += " always"
+	}
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "default-information", "originate", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate",
+			fmt.Sprint("default-information originate", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no default-information originate")
 	}
 	return cmd.Success
 }
@@ -11919,7 +12557,16 @@ func quaggaProtocolsOspfDefaultMetric(Cmd int, Args cmd.Args) int {
 	//protocols ospf default-metric WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"default-metric ", fmt.Sprint(Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "default-metric", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no default-metric ", fmt.Sprint(Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -11943,7 +12590,16 @@ func quaggaProtocolsOspfDistanceGlobal(Cmd int, Args cmd.Args) int {
 	//protocols ospf distance global WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"distance ", fmt.Sprint(Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "distance", "global", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no distance ", fmt.Sprint(Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -11972,6 +12628,29 @@ func quaggaProtocolsOspfDistanceOspfExternal(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	intraArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "intra-area"})
+	if intraArea != nil {
+		parm += " intra-area " + *intraArea
+	}
+	interArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "inter-area"})
+	if interArea != nil {
+		parm += " inter-area " + *interArea
+	}
+	external := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "external"})
+	if external != nil {
+		parm += " external " + *external
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf",
+			fmt.Sprint("distance ospf", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf")
+	}
 	return cmd.Success
 }
 
@@ -11987,6 +12666,29 @@ func quaggaProtocolsOspfDistanceOspfInterArea(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	intraArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "intra-area"})
+	if intraArea != nil {
+		parm += " intra-area " + *intraArea
+	}
+	interArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "inter-area"})
+	if interArea != nil {
+		parm += " inter-area " + *interArea
+	}
+	external := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "external"})
+	if external != nil {
+		parm += " external " + *external
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf",
+			fmt.Sprint("distance ospf", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf")
+	}
 	return cmd.Success
 }
 
@@ -12001,6 +12703,29 @@ func quaggaProtocolsOspfDistanceOspfIntraArea(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	intraArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "intra-area"})
+	if intraArea != nil {
+		parm += " intra-area " + *intraArea
+	}
+	interArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "inter-area"})
+	if interArea != nil {
+		parm += " inter-area " + *interArea
+	}
+	external := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "external"})
+	if external != nil {
+		parm += " external " + *external
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf",
+			fmt.Sprint("distance ospf", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf")
 	}
 	return cmd.Success
 }
@@ -12035,6 +12760,29 @@ func quaggaProtocolsOspfDistanceOspf(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	intraArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "intra-area"})
+	if intraArea != nil {
+		parm += " intra-area " + *intraArea
+	}
+	interArea := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "inter-area"})
+	if interArea != nil {
+		parm += " inter-area " + *interArea
+	}
+	external := configCandidate.value([]string{"protocols", "ospf", "distance", "ospf", "external"})
+	if external != nil {
+		parm += " external " + *external
+	}
+	if parm != "" {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf",
+			fmt.Sprint("distance ospf", parm))
+	} else {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no distance ospf")
+	}
 	return cmd.Success
 }
 
@@ -12050,7 +12798,16 @@ func quaggaProtocolsOspfLogAdjacencyChangesDetail(Cmd int, Args cmd.Args) int {
 	//protocols ospf log-adjacency-changes detail
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"log-adjacency-changes detail")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "log-adjacency-changes", "detail"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no log-adjacency-changes detail")
+		}
 	}
 	return cmd.Success
 }
@@ -12068,7 +12825,16 @@ func quaggaProtocolsOspfLogAdjacencyChanges(Cmd int, Args cmd.Args) int {
 	//protocols ospf log-adjacency-changes
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"log-adjacency-changes")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "log-adjacency-changes"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no log-adjacency-changes")
+		}
 	}
 	return cmd.Success
 }
@@ -12098,7 +12864,16 @@ func quaggaProtocolsOspfMaxMetricRouterLsaAdministrative(Cmd int, Args cmd.Args)
 	//protocols ospf max-metric router-lsa administrative
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"max-metric router-lsa administrative")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "max-metric", "router-lsa", "administrative"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no max-metric router-lsa administrative")
+		}
 	}
 	return cmd.Success
 }
@@ -12133,7 +12908,17 @@ func quaggaProtocolsOspfMaxMetricRouterLsaOnShutdown(Cmd int, Args cmd.Args) int
 	//protocols ospf max-metric router-lsa on-shutdown WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("max-metric router-lsa on-shutdown ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "max-metric", "router-lsa",
+				"on-shutdown", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no max-metric router-lsa on-shutdown")
+		}
 	}
 	return cmd.Success
 }
@@ -12156,7 +12941,17 @@ func quaggaProtocolsOspfMaxMetricRouterLsaOnStartup(Cmd int, Args cmd.Args) int 
 	//protocols ospf max-metric router-lsa on-startup WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("router-lsa on-startup ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "max-metric", "router-lsa",
+				"on-startup", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no max-metric router-lsa on-startup")
+		}
 	}
 	return cmd.Success
 }
@@ -12174,7 +12969,16 @@ func quaggaProtocolsOspfMplsTeEnable(Cmd int, Args cmd.Args) int {
 	//protocols ospf mpls-te enable
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"mpls-te on")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "mpls-te", "enable"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no mpls-te")
+		}
 	}
 	return cmd.Success
 }
@@ -12205,7 +13009,16 @@ func quaggaProtocolsOspfMplsTeRouterAddress(Cmd int, Args cmd.Args) int {
 	//protocols ospf mpls-te router-address A.B.C.D
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("mpls-te router-address ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "mpls-te", "router-address", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no mpls-te")
+		}
 	}
 	return cmd.Success
 }
@@ -12225,7 +13038,16 @@ func quaggaProtocolsOspfNeighbor(Cmd int, Args cmd.Args) int {
 	//protocols ospf neighbor A.B.C.D
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("neighbor ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "neighbor", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no neighbor ", Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -12250,7 +13072,17 @@ func quaggaProtocolsOspfNeighborPollInterval(Cmd int, Args cmd.Args) int {
 	//protocols ospf neighbor A.B.C.D poll-interval WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("neighbor ", Args[0], " poll-interval ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "neighbor", fmt.Sprint(Args[0]),
+				"poll-interval", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("neighbor ", Args[0], " poll-interval 60"))
+		}
 	}
 	return cmd.Success
 }
@@ -12274,7 +13106,17 @@ func quaggaProtocolsOspfNeighborPriority(Cmd int, Args cmd.Args) int {
 	//protocols ospf neighbor A.B.C.D priority WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("neighbor ", Args[0], " priority ", Args[1]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "neighbor", fmt.Sprint(Args[0]),
+				"priority", fmt.Sprint(Args[1])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("neighbor ", Args[0], " priority 0"))
+		}
 	}
 	return cmd.Success
 }
@@ -12303,7 +13145,21 @@ func quaggaProtocolsOspf(Cmd int, Args cmd.Args) int {
 	//protocols ospf
 	switch Cmd {
 	case cmd.Set:
+		routerId := configCandidate.value(
+			[]string{"protocols", "ospf", "parameters", "router-id"})
+		if routerId != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("ospf router-id ", *routerId))
+		} else {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no ospf router-id")
+		}
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf"}) != nil {
+			quaggaVtysh("configure terminal", "no router ospf")
+		}
 	}
 	return cmd.Success
 }
@@ -12331,7 +13187,16 @@ func quaggaProtocolsOspfParametersAbrType(Cmd int, Args cmd.Args) int {
 	//protocols ospf parameters abr-type WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("ospf abr-type ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "parameters", "abr-type", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"ospf abr-type cisco")
+		}
 	}
 	return cmd.Success
 }
@@ -12360,7 +13225,17 @@ func quaggaProtocolsOspfParametersOpaqueLsa(Cmd int, Args cmd.Args) int {
 	//protocols ospf parameters opaque-lsa
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"ospf opaque-lsa")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "parameters", "opaque-lsa"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no ospf opaque-lsa")
+		}
+
 	}
 	return cmd.Success
 }
@@ -12376,7 +13251,16 @@ func quaggaProtocolsOspfParametersRfc1583Compatibility(Cmd int, Args cmd.Args) i
 	//protocols ospf parameters rfc1583-compatibility
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"ospf rfc1583compatibility")
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "parameters", "rfc1583compatibility"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no ospf rfc1583compatibility")
+		}
 	}
 	return cmd.Success
 }
@@ -12389,7 +13273,16 @@ func quaggaProtocolsOspfParametersRouterId(Cmd int, Args cmd.Args) int {
 	//protocols ospf parameters router-id A.B.C.D
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("ospf router-id ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "parameters", "router-id", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no ospf router-id")
+		}
 	}
 	return cmd.Success
 }
@@ -12422,7 +13315,16 @@ func quaggaProtocolsOspfPassiveInterfaceExclude(Cmd int, Args cmd.Args) int {
 	//protocols ospf passive-interface-exclude WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("no passive-interface ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "passive-interface-exclude", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("passive-interface ", Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -12473,7 +13375,22 @@ func quaggaProtocolsOspfPassiveInterface(Cmd int, Args cmd.Args) int {
 	//protocols ospf passive-interface WORD
 	switch Cmd {
 	case cmd.Set:
+		if fmt.Sprint(Args[0]) == "default" {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"passive-interface default")
+		} else {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("passive-interface ", Args[0]))
+		}
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "passive-interface", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no passive-interface ", Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -12491,6 +13408,27 @@ func quaggaProtocolsOspfRedistributeBgpMetricType(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute bgp", parm))
+	}
 	return cmd.Success
 }
 
@@ -12505,6 +13443,27 @@ func quaggaProtocolsOspfRedistributeBgpMetric(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute bgp", parm))
 	}
 	return cmd.Success
 }
@@ -12536,7 +13495,15 @@ func quaggaProtocolsOspfRedistributeBgp(Cmd int, Args cmd.Args) int {
 	//protocols ospf redistribute bgp
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"redistribute bgp")
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf", "redistribute", "bgp"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no redistribute bgp")
+		}
 	}
 	return cmd.Success
 }
@@ -12552,6 +13519,27 @@ func quaggaProtocolsOspfRedistributeBgpRouteMap(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "bgp", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute bgp", parm))
 	}
 	return cmd.Success
 }
@@ -12569,6 +13557,27 @@ func quaggaProtocolsOspfRedistributeConnectedMetricType(Cmd int, Args cmd.Args) 
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute connected", parm))
+	}
 	return cmd.Success
 }
 
@@ -12583,6 +13592,27 @@ func quaggaProtocolsOspfRedistributeConnectedMetric(Cmd int, Args cmd.Args) int 
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute connected", parm))
 	}
 	return cmd.Success
 }
@@ -12614,7 +13644,15 @@ func quaggaProtocolsOspfRedistributeConnected(Cmd int, Args cmd.Args) int {
 	//protocols ospf redistribute connected
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"redistribute connected")
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf", "redistribute", "connected"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no redistribute connected")
+		}
 	}
 	return cmd.Success
 }
@@ -12629,6 +13667,27 @@ func quaggaProtocolsOspfRedistributeConnectedRouteMap(Cmd int, Args cmd.Args) in
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "connected", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute connected", parm))
 	}
 	return cmd.Success
 }
@@ -12646,6 +13705,27 @@ func quaggaProtocolsOspfRedistributeKernelMetricType(Cmd int, Args cmd.Args) int
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute kernel", parm))
+	}
 	return cmd.Success
 }
 
@@ -12660,6 +13740,27 @@ func quaggaProtocolsOspfRedistributeKernelMetric(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute kernel", parm))
 	}
 	return cmd.Success
 }
@@ -12691,7 +13792,15 @@ func quaggaProtocolsOspfRedistributeKernel(Cmd int, Args cmd.Args) int {
 	//protocols ospf redistribute kernel
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"redistribute kernel")
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf", "redistribute", "kernel"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no redistribute kernel")
+		}
 	}
 	return cmd.Success
 }
@@ -12706,6 +13815,27 @@ func quaggaProtocolsOspfRedistributeKernelRouteMap(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "kernel", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute kernel", parm))
 	}
 	return cmd.Success
 }
@@ -12735,6 +13865,27 @@ func quaggaProtocolsOspfRedistributeRipMetricType(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute rip", parm))
+	}
 	return cmd.Success
 }
 
@@ -12749,6 +13900,27 @@ func quaggaProtocolsOspfRedistributeRipMetric(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute rip", parm))
 	}
 	return cmd.Success
 }
@@ -12780,7 +13952,15 @@ func quaggaProtocolsOspfRedistributeRip(Cmd int, Args cmd.Args) int {
 	//protocols ospf redistribute rip
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"redistribute rip")
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf", "redistribute", "rip"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no redistribute rip")
+		}
 	}
 	return cmd.Success
 }
@@ -12795,6 +13975,27 @@ func quaggaProtocolsOspfRedistributeRipRouteMap(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "rip", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute rip", parm))
 	}
 	return cmd.Success
 }
@@ -12812,6 +14013,27 @@ func quaggaProtocolsOspfRedistributeStaticMetricType(Cmd int, Args cmd.Args) int
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute static", parm))
+	}
 	return cmd.Success
 }
 
@@ -12826,6 +14048,27 @@ func quaggaProtocolsOspfRedistributeStaticMetric(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute static", parm))
 	}
 	return cmd.Success
 }
@@ -12857,7 +14100,15 @@ func quaggaProtocolsOspfRedistributeStatic(Cmd int, Args cmd.Args) int {
 	//protocols ospf redistribute static
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"redistribute static")
 	case cmd.Delete:
+		if configRunning.lookup([]string{"protocols", "ospf", "redistribute", "static"}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				"no redistribute static")
+		}
 	}
 	return cmd.Success
 }
@@ -12872,6 +14123,27 @@ func quaggaProtocolsOspfRedistributeStaticRouteMap(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	parm := ""
+	metric := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric"})
+	if metric != nil {
+		parm += " metric " + *metric
+	}
+	metricType := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "metric-type"})
+	if metricType != nil {
+		parm += " metric-type " + *metricType
+	}
+	routeMap := configCandidate.value(
+		[]string{"protocols", "ospf", "redistribute", "static", "route-map"})
+	if routeMap != nil {
+		parm += " route-map " + *routeMap
+	}
+	if metric != nil || metricType != nil || routeMap != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("redistribute static", parm))
 	}
 	return cmd.Success
 }
@@ -12906,7 +14178,17 @@ func quaggaProtocolsOspfRefreshTimers(Cmd int, Args cmd.Args) int {
 	//protocols ospf refresh timers WORD
 	switch Cmd {
 	case cmd.Set:
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no refresh timer",
+			fmt.Sprint("refresh timer ", Args[0]))
 	case cmd.Delete:
+		if configRunning.lookup(
+			[]string{"protocols", "ospf", "refresh", "timers", fmt.Sprint(Args[0])}) != nil {
+			quaggaVtysh("configure terminal",
+				"router ospf",
+				fmt.Sprint("no refresh timer ", Args[0]))
+		}
 	}
 	return cmd.Success
 }
@@ -12948,6 +14230,21 @@ func quaggaProtocolsOspfTimersThrottleSpfDelay(Cmd int, Args cmd.Args) int {
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	delay := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "delay"})
+	initialHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "initial-holdtime"})
+	maxHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "max-holdtime"})
+	if delay != nil && initialHoldtime != nil && maxHoldtime != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("timers throttle spf ", *delay, " ", *initialHoldtime, " ", *maxHoldtime))
+	} else if configRunning.lookup([]string{"protocols", "ospf"}) != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no timers throttle spf")
+	}
 	return cmd.Success
 }
 
@@ -12964,6 +14261,21 @@ func quaggaProtocolsOspfTimersThrottleSpfInitialHoldtime(Cmd int, Args cmd.Args)
 	case cmd.Set:
 	case cmd.Delete:
 	}
+	delay := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "delay"})
+	initialHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "initial-holdtime"})
+	maxHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "max-holdtime"})
+	if delay != nil && initialHoldtime != nil && maxHoldtime != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("timers throttle spf ", *delay, " ", *initialHoldtime, " ", *maxHoldtime))
+	} else if configRunning.lookup([]string{"protocols", "ospf"}) != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no timers throttle spf")
+	}
 	return cmd.Success
 }
 
@@ -12979,6 +14291,21 @@ func quaggaProtocolsOspfTimersThrottleSpfMaxHoldtime(Cmd int, Args cmd.Args) int
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	delay := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "delay"})
+	initialHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "initial-holdtime"})
+	maxHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "max-holdtime"})
+	if delay != nil && initialHoldtime != nil && maxHoldtime != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("timers throttle spf ", *delay, " ", *initialHoldtime, " ", *maxHoldtime))
+	} else if configRunning.lookup([]string{"protocols", "ospf"}) != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no timers throttle spf")
 	}
 	return cmd.Success
 }
@@ -13002,6 +14329,21 @@ func quaggaProtocolsOspfTimersThrottleSpf(Cmd int, Args cmd.Args) int {
 	switch Cmd {
 	case cmd.Set:
 	case cmd.Delete:
+	}
+	delay := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "delay"})
+	initialHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "initial-holdtime"})
+	maxHoldtime := configCandidate.value(
+		[]string{"protocols", "ospf", "timers", "throttle", "spf", "max-holdtime"})
+	if delay != nil && initialHoldtime != nil && maxHoldtime != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			fmt.Sprint("timers throttle spf ", *delay, " ", *initialHoldtime, " ", *maxHoldtime))
+	} else if configRunning.lookup([]string{"protocols", "ospf"}) != nil {
+		quaggaVtysh("configure terminal",
+			"router ospf",
+			"no timers throttle spf")
 	}
 	return cmd.Success
 }

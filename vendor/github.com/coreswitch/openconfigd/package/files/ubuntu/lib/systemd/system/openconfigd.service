@@ -1,0 +1,14 @@
+[Unit]
+Description=openconfigd
+
+[Service]
+Type=simple
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+Restart=always
+ExecStart=/usr/bin/openconfigd -y /etc/openconfigd/yang
+
+[Install]
+WantedBy=multi-user.target
