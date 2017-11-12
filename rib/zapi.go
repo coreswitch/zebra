@@ -891,6 +891,9 @@ func (b *IPRouteBody) DecodeFromBytes(data []byte) error {
 	if b.Message&MESSAGE_METRIC > 0 {
 		b.Metric = binary.BigEndian.Uint32(data[pos : pos+4])
 		pos += 4
+		if OspfMetricFilter && b.Type == ROUTE_OSPF {
+			b.Metric = 0
+		}
 	}
 
 	return nil

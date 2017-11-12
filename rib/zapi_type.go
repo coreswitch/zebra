@@ -25,6 +25,7 @@ const (
 
 var (
 	DefaultVrfProtect = false
+	OspfMetricFilter  = false
 )
 
 type COMMAND_TYPE uint16
