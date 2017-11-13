@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -159,7 +160,15 @@ type RouteInfo struct {
 }
 
 func (route RouteInfo) String() string {
-	return fmt.Sprintf("%s", route.Rib.Prefix)
+	strs := []string{}
+	strs = append(strs, fmt.Sprintf("%s", route.Rib.Prefix))
+	if route.Nexthop != nil {
+		switch route.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			strs = append(strs, fmt.Sprintf("encap seg6 %s", route.Nexthop.EncapSeg6.String()))
+		}
+	}
+	return fmt.Sprintf("%s", strings.Join(strs, " "))
 	//return route.Prefix.String() + " " + route.Rib.String()
 }
 
@@ -167,6 +176,8 @@ type NexthopInfo struct {
 	LinkIndex int
 	Hops      int
 	Gateway   net.IP
+	EncapType int
+	EncapSeg6 EncapSEG6
 }
 
 func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
@@ -194,6 +205,7 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 
 	route := RouteInfo{MsgType: m.Header.Type, Rib: Rib{Type: RIB_KERNEL}, Table: int(msg.Table)}
 	nexthop := new(Nexthop)
+	var encap, encapType syscall.NetlinkRouteAttr
 	for _, attr := range attrs {
 		switch attr.Attr.Type {
 		case syscall.RTA_GATEWAY:
@@ -228,10 +240,30 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 				if err != nil {
 					return nil, nil, err
 				}
+				var encap, encapType syscall.NetlinkRouteAttr
 				for _, attr := range attrs {
 					switch attr.Attr.Type {
 					case syscall.RTA_GATEWAY:
 						info.Gateway = net.IP(attr.Value)
+					case nl.RTA_ENCAP_TYPE:
+						encapType = attr
+					case nl.RTA_ENCAP:
+						encap = attr
+					}
+				}
+				if len(encap.Value) != 0 && len(encapType.Value) != 0 {
+					typ := int(native.Uint16(encapType.Value[0:2]))
+					switch typ {
+					// List more LWTUNNEL_ENCAP_XXX here
+					case nl.LWTUNNEL_ENCAP_SEG6:
+						seg6 := &netlink.SEG6Encap{}
+						if err := seg6.Decode(encap.Value); err != nil {
+							fmt.Println("ERROR: failed to Decode seg6 RTA")
+							return nil, nil, err
+						}
+						info.EncapType = nl.LWTUNNEL_ENCAP_SEG6
+						info.EncapSeg6.Mode = seg6.Mode
+						info.EncapSeg6.Segments = seg6.Segments
 					}
 				}
 				return info, value[int(nh.RtNexthop.Len):], nil
@@ -245,8 +277,29 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 				route.MultiPath = append(route.MultiPath, info)
 				n := NewNexthopAddrIf(info.Gateway, IfIndex(info.LinkIndex))
 				route.Nexthops = append(route.Nexthops, n)
+				n.EncapType = info.EncapType
+				n.EncapSeg6 = info.EncapSeg6
 				rest = buf
 			}
+		case nl.RTA_ENCAP_TYPE:
+			encapType = attr
+		case nl.RTA_ENCAP:
+			encap = attr
+		}
+	}
+
+	if len(encap.Value) != 0 && len(encapType.Value) != 0 {
+		typ := int(native.Uint16(encapType.Value[0:2]))
+		switch typ {
+		// List more LWTUNNEL_ENCAP_XXX here
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			seg6 := &netlink.SEG6Encap{}
+			if err := seg6.Decode(encap.Value); err != nil {
+				return nil, err
+			}
+			nexthop.EncapType = nl.LWTUNNEL_ENCAP_SEG6
+			nexthop.EncapSeg6.Mode = seg6.Mode
+			nexthop.EncapSeg6.Segments = seg6.Segments
 		}
 	}
 
@@ -838,6 +891,13 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
 	if rib.Nexthop != nil {
 		route.Gw = rib.Nexthop.IP
 		route.LinkIndex = int(rib.Nexthop.Index)
+		switch rib.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			seg6 := &netlink.SEG6Encap{}
+			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
+			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			route.Encap = seg6
+		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
 		for _, nexthop := range rib.Nexthops {
@@ -866,6 +926,13 @@ func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId int) error {
 	if rib.Nexthop != nil {
 		route.Gw = rib.Nexthop.IP
 		route.LinkIndex = int(rib.Nexthop.Index)
+		switch rib.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			seg6 := &netlink.SEG6Encap{}
+			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
+			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			route.Encap = seg6
+		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
 		for _, nexthop := range rib.Nexthops {
@@ -1105,4 +1172,25 @@ func LinkSetUp(ifp *Interface) error {
 
 func LinkSetDown(ifp *Interface) error {
 	return netlink.LinkSetDown(&netlink.Dummy{netlink.LinkAttrs{Index: int(ifp.Index)}})
+}
+
+// Encap Helper functions for LWT (light weight tunnel)
+func EncapTypeString(typ int) string {
+	switch typ {
+	case nl.LWTUNNEL_ENCAP_NONE:
+		return "none"
+	case nl.LWTUNNEL_ENCAP_MPLS:
+		return "mpls"
+	case nl.LWTUNNEL_ENCAP_IP:
+		return "ip"
+	case nl.LWTUNNEL_ENCAP_ILA:
+		return "ila"
+	case nl.LWTUNNEL_ENCAP_IP6:
+		return "ip6"
+	case nl.LWTUNNEL_ENCAP_SEG6:
+		return "seg6"
+	case nl.LWTUNNEL_ENCAP_BPF:
+		return "bpf"
+	}
+	return "unknown"
 }

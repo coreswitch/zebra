@@ -22,6 +22,7 @@ import (
 	"net"
 
 	"github.com/coreswitch/netutil"
+	"github.com/vishvananda/netlink/nl"
 )
 
 var RibShowHeader = `Codes: K - kernel, C - connected, S - static, R - RIP, B - BGP
@@ -75,13 +76,19 @@ func (v *Vrf) RibShowIPv4Nexthop(rib *Rib, n *Nexthop, offset int, out io.Writer
 	}
 
 	if n.IsIfOnly() {
-		fmt.Fprintf(out, " is directly connected %s\n", v.IfName(n.Index))
+		fmt.Fprintf(out, " is directly connected %s", v.IfName(n.Index))
 	} else {
 		if n.IsAddrOnly() {
-			fmt.Fprintf(out, " via %v\n", n.IP)
+			fmt.Fprintf(out, " via %v", n.IP)
 		} else {
-			fmt.Fprintf(out, " via %v, %s\n", n.IP, v.IfName(n.Index))
+			fmt.Fprintf(out, " via %v, %s", n.IP, v.IfName(n.Index))
 		}
+	}
+	switch n.EncapType {
+	case nl.LWTUNNEL_ENCAP_SEG6:
+		fmt.Fprintf(out, " encap seg6 %s\n", n.EncapSeg6.String())
+	default:
+		fmt.Fprintf(out, "\n")
 	}
 }
 
@@ -154,6 +161,10 @@ func (v *Vrf) RibShowIPv6Entry(t *ShowTask, rib *Rib, database bool) {
 	fmt.Fprintf(buf, "%s %c%c %v [%d/%d]\n", ribTypeShortString(rib), fib, selected, rib.Prefix, rib.Distance, rib.Metric)
 
 	if rib.Nexthop != nil {
+		switch rib.Nexthop.EncapType {
+		case nl.LWTUNNEL_ENCAP_SEG6:
+			fmt.Fprintf(buf, "      encap seg6 %s\n", rib.Nexthop.EncapSeg6.String())
+		}
 		if rib.Nexthop.IsIfOnly() {
 			fmt.Fprintf(buf, "      via %s, directly connected\n", v.IfName(rib.Nexthop.Index))
 		} else {
