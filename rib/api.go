@@ -58,6 +58,31 @@ func IPv4RouteApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
+func IPv4VrfRouteApi(Cmd int, Args cmd.Args) int {
+	vrfName := Args[0].(string)
+	prefix := Args[1].(*netutil.Prefix)
+	nexthop := Args[2].(net.IP)
+
+	fmt.Println("Vrf Static route:", vrfName, prefix, nexthop)
+
+	vrf := VrfLookupByName(vrfName)
+	if vrf == nil {
+		fmt.Println("IPv4VrfStatic: Can't find VRF")
+		return cmd.Success
+	}
+	if Cmd == cmd.Set {
+		vrf.StaticAdd(prefix, nexthop)
+	} else {
+		vrf.StaticDelete(prefix, nexthop)
+	}
+
+	return cmd.Success
+}
+
+func IPv4VrfRouteApi2(Cmd int, Args cmd.Args) int {
+	return cmd.Success
+}
+
 func IPv4RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	prefix := Args[0].(*netutil.Prefix)
 	nexthop := Args[1].(net.IP)
@@ -81,7 +106,9 @@ func IPv6RouteApi(Cmd int, Args cmd.Args) int {
 	nexthop := Args[1].(net.IP)
 	fmt.Println("Static route:", prefix, nexthop)
 	if Cmd == cmd.Set {
+		server.StaticAdd(prefix, nexthop)
 	} else {
+		server.StaticDelete(prefix, nexthop)
 	}
 	return cmd.Success
 }
@@ -98,16 +125,14 @@ func IPv6RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
-func IPv4VrfRouteApi(Cmd int, Args cmd.Args) int {
+func IPv6VrfRouteApi(Cmd int, Args cmd.Args) int {
 	vrfName := Args[0].(string)
 	prefix := Args[1].(*netutil.Prefix)
 	nexthop := Args[2].(net.IP)
-
 	fmt.Println("Vrf Static route:", vrfName, prefix, nexthop)
-
 	vrf := VrfLookupByName(vrfName)
 	if vrf == nil {
-		fmt.Println("IPv4VrfStatic: Can't find VRF")
+		fmt.Println("Can't find VRF")
 		return cmd.Success
 	}
 	if Cmd == cmd.Set {
@@ -115,11 +140,6 @@ func IPv4VrfRouteApi(Cmd int, Args cmd.Args) int {
 	} else {
 		vrf.StaticDelete(prefix, nexthop)
 	}
-
-	return cmd.Success
-}
-
-func IPv4VrfRouteApi2(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
