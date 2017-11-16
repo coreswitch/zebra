@@ -41,7 +41,7 @@ func (s *Static) Rib() *Rib {
 }
 
 func (v *Vrf) StaticAdd(p *netutil.Prefix, naddr net.IP) error {
-	node := v.staticTable[AFI_IP].Acquire(p.IP, p.Length)
+	node := v.staticTable[p.AFI()].Acquire(p.IP, p.Length)
 	nhop := NewNexthopAddr(naddr)
 
 	var static *Static
@@ -50,8 +50,8 @@ func (v *Vrf) StaticAdd(p *netutil.Prefix, naddr net.IP) error {
 		static = node.Item.(*Static)
 		for _, n := range static.Nexthops {
 			if n.Equal(nhop) {
-				v.staticTable[AFI_IP].Release(node)
-				return fmt.Errorf("Same nexthpo exists")
+				v.staticTable[p.AFI()].Release(node)
+				return fmt.Errorf("Same nexthop exists")
 			}
 		}
 	} else {
@@ -67,7 +67,7 @@ func (v *Vrf) StaticAdd(p *netutil.Prefix, naddr net.IP) error {
 
 func (v *Vrf) StaticDelete(p *netutil.Prefix, naddr net.IP) error {
 	fmt.Println("StaticDelete")
-	node := v.staticTable[AFI_IP].Lookup(p.IP, p.Length)
+	node := v.staticTable[p.AFI()].Lookup(p.IP, p.Length)
 	if node == nil {
 		fmt.Println("Can't find route")
 		return fmt.Errorf("Can't find the route")
