@@ -92,7 +92,7 @@ func IPv4RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	for _, arg := range Args {
 		segs = append(segs, arg.(net.IP))
 	}
-	fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, mode, segs)
+	//fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, mode, segs)
 	if Cmd == cmd.Set {
 		server.StaticSeg6SegmentsAdd(prefix, nexthop, mode, segs)
 	} else {
@@ -118,9 +118,15 @@ func IPv6RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
 	nexthop := Args[1].(net.IP)
 	mode := Args[2].(string)
 	Args = Args[3:]
-	fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, mode, Args)
+	segs := make([]net.IP, 0, len(Args))
+	for _, arg := range Args {
+		segs = append(segs, arg.(net.IP))
+	}
+	//fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, mode, segs)
 	if Cmd == cmd.Set {
+		server.StaticSeg6SegmentsAdd(prefix, nexthop, mode, segs)
 	} else {
+		server.StaticSeg6SegmentsDelete(prefix, nexthop, mode, segs)
 	}
 	return cmd.Success
 }
