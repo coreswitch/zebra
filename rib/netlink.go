@@ -915,10 +915,12 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
 }
 
 func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId int) error {
+	fmt.Printf("NetlinkRouteDelete(): %s/%d\n", p.IP, p.Length)
+	len_ := len(p.IP) * 8
 	route := &netlink.Route{
 		Dst: &net.IPNet{
 			IP:   p.IP,
-			Mask: net.CIDRMask(p.Length, 32),
+			Mask: net.CIDRMask(p.Length, len_),
 		},
 		Protocol: syscall.RTPROT_ZEBRA,
 	}
