@@ -483,7 +483,6 @@ func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
 	if n == nil {
 		return
 	}
-
 	if n.Item == nil {
 		fmt.Println("n.Item is nil, ", p, ri)
 		return

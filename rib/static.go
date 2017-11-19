@@ -104,18 +104,24 @@ func (v *Vrf) StaticDelete(p *netutil.Prefix, naddr net.IP) error {
 }
 
 func (v *Vrf) StaticSeg6SegmentsAdd(p *netutil.Prefix, naddr net.IP, mode string, segs []net.IP) error {
-	node := v.staticTable[AFI_IP].Acquire(p.IP, p.Length)
+	node := v.staticTable[p.AFI()].Acquire(p.IP, p.Length)
 	nhop := NewNexthopAddr(naddr)
 
 	switch mode {
 	case "inline":
 		nhop.EncapSeg6.Mode = nl.SEG6_IPTUN_MODE_INLINE
+		segs = append(segs, net.ParseIP("::"))
 	case "encap":
 		nhop.EncapSeg6.Mode = nl.SEG6_IPTUN_MODE_ENCAP
 	default:
 		return fmt.Errorf("Unspported seg6 encap mode:", mode)
 	}
 	nhop.EncapType = nl.LWTUNNEL_ENCAP_SEG6
+	// reverse order segs before sending to netlink
+	last := len(segs) - 1
+	for i := 0; i < len(segs)/2; i++ {
+		segs[i], segs[last-i] = segs[last-i], segs[i]
+	}
 	nhop.EncapSeg6.Segments = segs
 
 	var static *Static
@@ -124,7 +130,7 @@ func (v *Vrf) StaticSeg6SegmentsAdd(p *netutil.Prefix, naddr net.IP, mode string
 		static = node.Item.(*Static)
 		for _, n := range static.Nexthops {
 			if n.Equal(nhop) {
-				v.staticTable[AFI_IP].Release(node)
+				v.staticTable[p.AFI()].Release(node)
 				return fmt.Errorf("Same nexthop exists")
 			}
 		}
@@ -140,29 +146,33 @@ func (v *Vrf) StaticSeg6SegmentsAdd(p *netutil.Prefix, naddr net.IP, mode string
 }
 
 func (v *Vrf) StaticSeg6SegmentsDelete(p *netutil.Prefix, naddr net.IP, mode string, segs []net.IP) error {
-	fmt.Println("StaticSeg6SegmentsDelete")
-	node := v.staticTable[AFI_IP].Lookup(p.IP, p.Length)
-	if node == nil {
-		fmt.Println("Can't find route")
-		return fmt.Errorf("Can't find the route")
-	}
-	if node.Item == nil {
-		fmt.Println("no static info")
-		return fmt.Errorf("No static route information")
-	}
-	static := node.Item.(*Static)
-
+	node := v.staticTable[p.AFI()].Lookup(p.IP, p.Length)
 	nhop := NewNexthopAddr(naddr)
 	switch mode {
 	case "inline":
 		nhop.EncapSeg6.Mode = nl.SEG6_IPTUN_MODE_INLINE
+		segs = append(segs, net.ParseIP("::"))
 	case "encap":
 		nhop.EncapSeg6.Mode = nl.SEG6_IPTUN_MODE_ENCAP
 	default:
 		return fmt.Errorf("Unspported seg6 encap mode:", mode)
 	}
 	nhop.EncapType = nl.LWTUNNEL_ENCAP_SEG6
+	// reverse order segs before sending to netlink
+	last := len(segs) - 1
+	for i := 0; i < len(segs)/2; i++ {
+		segs[i], segs[last-i] = segs[last-i], segs[i]
+	}
 	nhop.EncapSeg6.Segments = segs
+	if node == nil {
+		fmt.Println("Can't find the route")
+		return fmt.Errorf("Can't find the route")
+	}
+	if node.Item == nil {
+		fmt.Println("No static route information")
+		return fmt.Errorf("No static route information")
+	}
+	static := node.Item.(*Static)
 
 	nhops := []*Nexthop{}
 	for _, n := range static.Nexthops {
