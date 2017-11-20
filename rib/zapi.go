@@ -83,8 +83,10 @@ import (
 // #define ZEBRA_MESSAGE_MAX                 25
 
 type Client struct {
-	Version uint8
-	VrfId   int
+	Version   uint8
+	VrfId     int
+	RouterId  bool
+	Interface bool
 }
 
 var (
@@ -260,11 +262,8 @@ func Hello(conn net.Conn, h *Header, data []byte) error {
 	return nil
 }
 
-func RouterIdAdd(conn net.Conn, version byte, data []byte) {
-	v := VrfDefault()
-	routerId := v.RouterId()
+func RouterIdUpdateSend(conn net.Conn, version byte, routerId net.IP) {
 	body := &RouterIDUpdateBody{IP: routerId, Length: 32}
-
 	m := &Message{
 		Header: Header{
 			Marker:  HEADER_MARKER,
@@ -275,9 +274,32 @@ func RouterIdAdd(conn net.Conn, version byte, data []byte) {
 		Body: body,
 	}
 	s, _ := m.Serialize()
-	//fmt.Println(s)
 	conn.Write(s)
-	//fmt.Println(written, err)
+}
+
+func RouterIdAdd(conn net.Conn, version byte, data []byte) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
+	if client, ok := ClientMap[conn]; ok {
+		client.RouterId = true
+
+		v := VrfLookupByIndex(client.VrfId)
+		if v != nil {
+			RouterIdUpdateSend(conn, version, v.RouterId())
+		}
+	}
+}
+
+func RouterIdUpdate(vrfId int, routerId net.IP) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
+	for conn, client := range ClientMap {
+		if client.Version == 2 && client.VrfId == vrfId && client.RouterId {
+			RouterIdUpdateSend(conn, client.Version, routerId)
+		}
+	}
 }
 
 type INTERFACE_STATUS uint8

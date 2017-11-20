@@ -208,7 +208,18 @@ var cmdSpec = `
         "mode": "exec",
         "helps": [
             "Show running system information",
-			      "Router ID"
+			"Router ID"
+        ]
+    },
+    {
+        "name": "show_router_id_vrf",
+        "line": "show router-id vrf :ribd:vrf",
+        "mode": "exec",
+        "helps": [
+            "Show running system information",
+			"Router ID",
+            "VRF",
+            "VRF name"
         ]
     }
 ]
@@ -230,6 +241,7 @@ var cmdNameMap = map[string]func(*ShowTask, []interface{}){
 	"show_ipv6_route_vrf":          ShowIpv6RouteVrf,
 	"show_ipv6_route_vrf_database": ShowIpv6RouteVrfDatabase,
 	"show_router_id":               ShowRouterId,
+	"show_router_id_vrf":           ShowRouterIdVrf,
 }
 
 const (
@@ -288,6 +300,16 @@ func ShowIpv6InterfaceBrief(t *ShowTask, Args []interface{}) {
 
 func ShowRouterId(t *ShowTask, Args []interface{}) {
 	t.Str = VrfDefault().RouterIdShow()
+}
+
+func ShowRouterIdVrf(t *ShowTask, Args []interface{}) {
+	vrfName := Args[0].(string)
+	vrf := VrfLookupByName(vrfName)
+	if vrf == nil {
+		t.Str = "% VRF does not exists"
+		return
+	}
+	t.Str = vrf.RouterIdShow()
 }
 
 func rpcRegisterCli(conn *grpc.ClientConn) {

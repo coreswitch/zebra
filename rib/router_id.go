@@ -118,7 +118,7 @@ func (v *Vrf) RouterIdUpdate() {
 	}
 	// Compare curent and update
 	if !current.Equal(update) {
-		copy(current, update)
+		copy(v.routerId.Id, update)
 		v.routerId.Type = typ
 
 		// Advertise update.
@@ -142,4 +142,5 @@ func (v *Vrf) RouterIdUnset() {
 }
 
 func (v *Vrf) RouterIdUpdateNotification() {
+	RouterIdUpdate(v.Index, v.routerId.Id)
 }
