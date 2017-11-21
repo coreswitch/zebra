@@ -25,6 +25,7 @@ func EsiHook() {
 		rib.ShutdownSkipHook = rib.EsiShutdownSkipHook
 		rib.AddPathDefault = true
 		rib.IfForceUpFlag = true
+		rib.OspfMetricFilter = true
 		// rib.NoVRFDelete = true
 	}
 }
