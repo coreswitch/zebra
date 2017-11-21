@@ -470,7 +470,7 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	v.RibProcess(p, ribs, found, false)
 
 	// Invoke wakler.
-	v.RibWalker()
+	v.RibWalker(p.AFI())
 }
 
 func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
@@ -483,7 +483,6 @@ func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
 	if n == nil {
 		return
 	}
-
 	if n.Item == nil {
 		fmt.Println("n.Item is nil, ", p, ri)
 		return
@@ -519,43 +518,43 @@ func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
 	v.RibProcess(p, ribs, found, false)
 
 	// Invoke wakler.
-	v.RibWalker()
+	v.RibWalker(p.AFI())
 }
 
 func (v *Vrf) RibClean(src interface{}) {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
-	ptree := v.ribTable[AFI_IP]
+	for _, ptree := range []*netutil.Ptree{v.ribTable[AFI_IP], v.ribTable[AFI_IP6]} {
+		for n := ptree.Top(); n != nil; n = ptree.Next(n) {
+			var found *Rib
+			var ribs RibSlice
 
-	for n := ptree.Top(); n != nil; n = ptree.Next(n) {
-		var found *Rib
-		var ribs RibSlice
-
-		for _, rib := range n.Item.(RibSlice) {
-			if rib.Src == src {
-				found = rib
-			} else {
-				ribs = append(ribs, rib)
+			for _, rib := range n.Item.(RibSlice) {
+				if rib.Src == src {
+					found = rib
+				} else {
+					ribs = append(ribs, rib)
+				}
 			}
-		}
-		if found == nil {
-			continue
-		}
-		if len(ribs) == 0 {
-			n.Item = nil
-		} else {
-			n.Item = ribs
-		}
-		ptree.Release(n)
+			if found == nil {
+				continue
+			}
+			if len(ribs) == 0 {
+				n.Item = nil
+			} else {
+				n.Item = ribs
+			}
+			ptree.Release(n)
 
-		p := netutil.PrefixFromIPPrefixlen(n.Key(), n.KeyLength())
+			p := netutil.PrefixFromIPPrefixlen(n.Key(), n.KeyLength())
 
-		if conn := src.(net.Conn); conn != nil && ClientVersion(conn) == 2 && found.IsFib() {
-			RedistIPv4Delete(v.Index, p, found)
-			found.Redist = true
+			if conn := src.(net.Conn); conn != nil && ClientVersion(conn) == 2 && found.IsFib() {
+				RedistIPv4Delete(v.Index, p, found)
+				found.Redist = true
+			}
+
+			v.RibProcess(p, ribs, found, false)
 		}
-
-		v.RibProcess(p, ribs, found, false)
 	}
 }
 
@@ -614,16 +613,27 @@ func RibClearSrc(src interface{}) {
 
 func (v *Vrf) Resolve(ri *Rib) {
 	if ri.Type == RIB_STATIC || ri.Type == RIB_BGP {
+		ri.UnsetResolved()
 		//fmt.Println("resovling nexthop for static/bgp")
 		if ri.Nexthop != nil {
 			//fmt.Println("resolving nexthop", ri.Nexthop)
-			ptree := v.ribTable[AFI_IP]
-			n := ptree.Match(ri.Nexthop.IP, 32)
-			if n != nil {
-				// XXX self reference.
-				ri.SetResolved()
+			if ri.Nexthop.IP == nil {
+				// TODO: case of interface nexthop
 			} else {
-				ri.UnsetResolved()
+				var ptree *netutil.Ptree
+				len_ := len(ri.Nexthop.IP)
+				if len_ == 4 {
+					ptree = v.ribTable[AFI_IP]
+				} else if len_ == 16 {
+					ptree = v.ribTable[AFI_IP6]
+				}
+				if ptree != nil {
+					n := ptree.Match(ri.Nexthop.IP, len_*8)
+					if n != nil {
+						// XXX self reference.
+						ri.SetResolved()
+					}
+				}
 			}
 		}
 	} else {
@@ -631,18 +641,25 @@ func (v *Vrf) Resolve(ri *Rib) {
 	}
 }
 
-func (v *Vrf) RibWalker() {
+func (v *Vrf) RibWalker(af int) {
 	//fmt.Println("Vrf RibWalker:", v.Name)
 	//v.Walker = time.Timer()
 	//GetInstance().eventChan <- Event{}
-	ptree := v.ribTable[AFI_IP]
-	for n := ptree.Top(); n != nil; n = ptree.Next(n) {
-		if n.Item != nil {
-			ip := make([]byte, 4)
-			copy(ip, n.Key())
-			p := netutil.PrefixFromIPPrefixlen(ip, n.KeyLength())
-			ribs := n.Item.(RibSlice)
-			v.RibProcess(p, ribs, nil, true)
+	if af == AFI_IP || af == AFI_IP6 {
+		ptree := v.ribTable[af]
+		for n := ptree.Top(); n != nil; n = ptree.Next(n) {
+			if n.Item != nil {
+				var ip []byte
+				if af == AFI_IP {
+					ip = make([]byte, 4)
+				} else if af == AFI_IP6 {
+					ip = make([]byte, 16)
+				}
+				copy(ip, n.Key())
+				p := netutil.PrefixFromIPPrefixlen(ip, n.KeyLength())
+				ribs := n.Item.(RibSlice)
+				v.RibProcess(p, ribs, nil, true)
+			}
 		}
 	}
 }
@@ -651,6 +668,7 @@ func RibWalker() {
 	fmt.Println("RibWalker for all Vrf")
 	//GetInstance().eventChan <- Event{}
 	for _, vrf := range VrfMap {
-		vrf.RibWalker()
+		vrf.RibWalker(AFI_IP)
+		vrf.RibWalker(AFI_IP6)
 	}
 }

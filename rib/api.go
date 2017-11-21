@@ -58,40 +58,6 @@ func IPv4RouteApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
-func IPv4RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
-	prefix := Args[0].(*netutil.Prefix)
-	nexthop := Args[1].(net.IP)
-	mode := Args[2].(string)
-	Args = Args[3:]
-	fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, mode, Args)
-	if Cmd == cmd.Set {
-	} else {
-	}
-	return cmd.Success
-}
-
-func IPv6RouteApi(Cmd int, Args cmd.Args) int {
-	prefix := Args[0].(*netutil.Prefix)
-	nexthop := Args[1].(net.IP)
-	fmt.Println("Static route:", prefix, nexthop)
-	if Cmd == cmd.Set {
-	} else {
-	}
-	return cmd.Success
-}
-
-func IPv6RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
-	prefix := Args[0].(*netutil.Prefix)
-	nexthop := Args[1].(net.IP)
-	mode := Args[2].(string)
-	Args = Args[3:]
-	fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, mode, Args)
-	if Cmd == cmd.Set {
-	} else {
-	}
-	return cmd.Success
-}
-
 func IPv4VrfRouteApi(Cmd int, Args cmd.Args) int {
 	vrfName := Args[0].(string)
 	prefix := Args[1].(*netutil.Prefix)
@@ -114,6 +80,72 @@ func IPv4VrfRouteApi(Cmd int, Args cmd.Args) int {
 }
 
 func IPv4VrfRouteApi2(Cmd int, Args cmd.Args) int {
+	return cmd.Success
+}
+
+func IPv4RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
+	prefix := Args[0].(*netutil.Prefix)
+	nexthop := Args[1].(net.IP)
+	mode := Args[2].(string)
+	Args = Args[3:]
+	segs := make([]net.IP, 0, len(Args))
+	for _, arg := range Args {
+		segs = append(segs, arg.(net.IP))
+	}
+	//fmt.Println("Static IPv4 seg6 segments:", prefix, nexthop, mode, segs)
+	if Cmd == cmd.Set {
+		server.StaticSeg6SegmentsAdd(prefix, nexthop, mode, segs)
+	} else {
+		server.StaticSeg6SegmentsDelete(prefix, nexthop, mode, segs)
+	}
+	return cmd.Success
+}
+
+func IPv6RouteApi(Cmd int, Args cmd.Args) int {
+	prefix := Args[0].(*netutil.Prefix)
+	nexthop := Args[1].(net.IP)
+	fmt.Println("Static route:", prefix, nexthop)
+	if Cmd == cmd.Set {
+		server.StaticAdd(prefix, nexthop)
+	} else {
+		server.StaticDelete(prefix, nexthop)
+	}
+	return cmd.Success
+}
+
+func IPv6RouteSeg6SegmentsApi(Cmd int, Args cmd.Args) int {
+	prefix := Args[0].(*netutil.Prefix)
+	nexthop := Args[1].(net.IP)
+	mode := Args[2].(string)
+	Args = Args[3:]
+	segs := make([]net.IP, 0, len(Args))
+	for _, arg := range Args {
+		segs = append(segs, arg.(net.IP))
+	}
+	//fmt.Println("Static IPv6 seg6 segments:", prefix, nexthop, mode, segs)
+	if Cmd == cmd.Set {
+		server.StaticSeg6SegmentsAdd(prefix, nexthop, mode, segs)
+	} else {
+		server.StaticSeg6SegmentsDelete(prefix, nexthop, mode, segs)
+	}
+	return cmd.Success
+}
+
+func IPv6VrfRouteApi(Cmd int, Args cmd.Args) int {
+	vrfName := Args[0].(string)
+	prefix := Args[1].(*netutil.Prefix)
+	nexthop := Args[2].(net.IP)
+	fmt.Println("Vrf Static route:", vrfName, prefix, nexthop)
+	vrf := VrfLookupByName(vrfName)
+	if vrf == nil {
+		fmt.Println("Can't find VRF")
+		return cmd.Success
+	}
+	if Cmd == cmd.Set {
+		vrf.StaticAdd(prefix, nexthop)
+	} else {
+		vrf.StaticDelete(prefix, nexthop)
+	}
 	return cmd.Success
 }
 
