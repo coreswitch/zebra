@@ -819,20 +819,6 @@ func EsiNetlinkDoneHook() {
 }
 
 func NetlinkDumpAndSubscribe(inst *Server) error {
-	type subscribeFunc func(inst *Server, newNs, curNs netns.NsHandle, done <-chan struct{}) error
-
-	for _, s := range []subscribeFunc{
-		linkSubscribe,
-		addrSubscribe,
-		routeSubscribe,
-		neighSubscribe,
-	} {
-		err := s(inst, netns.None(), netns.None(), nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-
 	nl, err := nl.GetNetlinkSocketAt(netns.None(), netns.None(), syscall.NETLINK_ROUTE)
 	if err != nil {
 		return err
@@ -861,6 +847,20 @@ func NetlinkDumpAndSubscribe(inst *Server) error {
 		{syscall.RTM_GETNEIGH, syscall.AF_INET6, neighMsgParse},
 	} {
 		err = netlinkDump(nl, l.protocol, l.family, l.callback)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	type subscribeFunc func(inst *Server, newNs, curNs netns.NsHandle, done <-chan struct{}) error
+
+	for _, s := range []subscribeFunc{
+		linkSubscribe,
+		addrSubscribe,
+		routeSubscribe,
+		neighSubscribe,
+	} {
+		err := s(inst, netns.None(), netns.None(), nil)
 		if err != nil {
 			fmt.Println(err)
 		}
