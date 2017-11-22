@@ -614,13 +614,23 @@ func ClientVersion(conn net.Conn) uint8 {
 	return 2
 }
 
-func EsiConnected(p *netutil.Prefix) bool {
+func EsiConnected(vrfId int, p *netutil.Prefix, rib *Rib) bool {
 	if len(p.IP) > 0 {
 		if p.IP[0] == 172 && p.Length == 12 {
 			return true
 		}
 		if p.IP[0] == 198 && p.Length == 15 {
 			return true
+		}
+	}
+	vrf := VrfLookupByIndex(vrfId)
+	if vrf != nil && rib.Nexthop != nil && rib.Nexthop.Index != 0 {
+		ifp := vrf.IfLookupByIndex(rib.Nexthop.Index)
+		if ifp != nil {
+			r := regexp.MustCompile(`^veth`)
+			if r.MatchString(ifp.Name) {
+				return true
+			}
 		}
 	}
 	return false
@@ -657,7 +667,7 @@ func RedistIPv4Add(vrfId int, p *netutil.Prefix, rib *Rib, conn net.Conn) {
 				fmt.Println("RedistIPv4Add: version 2 and vrfId is different")
 				continue
 			}
-			if client.Version == 2 && rib.Type == RIB_CONNECTED && EsiConnected(p) {
+			if client.Version == 2 && rib.Type == RIB_CONNECTED && EsiConnected(vrfId, p, rib) {
 				fmt.Println("RedistIPv4Add: version 2 and backbone connected")
 				continue
 			}
@@ -694,7 +704,7 @@ func RedistIPv4Add(vrfId int, p *netutil.Prefix, rib *Rib, conn net.Conn) {
 			// 	fmt.Println("RedistIPv4Add: version 2 and vrfId is different")
 			// 	continue
 			// }
-			if ver == 2 && rib.Type == RIB_CONNECTED && EsiConnected(p) {
+			if ver == 2 && rib.Type == RIB_CONNECTED && EsiConnected(vrfId, p, rib) {
 				fmt.Println("RedistIPv4Add: version 2 and backbone connected")
 				return
 			}
