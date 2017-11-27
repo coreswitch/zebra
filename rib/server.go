@@ -267,8 +267,8 @@ func (s *Server) vifAdd(ifName string, vlanId uint64, errCh chan error) error {
 }
 
 func (s *Server) VIFDelete(ifName string, vlanId uint64) error {
-	return s.apiAsync(func() error {
-		return s.vifDeleteAsync(ifName, vlanId)
+	return s.apiSync(func() error {
+		return s.vifDelete(ifName, vlanId, nil)
 	})
 }
 
@@ -296,10 +296,9 @@ func (s *Server) vifDelete(ifName string, vlanId uint64, errCh chan error) error
 
 	vlanIfName := fmt.Sprintf("%s.%d", ifp.Name, vlanId)
 
-	v := VrfLookupByName("")
-	v.IfWatchAdd(IF_WATCH_UNREGISTER, vlanIfName, errCh)
-
 	NetlinkVlanDelete(vlanIfName, int(vlanId))
+
+	fmt.Println("[API] VIFDelete end:", ifName, vlanId)
 
 	return nil
 }
