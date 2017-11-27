@@ -268,21 +268,11 @@ func (s *Server) vifAdd(ifName string, vlanId uint64, errCh chan error) error {
 
 func (s *Server) VIFDelete(ifName string, vlanId uint64) error {
 	return s.apiSync(func() error {
-		return s.vifDelete(ifName, vlanId, nil)
+		return s.vifDelete(ifName, vlanId)
 	})
 }
 
-func (s *Server) vifDeleteAsync(ifName string, vlanId uint64) error {
-	errCh := make(chan error)
-	s.asyncCall(func() error {
-		return s.vifDelete(ifName, vlanId, errCh)
-	}, errCh)
-	err := WaitAsync(errCh)
-	fmt.Println("[API] VIFDelete end:", ifName, vlanId)
-	return err
-}
-
-func (s *Server) vifDelete(ifName string, vlanId uint64, errCh chan error) error {
+func (s *Server) vifDelete(ifName string, vlanId uint64) error {
 	fmt.Println("[API] VIFDelete start:", ifName, vlanId)
 
 	ifp := IfLookupByName(ifName)
