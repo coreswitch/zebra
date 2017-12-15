@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"runtime"
 	"sync"
 	"time"
 
@@ -221,6 +222,16 @@ var cmdSpec = `
             "VRF",
             "VRF name"
         ]
+    },
+    {
+        "name": "show_ribd_numgoroutine",
+        "line": "show ribd numgoroutine",
+        "mode": "exec",
+        "helps": [
+            "Show running system information",
+			"ribd",
+            "Number of goroutine"
+        ]
     }
 ]
 `
@@ -242,6 +253,7 @@ var cmdNameMap = map[string]func(*ShowTask, []interface{}){
 	"show_ipv6_route_vrf_database": ShowIpv6RouteVrfDatabase,
 	"show_router_id":               ShowRouterId,
 	"show_router_id_vrf":           ShowRouterIdVrf,
+	"show_ribd_numgoroutine":       ShowRibdNumGoroutine,
 }
 
 const (
@@ -310,6 +322,14 @@ func ShowRouterIdVrf(t *ShowTask, Args []interface{}) {
 		return
 	}
 	t.Str = vrf.RouterIdShow()
+}
+
+func ShowRibdNumGoroutine(t *ShowTask, Args []interface{}) {
+	if t.Json {
+		t.Str = fmt.Sprintf(`{"num-goroutine": %d}`, runtime.NumGoroutine())
+	} else {
+		t.Str = fmt.Sprintf(`Number of goroutine: %v`, runtime.NumGoroutine())
+	}
 }
 
 func rpcRegisterCli(conn *grpc.ClientConn) {
@@ -395,6 +415,18 @@ func rpcSubscribe(conn *grpc.ClientConn) error {
 	path := []string{"vrf", "vlans", "interfaces", "routing-options"}
 	msg := &rpc.ConfigRequest{
 		Type:   rpc.ConfigType_SUBSCRIBE_MULTI,
+		Module: "ribd",
+		Port:   2601,
+		Path:   path,
+	}
+	err = stream.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	path = []string{"show", "ribd"}
+	msg = &rpc.ConfigRequest{
+		Type:   rpc.ConfigType_SUBSCRIBE,
 		Module: "ribd",
 		Port:   2601,
 		Path:   path,
