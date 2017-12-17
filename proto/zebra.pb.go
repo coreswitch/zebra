@@ -9,16 +9,21 @@ It is generated from these files:
 	zebra.proto
 
 It has these top-level messages:
+	InterfaceRequest
+	InterfaceUpdate
+	RouterIdRequest
+	RouterIdUpdate
+	RedistributeIPv4Request
+	RedistributeIPv6Request
 	IPv4
 	PrefixIPv4
 	NexthopIPv4
-	IPv6
+	AddressIPv4
 	PrefixIPv6
 	NexthopIPv6
+	AddressIPv6
 	RouteIPv4
-	RouteIPv4Response
 	RouteIPv6
-	RouteIPv6Response
 */
 package zebra
 
@@ -46,40 +51,34 @@ type RouteType int32
 
 const (
 	RouteType_RIB_UNKNOWN   RouteType = 0
-	RouteType_RIB_KERNEL    RouteType = 1
+	RouteType_RIB_SYSTEM    RouteType = 1
 	RouteType_RIB_CONNECTED RouteType = 2
 	RouteType_RIB_STATIC    RouteType = 3
 	RouteType_RIB_RIP       RouteType = 4
-	RouteType_RIB_RIPNG     RouteType = 5
-	RouteType_RIB_OSPF      RouteType = 6
-	RouteType_RIB_OSPF6     RouteType = 7
-	RouteType_RIB_BGP       RouteType = 8
-	RouteType_RIB_ISIS      RouteType = 9
+	RouteType_RIB_OSPF      RouteType = 5
+	RouteType_RIB_ISIS      RouteType = 6
+	RouteType_RIB_BGP       RouteType = 7
 )
 
 var RouteType_name = map[int32]string{
 	0: "RIB_UNKNOWN",
-	1: "RIB_KERNEL",
+	1: "RIB_SYSTEM",
 	2: "RIB_CONNECTED",
 	3: "RIB_STATIC",
 	4: "RIB_RIP",
-	5: "RIB_RIPNG",
-	6: "RIB_OSPF",
-	7: "RIB_OSPF6",
-	8: "RIB_BGP",
-	9: "RIB_ISIS",
+	5: "RIB_OSPF",
+	6: "RIB_ISIS",
+	7: "RIB_BGP",
 }
 var RouteType_value = map[string]int32{
 	"RIB_UNKNOWN":   0,
-	"RIB_KERNEL":    1,
+	"RIB_SYSTEM":    1,
 	"RIB_CONNECTED": 2,
 	"RIB_STATIC":    3,
 	"RIB_RIP":       4,
-	"RIB_RIPNG":     5,
-	"RIB_OSPF":      6,
-	"RIB_OSPF6":     7,
-	"RIB_BGP":       8,
-	"RIB_ISIS":      9,
+	"RIB_OSPF":      5,
+	"RIB_ISIS":      6,
+	"RIB_BGP":       7,
 }
 
 func (x RouteType) String() string {
@@ -135,6 +134,300 @@ func (x RouteSubType) String() string {
 }
 func (RouteSubType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
+type Op int32
+
+const (
+	Op_NoOperation           Op = 0
+	Op_InterfaceSubscribe    Op = 1
+	Op_InterfaceUnsubscribe  Op = 2
+	Op_RouterIdSubscribe     Op = 3
+	Op_RouterIdUnsubscribe   Op = 4
+	Op_RedistAdd             Op = 5
+	Op_RedistDelete          Op = 6
+	Op_RedistDefaultAdd      Op = 7
+	Op_RedistDefaultDelete   Op = 8
+	Op_RouteAdd              Op = 9
+	Op_RouteDelete           Op = 10
+	Op_InterfaceAdd          Op = 11
+	Op_InterfaceDelete       Op = 12
+	Op_InterfaceAddrAdd      Op = 13
+	Op_InterfaceAddrDelete   Op = 14
+	Op_InterfaceUp           Op = 15
+	Op_InterfaceDown         Op = 16
+	Op_InterfaceFlagChange   Op = 17
+	Op_InterfaceNameChange   Op = 18
+	Op_InterfaceMtuChange    Op = 19
+	Op_InterfaceMetricChange Op = 20
+)
+
+var Op_name = map[int32]string{
+	0:  "NoOperation",
+	1:  "InterfaceSubscribe",
+	2:  "InterfaceUnsubscribe",
+	3:  "RouterIdSubscribe",
+	4:  "RouterIdUnsubscribe",
+	5:  "RedistAdd",
+	6:  "RedistDelete",
+	7:  "RedistDefaultAdd",
+	8:  "RedistDefaultDelete",
+	9:  "RouteAdd",
+	10: "RouteDelete",
+	11: "InterfaceAdd",
+	12: "InterfaceDelete",
+	13: "InterfaceAddrAdd",
+	14: "InterfaceAddrDelete",
+	15: "InterfaceUp",
+	16: "InterfaceDown",
+	17: "InterfaceFlagChange",
+	18: "InterfaceNameChange",
+	19: "InterfaceMtuChange",
+	20: "InterfaceMetricChange",
+}
+var Op_value = map[string]int32{
+	"NoOperation":           0,
+	"InterfaceSubscribe":    1,
+	"InterfaceUnsubscribe":  2,
+	"RouterIdSubscribe":     3,
+	"RouterIdUnsubscribe":   4,
+	"RedistAdd":             5,
+	"RedistDelete":          6,
+	"RedistDefaultAdd":      7,
+	"RedistDefaultDelete":   8,
+	"RouteAdd":              9,
+	"RouteDelete":           10,
+	"InterfaceAdd":          11,
+	"InterfaceDelete":       12,
+	"InterfaceAddrAdd":      13,
+	"InterfaceAddrDelete":   14,
+	"InterfaceUp":           15,
+	"InterfaceDown":         16,
+	"InterfaceFlagChange":   17,
+	"InterfaceNameChange":   18,
+	"InterfaceMtuChange":    19,
+	"InterfaceMetricChange": 20,
+}
+
+func (x Op) String() string {
+	return proto.EnumName(Op_name, int32(x))
+}
+func (Op) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type InterfaceRequest struct {
+	Op    Op     `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId uint32 `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+}
+
+func (m *InterfaceRequest) Reset()                    { *m = InterfaceRequest{} }
+func (m *InterfaceRequest) String() string            { return proto.CompactTextString(m) }
+func (*InterfaceRequest) ProtoMessage()               {}
+func (*InterfaceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *InterfaceRequest) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *InterfaceRequest) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+type InterfaceUpdate struct {
+	Op       Op             `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	Changed  uint32         `protobuf:"varint,2,opt,name=changed" json:"changed,omitempty"`
+	VrfId    uint32         `protobuf:"varint,3,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	Name     string         `protobuf:"bytes,4,opt,name=name" json:"name,omitempty"`
+	Index    uint32         `protobuf:"varint,5,opt,name=index" json:"index,omitempty"`
+	Mtu      uint32         `protobuf:"varint,6,opt,name=mtu" json:"mtu,omitempty"`
+	Metric   uint32         `protobuf:"varint,7,opt,name=metric" json:"metric,omitempty"`
+	AddrIpv4 []*AddressIPv4 `protobuf:"bytes,8,rep,name=addr_ipv4,json=addrIpv4" json:"addr_ipv4,omitempty"`
+	AddrIpv6 []*AddressIPv6 `protobuf:"bytes,9,rep,name=addr_ipv6,json=addrIpv6" json:"addr_ipv6,omitempty"`
+}
+
+func (m *InterfaceUpdate) Reset()                    { *m = InterfaceUpdate{} }
+func (m *InterfaceUpdate) String() string            { return proto.CompactTextString(m) }
+func (*InterfaceUpdate) ProtoMessage()               {}
+func (*InterfaceUpdate) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *InterfaceUpdate) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *InterfaceUpdate) GetChanged() uint32 {
+	if m != nil {
+		return m.Changed
+	}
+	return 0
+}
+
+func (m *InterfaceUpdate) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+func (m *InterfaceUpdate) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *InterfaceUpdate) GetIndex() uint32 {
+	if m != nil {
+		return m.Index
+	}
+	return 0
+}
+
+func (m *InterfaceUpdate) GetMtu() uint32 {
+	if m != nil {
+		return m.Mtu
+	}
+	return 0
+}
+
+func (m *InterfaceUpdate) GetMetric() uint32 {
+	if m != nil {
+		return m.Metric
+	}
+	return 0
+}
+
+func (m *InterfaceUpdate) GetAddrIpv4() []*AddressIPv4 {
+	if m != nil {
+		return m.AddrIpv4
+	}
+	return nil
+}
+
+func (m *InterfaceUpdate) GetAddrIpv6() []*AddressIPv6 {
+	if m != nil {
+		return m.AddrIpv6
+	}
+	return nil
+}
+
+type RouterIdRequest struct {
+	Op    Op     `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId uint32 `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+}
+
+func (m *RouterIdRequest) Reset()                    { *m = RouterIdRequest{} }
+func (m *RouterIdRequest) String() string            { return proto.CompactTextString(m) }
+func (*RouterIdRequest) ProtoMessage()               {}
+func (*RouterIdRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *RouterIdRequest) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *RouterIdRequest) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+type RouterIdUpdate struct {
+	VrfId    uint32 `protobuf:"varint,1,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	RouterId *IPv4  `protobuf:"bytes,2,opt,name=router_id,json=routerId" json:"router_id,omitempty"`
+}
+
+func (m *RouterIdUpdate) Reset()                    { *m = RouterIdUpdate{} }
+func (m *RouterIdUpdate) String() string            { return proto.CompactTextString(m) }
+func (*RouterIdUpdate) ProtoMessage()               {}
+func (*RouterIdUpdate) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *RouterIdUpdate) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+func (m *RouterIdUpdate) GetRouterId() *IPv4 {
+	if m != nil {
+		return m.RouterId
+	}
+	return nil
+}
+
+type RedistributeIPv4Request struct {
+	Op        Op        `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId     uint32    `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	RouteType RouteType `protobuf:"varint,4,opt,name=route_type,json=routeType,enum=zebra.RouteType" json:"route_type,omitempty"`
+}
+
+func (m *RedistributeIPv4Request) Reset()                    { *m = RedistributeIPv4Request{} }
+func (m *RedistributeIPv4Request) String() string            { return proto.CompactTextString(m) }
+func (*RedistributeIPv4Request) ProtoMessage()               {}
+func (*RedistributeIPv4Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *RedistributeIPv4Request) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *RedistributeIPv4Request) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+func (m *RedistributeIPv4Request) GetRouteType() RouteType {
+	if m != nil {
+		return m.RouteType
+	}
+	return RouteType_RIB_UNKNOWN
+}
+
+type RedistributeIPv6Request struct {
+	Op        Op        `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId     uint32    `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	RouteType RouteType `protobuf:"varint,4,opt,name=route_type,json=routeType,enum=zebra.RouteType" json:"route_type,omitempty"`
+}
+
+func (m *RedistributeIPv6Request) Reset()                    { *m = RedistributeIPv6Request{} }
+func (m *RedistributeIPv6Request) String() string            { return proto.CompactTextString(m) }
+func (*RedistributeIPv6Request) ProtoMessage()               {}
+func (*RedistributeIPv6Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *RedistributeIPv6Request) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *RedistributeIPv6Request) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
+
+func (m *RedistributeIPv6Request) GetRouteType() RouteType {
+	if m != nil {
+		return m.RouteType
+	}
+	return RouteType_RIB_UNKNOWN
+}
+
 type IPv4 struct {
 	SAddr uint32 `protobuf:"varint,1,opt,name=s_addr,json=sAddr" json:"s_addr,omitempty"`
 }
@@ -142,7 +435,7 @@ type IPv4 struct {
 func (m *IPv4) Reset()                    { *m = IPv4{} }
 func (m *IPv4) String() string            { return proto.CompactTextString(m) }
 func (*IPv4) ProtoMessage()               {}
-func (*IPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*IPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 func (m *IPv4) GetSAddr() uint32 {
 	if m != nil {
@@ -152,16 +445,16 @@ func (m *IPv4) GetSAddr() uint32 {
 }
 
 type PrefixIPv4 struct {
-	Addr   *IPv4  `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Addr   []byte `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
 	Length uint32 `protobuf:"varint,2,opt,name=length" json:"length,omitempty"`
 }
 
 func (m *PrefixIPv4) Reset()                    { *m = PrefixIPv4{} }
 func (m *PrefixIPv4) String() string            { return proto.CompactTextString(m) }
 func (*PrefixIPv4) ProtoMessage()               {}
-func (*PrefixIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*PrefixIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
-func (m *PrefixIPv4) GetAddr() *IPv4 {
+func (m *PrefixIPv4) GetAddr() []byte {
 	if m != nil {
 		return m.Addr
 	}
@@ -176,16 +469,16 @@ func (m *PrefixIPv4) GetLength() uint32 {
 }
 
 type NexthopIPv4 struct {
-	Addr    *IPv4  `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Addr    []byte `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
 	Ifindex uint32 `protobuf:"varint,2,opt,name=ifindex" json:"ifindex,omitempty"`
 }
 
 func (m *NexthopIPv4) Reset()                    { *m = NexthopIPv4{} }
 func (m *NexthopIPv4) String() string            { return proto.CompactTextString(m) }
 func (*NexthopIPv4) ProtoMessage()               {}
-func (*NexthopIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*NexthopIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
-func (m *NexthopIPv4) GetAddr() *IPv4 {
+func (m *NexthopIPv4) GetAddr() []byte {
 	if m != nil {
 		return m.Addr
 	}
@@ -199,57 +492,41 @@ func (m *NexthopIPv4) GetIfindex() uint32 {
 	return 0
 }
 
-type IPv6 struct {
-	S6Addr1 uint32 `protobuf:"varint,1,opt,name=s6_addr1,json=s6Addr1" json:"s6_addr1,omitempty"`
-	S6Addr2 uint32 `protobuf:"varint,2,opt,name=s6_addr2,json=s6Addr2" json:"s6_addr2,omitempty"`
-	S6Addr3 uint32 `protobuf:"varint,3,opt,name=s6_addr3,json=s6Addr3" json:"s6_addr3,omitempty"`
-	S6Addr4 uint32 `protobuf:"varint,4,opt,name=s6_addr4,json=s6Addr4" json:"s6_addr4,omitempty"`
+type AddressIPv4 struct {
+	Addr  *PrefixIPv4 `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Flags uint32      `protobuf:"varint,2,opt,name=flags" json:"flags,omitempty"`
 }
 
-func (m *IPv6) Reset()                    { *m = IPv6{} }
-func (m *IPv6) String() string            { return proto.CompactTextString(m) }
-func (*IPv6) ProtoMessage()               {}
-func (*IPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (m *AddressIPv4) Reset()                    { *m = AddressIPv4{} }
+func (m *AddressIPv4) String() string            { return proto.CompactTextString(m) }
+func (*AddressIPv4) ProtoMessage()               {}
+func (*AddressIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
-func (m *IPv6) GetS6Addr1() uint32 {
+func (m *AddressIPv4) GetAddr() *PrefixIPv4 {
 	if m != nil {
-		return m.S6Addr1
+		return m.Addr
 	}
-	return 0
+	return nil
 }
 
-func (m *IPv6) GetS6Addr2() uint32 {
+func (m *AddressIPv4) GetFlags() uint32 {
 	if m != nil {
-		return m.S6Addr2
-	}
-	return 0
-}
-
-func (m *IPv6) GetS6Addr3() uint32 {
-	if m != nil {
-		return m.S6Addr3
-	}
-	return 0
-}
-
-func (m *IPv6) GetS6Addr4() uint32 {
-	if m != nil {
-		return m.S6Addr4
+		return m.Flags
 	}
 	return 0
 }
 
 type PrefixIPv6 struct {
-	Addr   *IPv6  `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Addr   []byte `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
 	Length uint32 `protobuf:"varint,2,opt,name=length" json:"length,omitempty"`
 }
 
 func (m *PrefixIPv6) Reset()                    { *m = PrefixIPv6{} }
 func (m *PrefixIPv6) String() string            { return proto.CompactTextString(m) }
 func (*PrefixIPv6) ProtoMessage()               {}
-func (*PrefixIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*PrefixIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
-func (m *PrefixIPv6) GetAddr() *IPv6 {
+func (m *PrefixIPv6) GetAddr() []byte {
 	if m != nil {
 		return m.Addr
 	}
@@ -264,16 +541,16 @@ func (m *PrefixIPv6) GetLength() uint32 {
 }
 
 type NexthopIPv6 struct {
-	Addr    *IPv6  `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Addr    []byte `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
 	Ifindex uint32 `protobuf:"varint,2,opt,name=ifindex" json:"ifindex,omitempty"`
 }
 
 func (m *NexthopIPv6) Reset()                    { *m = NexthopIPv6{} }
 func (m *NexthopIPv6) String() string            { return proto.CompactTextString(m) }
 func (*NexthopIPv6) ProtoMessage()               {}
-func (*NexthopIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*NexthopIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
-func (m *NexthopIPv6) GetAddr() *IPv6 {
+func (m *NexthopIPv6) GetAddr() []byte {
 	if m != nil {
 		return m.Addr
 	}
@@ -287,19 +564,61 @@ func (m *NexthopIPv6) GetIfindex() uint32 {
 	return 0
 }
 
+type AddressIPv6 struct {
+	Addr  *PrefixIPv6 `protobuf:"bytes,1,opt,name=addr" json:"addr,omitempty"`
+	Flags uint32      `protobuf:"varint,2,opt,name=flags" json:"flags,omitempty"`
+}
+
+func (m *AddressIPv6) Reset()                    { *m = AddressIPv6{} }
+func (m *AddressIPv6) String() string            { return proto.CompactTextString(m) }
+func (*AddressIPv6) ProtoMessage()               {}
+func (*AddressIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+func (m *AddressIPv6) GetAddr() *PrefixIPv6 {
+	if m != nil {
+		return m.Addr
+	}
+	return nil
+}
+
+func (m *AddressIPv6) GetFlags() uint32 {
+	if m != nil {
+		return m.Flags
+	}
+	return 0
+}
+
 type RouteIPv4 struct {
-	Type     RouteType      `protobuf:"varint,1,opt,name=type,enum=zebra.RouteType" json:"type,omitempty"`
-	SubType  RouteSubType   `protobuf:"varint,2,opt,name=sub_type,json=subType,enum=zebra.RouteSubType" json:"sub_type,omitempty"`
-	Prefix   *PrefixIPv4    `protobuf:"bytes,3,opt,name=prefix" json:"prefix,omitempty"`
-	Distance uint32         `protobuf:"varint,4,opt,name=distance" json:"distance,omitempty"`
-	Metric   uint32         `protobuf:"varint,5,opt,name=metric" json:"metric,omitempty"`
-	Nexthops []*NexthopIPv4 `protobuf:"bytes,6,rep,name=nexthops" json:"nexthops,omitempty"`
+	Op       Op             `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId    uint32         `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	Type     RouteType      `protobuf:"varint,3,opt,name=type,enum=zebra.RouteType" json:"type,omitempty"`
+	SubType  RouteSubType   `protobuf:"varint,4,opt,name=sub_type,json=subType,enum=zebra.RouteSubType" json:"sub_type,omitempty"`
+	Prefix   *PrefixIPv4    `protobuf:"bytes,5,opt,name=prefix" json:"prefix,omitempty"`
+	Distance uint32         `protobuf:"varint,6,opt,name=distance" json:"distance,omitempty"`
+	Metric   uint32         `protobuf:"varint,7,opt,name=metric" json:"metric,omitempty"`
+	Tag      uint32         `protobuf:"varint,8,opt,name=tag" json:"tag,omitempty"`
+	Color    []string       `protobuf:"bytes,9,rep,name=color" json:"color,omitempty"`
+	Nexthops []*NexthopIPv4 `protobuf:"bytes,10,rep,name=nexthops" json:"nexthops,omitempty"`
 }
 
 func (m *RouteIPv4) Reset()                    { *m = RouteIPv4{} }
 func (m *RouteIPv4) String() string            { return proto.CompactTextString(m) }
 func (*RouteIPv4) ProtoMessage()               {}
-func (*RouteIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*RouteIPv4) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *RouteIPv4) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *RouteIPv4) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
 
 func (m *RouteIPv4) GetType() RouteType {
 	if m != nil {
@@ -336,6 +655,20 @@ func (m *RouteIPv4) GetMetric() uint32 {
 	return 0
 }
 
+func (m *RouteIPv4) GetTag() uint32 {
+	if m != nil {
+		return m.Tag
+	}
+	return 0
+}
+
+func (m *RouteIPv4) GetColor() []string {
+	if m != nil {
+		return m.Color
+	}
+	return nil
+}
+
 func (m *RouteIPv4) GetNexthops() []*NexthopIPv4 {
 	if m != nil {
 		return m.Nexthops
@@ -343,27 +676,37 @@ func (m *RouteIPv4) GetNexthops() []*NexthopIPv4 {
 	return nil
 }
 
-type RouteIPv4Response struct {
-}
-
-func (m *RouteIPv4Response) Reset()                    { *m = RouteIPv4Response{} }
-func (m *RouteIPv4Response) String() string            { return proto.CompactTextString(m) }
-func (*RouteIPv4Response) ProtoMessage()               {}
-func (*RouteIPv4Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
-
 type RouteIPv6 struct {
-	Type     RouteType      `protobuf:"varint,1,opt,name=type,enum=zebra.RouteType" json:"type,omitempty"`
-	SubType  RouteSubType   `protobuf:"varint,2,opt,name=sub_type,json=subType,enum=zebra.RouteSubType" json:"sub_type,omitempty"`
-	Prefix   *PrefixIPv6    `protobuf:"bytes,3,opt,name=prefix" json:"prefix,omitempty"`
-	Distance uint32         `protobuf:"varint,4,opt,name=distance" json:"distance,omitempty"`
-	Metric   uint32         `protobuf:"varint,5,opt,name=metric" json:"metric,omitempty"`
-	Nexthops []*NexthopIPv6 `protobuf:"bytes,6,rep,name=nexthops" json:"nexthops,omitempty"`
+	Op       Op             `protobuf:"varint,1,opt,name=op,enum=zebra.Op" json:"op,omitempty"`
+	VrfId    uint32         `protobuf:"varint,2,opt,name=vrf_id,json=vrfId" json:"vrf_id,omitempty"`
+	Type     RouteType      `protobuf:"varint,3,opt,name=type,enum=zebra.RouteType" json:"type,omitempty"`
+	SubType  RouteSubType   `protobuf:"varint,4,opt,name=sub_type,json=subType,enum=zebra.RouteSubType" json:"sub_type,omitempty"`
+	Prefix   *PrefixIPv6    `protobuf:"bytes,5,opt,name=prefix" json:"prefix,omitempty"`
+	Distance uint32         `protobuf:"varint,6,opt,name=distance" json:"distance,omitempty"`
+	Metric   uint32         `protobuf:"varint,7,opt,name=metric" json:"metric,omitempty"`
+	Tag      uint32         `protobuf:"varint,8,opt,name=tag" json:"tag,omitempty"`
+	Color    []string       `protobuf:"bytes,9,rep,name=color" json:"color,omitempty"`
+	Nexthops []*NexthopIPv6 `protobuf:"bytes,10,rep,name=nexthops" json:"nexthops,omitempty"`
 }
 
 func (m *RouteIPv6) Reset()                    { *m = RouteIPv6{} }
 func (m *RouteIPv6) String() string            { return proto.CompactTextString(m) }
 func (*RouteIPv6) ProtoMessage()               {}
-func (*RouteIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*RouteIPv6) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+
+func (m *RouteIPv6) GetOp() Op {
+	if m != nil {
+		return m.Op
+	}
+	return Op_NoOperation
+}
+
+func (m *RouteIPv6) GetVrfId() uint32 {
+	if m != nil {
+		return m.VrfId
+	}
+	return 0
+}
 
 func (m *RouteIPv6) GetType() RouteType {
 	if m != nil {
@@ -400,6 +743,20 @@ func (m *RouteIPv6) GetMetric() uint32 {
 	return 0
 }
 
+func (m *RouteIPv6) GetTag() uint32 {
+	if m != nil {
+		return m.Tag
+	}
+	return 0
+}
+
+func (m *RouteIPv6) GetColor() []string {
+	if m != nil {
+		return m.Color
+	}
+	return nil
+}
+
 func (m *RouteIPv6) GetNexthops() []*NexthopIPv6 {
 	if m != nil {
 		return m.Nexthops
@@ -407,27 +764,25 @@ func (m *RouteIPv6) GetNexthops() []*NexthopIPv6 {
 	return nil
 }
 
-type RouteIPv6Response struct {
-}
-
-func (m *RouteIPv6Response) Reset()                    { *m = RouteIPv6Response{} }
-func (m *RouteIPv6Response) String() string            { return proto.CompactTextString(m) }
-func (*RouteIPv6Response) ProtoMessage()               {}
-func (*RouteIPv6Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
-
 func init() {
+	proto.RegisterType((*InterfaceRequest)(nil), "zebra.InterfaceRequest")
+	proto.RegisterType((*InterfaceUpdate)(nil), "zebra.InterfaceUpdate")
+	proto.RegisterType((*RouterIdRequest)(nil), "zebra.RouterIdRequest")
+	proto.RegisterType((*RouterIdUpdate)(nil), "zebra.RouterIdUpdate")
+	proto.RegisterType((*RedistributeIPv4Request)(nil), "zebra.RedistributeIPv4Request")
+	proto.RegisterType((*RedistributeIPv6Request)(nil), "zebra.RedistributeIPv6Request")
 	proto.RegisterType((*IPv4)(nil), "zebra.IPv4")
 	proto.RegisterType((*PrefixIPv4)(nil), "zebra.PrefixIPv4")
 	proto.RegisterType((*NexthopIPv4)(nil), "zebra.NexthopIPv4")
-	proto.RegisterType((*IPv6)(nil), "zebra.IPv6")
+	proto.RegisterType((*AddressIPv4)(nil), "zebra.AddressIPv4")
 	proto.RegisterType((*PrefixIPv6)(nil), "zebra.PrefixIPv6")
 	proto.RegisterType((*NexthopIPv6)(nil), "zebra.NexthopIPv6")
+	proto.RegisterType((*AddressIPv6)(nil), "zebra.AddressIPv6")
 	proto.RegisterType((*RouteIPv4)(nil), "zebra.RouteIPv4")
-	proto.RegisterType((*RouteIPv4Response)(nil), "zebra.RouteIPv4Response")
 	proto.RegisterType((*RouteIPv6)(nil), "zebra.RouteIPv6")
-	proto.RegisterType((*RouteIPv6Response)(nil), "zebra.RouteIPv6Response")
 	proto.RegisterEnum("zebra.RouteType", RouteType_name, RouteType_value)
 	proto.RegisterEnum("zebra.RouteSubType", RouteSubType_name, RouteSubType_value)
+	proto.RegisterEnum("zebra.Op", Op_name, Op_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -438,211 +793,495 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for ZebraApi service
+// Client API for Zebra service
 
-type ZebraApiClient interface {
-	RouteIPv4Add(ctx context.Context, in *RouteIPv4, opts ...grpc.CallOption) (*RouteIPv4Response, error)
-	RouteIPv4Delete(ctx context.Context, in *RouteIPv4, opts ...grpc.CallOption) (*RouteIPv4Response, error)
-	RouteIPv6Add(ctx context.Context, in *RouteIPv6, opts ...grpc.CallOption) (*RouteIPv6Response, error)
-	RouteIPv6Delete(ctx context.Context, in *RouteIPv6, opts ...grpc.CallOption) (*RouteIPv6Response, error)
+type ZebraClient interface {
+	InterfaceService(ctx context.Context, opts ...grpc.CallOption) (Zebra_InterfaceServiceClient, error)
+	RouterIdService(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouterIdServiceClient, error)
+	RedistributeIPv4Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RedistributeIPv4ServiceClient, error)
+	RedistributeIPv6Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RedistributeIPv6ServiceClient, error)
+	RouteIPv4Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouteIPv4ServiceClient, error)
+	RouteIPv6Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouteIPv6ServiceClient, error)
 }
 
-type zebraApiClient struct {
+type zebraClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewZebraApiClient(cc *grpc.ClientConn) ZebraApiClient {
-	return &zebraApiClient{cc}
+func NewZebraClient(cc *grpc.ClientConn) ZebraClient {
+	return &zebraClient{cc}
 }
 
-func (c *zebraApiClient) RouteIPv4Add(ctx context.Context, in *RouteIPv4, opts ...grpc.CallOption) (*RouteIPv4Response, error) {
-	out := new(RouteIPv4Response)
-	err := grpc.Invoke(ctx, "/zebra.ZebraApi/RouteIPv4Add", in, out, c.cc, opts...)
+func (c *zebraClient) InterfaceService(ctx context.Context, opts ...grpc.CallOption) (Zebra_InterfaceServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[0], c.cc, "/zebra.Zebra/InterfaceService", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &zebraInterfaceServiceClient{stream}
+	return x, nil
 }
 
-func (c *zebraApiClient) RouteIPv4Delete(ctx context.Context, in *RouteIPv4, opts ...grpc.CallOption) (*RouteIPv4Response, error) {
-	out := new(RouteIPv4Response)
-	err := grpc.Invoke(ctx, "/zebra.ZebraApi/RouteIPv4Delete", in, out, c.cc, opts...)
+type Zebra_InterfaceServiceClient interface {
+	Send(*InterfaceRequest) error
+	Recv() (*InterfaceUpdate, error)
+	grpc.ClientStream
+}
+
+type zebraInterfaceServiceClient struct {
+	grpc.ClientStream
+}
+
+func (x *zebraInterfaceServiceClient) Send(m *InterfaceRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraInterfaceServiceClient) Recv() (*InterfaceUpdate, error) {
+	m := new(InterfaceUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *zebraClient) RouterIdService(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouterIdServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[1], c.cc, "/zebra.Zebra/RouterIdService", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &zebraRouterIdServiceClient{stream}
+	return x, nil
 }
 
-func (c *zebraApiClient) RouteIPv6Add(ctx context.Context, in *RouteIPv6, opts ...grpc.CallOption) (*RouteIPv6Response, error) {
-	out := new(RouteIPv6Response)
-	err := grpc.Invoke(ctx, "/zebra.ZebraApi/RouteIPv6Add", in, out, c.cc, opts...)
+type Zebra_RouterIdServiceClient interface {
+	Send(*RouterIdRequest) error
+	Recv() (*RouterIdUpdate, error)
+	grpc.ClientStream
+}
+
+type zebraRouterIdServiceClient struct {
+	grpc.ClientStream
+}
+
+func (x *zebraRouterIdServiceClient) Send(m *RouterIdRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraRouterIdServiceClient) Recv() (*RouterIdUpdate, error) {
+	m := new(RouterIdUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *zebraClient) RedistributeIPv4Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RedistributeIPv4ServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[2], c.cc, "/zebra.Zebra/RedistributeIPv4Service", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &zebraRedistributeIPv4ServiceClient{stream}
+	return x, nil
 }
 
-func (c *zebraApiClient) RouteIPv6Delete(ctx context.Context, in *RouteIPv6, opts ...grpc.CallOption) (*RouteIPv6Response, error) {
-	out := new(RouteIPv6Response)
-	err := grpc.Invoke(ctx, "/zebra.ZebraApi/RouteIPv6Delete", in, out, c.cc, opts...)
+type Zebra_RedistributeIPv4ServiceClient interface {
+	Send(*RedistributeIPv4Request) error
+	Recv() (*RouteIPv4, error)
+	grpc.ClientStream
+}
+
+type zebraRedistributeIPv4ServiceClient struct {
+	grpc.ClientStream
+}
+
+func (x *zebraRedistributeIPv4ServiceClient) Send(m *RedistributeIPv4Request) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraRedistributeIPv4ServiceClient) Recv() (*RouteIPv4, error) {
+	m := new(RouteIPv4)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *zebraClient) RedistributeIPv6Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RedistributeIPv6ServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[3], c.cc, "/zebra.Zebra/RedistributeIPv6Service", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &zebraRedistributeIPv6ServiceClient{stream}
+	return x, nil
 }
 
-// Server API for ZebraApi service
-
-type ZebraApiServer interface {
-	RouteIPv4Add(context.Context, *RouteIPv4) (*RouteIPv4Response, error)
-	RouteIPv4Delete(context.Context, *RouteIPv4) (*RouteIPv4Response, error)
-	RouteIPv6Add(context.Context, *RouteIPv6) (*RouteIPv6Response, error)
-	RouteIPv6Delete(context.Context, *RouteIPv6) (*RouteIPv6Response, error)
+type Zebra_RedistributeIPv6ServiceClient interface {
+	Send(*RedistributeIPv6Request) error
+	Recv() (*RouteIPv6, error)
+	grpc.ClientStream
 }
 
-func RegisterZebraApiServer(s *grpc.Server, srv ZebraApiServer) {
-	s.RegisterService(&_ZebraApi_serviceDesc, srv)
+type zebraRedistributeIPv6ServiceClient struct {
+	grpc.ClientStream
 }
 
-func _ZebraApi_RouteIPv4Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteIPv4)
-	if err := dec(in); err != nil {
+func (x *zebraRedistributeIPv6ServiceClient) Send(m *RedistributeIPv6Request) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraRedistributeIPv6ServiceClient) Recv() (*RouteIPv6, error) {
+	m := new(RouteIPv6)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ZebraApiServer).RouteIPv4Add(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/zebra.ZebraApi/RouteIPv4Add",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ZebraApiServer).RouteIPv4Add(ctx, req.(*RouteIPv4))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
-func _ZebraApi_RouteIPv4Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteIPv4)
-	if err := dec(in); err != nil {
+func (c *zebraClient) RouteIPv4Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouteIPv4ServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[4], c.cc, "/zebra.Zebra/RouteIPv4Service", opts...)
+	if err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ZebraApiServer).RouteIPv4Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/zebra.ZebraApi/RouteIPv4Delete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ZebraApiServer).RouteIPv4Delete(ctx, req.(*RouteIPv4))
-	}
-	return interceptor(ctx, in, info, handler)
+	x := &zebraRouteIPv4ServiceClient{stream}
+	return x, nil
 }
 
-func _ZebraApi_RouteIPv6Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteIPv6)
-	if err := dec(in); err != nil {
+type Zebra_RouteIPv4ServiceClient interface {
+	Send(*RouteIPv4) error
+	Recv() (*RouteIPv4, error)
+	grpc.ClientStream
+}
+
+type zebraRouteIPv4ServiceClient struct {
+	grpc.ClientStream
+}
+
+func (x *zebraRouteIPv4ServiceClient) Send(m *RouteIPv4) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraRouteIPv4ServiceClient) Recv() (*RouteIPv4, error) {
+	m := new(RouteIPv4)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ZebraApiServer).RouteIPv6Add(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/zebra.ZebraApi/RouteIPv6Add",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ZebraApiServer).RouteIPv6Add(ctx, req.(*RouteIPv6))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
-func _ZebraApi_RouteIPv6Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteIPv6)
-	if err := dec(in); err != nil {
+func (c *zebraClient) RouteIPv6Service(ctx context.Context, opts ...grpc.CallOption) (Zebra_RouteIPv6ServiceClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Zebra_serviceDesc.Streams[5], c.cc, "/zebra.Zebra/RouteIPv6Service", opts...)
+	if err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ZebraApiServer).RouteIPv6Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/zebra.ZebraApi/RouteIPv6Delete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ZebraApiServer).RouteIPv6Delete(ctx, req.(*RouteIPv6))
-	}
-	return interceptor(ctx, in, info, handler)
+	x := &zebraRouteIPv6ServiceClient{stream}
+	return x, nil
 }
 
-var _ZebraApi_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "zebra.ZebraApi",
-	HandlerType: (*ZebraApiServer)(nil),
-	Methods: []grpc.MethodDesc{
+type Zebra_RouteIPv6ServiceClient interface {
+	Send(*RouteIPv6) error
+	Recv() (*RouteIPv6, error)
+	grpc.ClientStream
+}
+
+type zebraRouteIPv6ServiceClient struct {
+	grpc.ClientStream
+}
+
+func (x *zebraRouteIPv6ServiceClient) Send(m *RouteIPv6) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *zebraRouteIPv6ServiceClient) Recv() (*RouteIPv6, error) {
+	m := new(RouteIPv6)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Server API for Zebra service
+
+type ZebraServer interface {
+	InterfaceService(Zebra_InterfaceServiceServer) error
+	RouterIdService(Zebra_RouterIdServiceServer) error
+	RedistributeIPv4Service(Zebra_RedistributeIPv4ServiceServer) error
+	RedistributeIPv6Service(Zebra_RedistributeIPv6ServiceServer) error
+	RouteIPv4Service(Zebra_RouteIPv4ServiceServer) error
+	RouteIPv6Service(Zebra_RouteIPv6ServiceServer) error
+}
+
+func RegisterZebraServer(s *grpc.Server, srv ZebraServer) {
+	s.RegisterService(&_Zebra_serviceDesc, srv)
+}
+
+func _Zebra_InterfaceService_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).InterfaceService(&zebraInterfaceServiceServer{stream})
+}
+
+type Zebra_InterfaceServiceServer interface {
+	Send(*InterfaceUpdate) error
+	Recv() (*InterfaceRequest, error)
+	grpc.ServerStream
+}
+
+type zebraInterfaceServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraInterfaceServiceServer) Send(m *InterfaceUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraInterfaceServiceServer) Recv() (*InterfaceRequest, error) {
+	m := new(InterfaceRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Zebra_RouterIdService_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).RouterIdService(&zebraRouterIdServiceServer{stream})
+}
+
+type Zebra_RouterIdServiceServer interface {
+	Send(*RouterIdUpdate) error
+	Recv() (*RouterIdRequest, error)
+	grpc.ServerStream
+}
+
+type zebraRouterIdServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraRouterIdServiceServer) Send(m *RouterIdUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraRouterIdServiceServer) Recv() (*RouterIdRequest, error) {
+	m := new(RouterIdRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Zebra_RedistributeIPv4Service_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).RedistributeIPv4Service(&zebraRedistributeIPv4ServiceServer{stream})
+}
+
+type Zebra_RedistributeIPv4ServiceServer interface {
+	Send(*RouteIPv4) error
+	Recv() (*RedistributeIPv4Request, error)
+	grpc.ServerStream
+}
+
+type zebraRedistributeIPv4ServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraRedistributeIPv4ServiceServer) Send(m *RouteIPv4) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraRedistributeIPv4ServiceServer) Recv() (*RedistributeIPv4Request, error) {
+	m := new(RedistributeIPv4Request)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Zebra_RedistributeIPv6Service_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).RedistributeIPv6Service(&zebraRedistributeIPv6ServiceServer{stream})
+}
+
+type Zebra_RedistributeIPv6ServiceServer interface {
+	Send(*RouteIPv6) error
+	Recv() (*RedistributeIPv6Request, error)
+	grpc.ServerStream
+}
+
+type zebraRedistributeIPv6ServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraRedistributeIPv6ServiceServer) Send(m *RouteIPv6) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraRedistributeIPv6ServiceServer) Recv() (*RedistributeIPv6Request, error) {
+	m := new(RedistributeIPv6Request)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Zebra_RouteIPv4Service_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).RouteIPv4Service(&zebraRouteIPv4ServiceServer{stream})
+}
+
+type Zebra_RouteIPv4ServiceServer interface {
+	Send(*RouteIPv4) error
+	Recv() (*RouteIPv4, error)
+	grpc.ServerStream
+}
+
+type zebraRouteIPv4ServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraRouteIPv4ServiceServer) Send(m *RouteIPv4) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraRouteIPv4ServiceServer) Recv() (*RouteIPv4, error) {
+	m := new(RouteIPv4)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Zebra_RouteIPv6Service_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ZebraServer).RouteIPv6Service(&zebraRouteIPv6ServiceServer{stream})
+}
+
+type Zebra_RouteIPv6ServiceServer interface {
+	Send(*RouteIPv6) error
+	Recv() (*RouteIPv6, error)
+	grpc.ServerStream
+}
+
+type zebraRouteIPv6ServiceServer struct {
+	grpc.ServerStream
+}
+
+func (x *zebraRouteIPv6ServiceServer) Send(m *RouteIPv6) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *zebraRouteIPv6ServiceServer) Recv() (*RouteIPv6, error) {
+	m := new(RouteIPv6)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+var _Zebra_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "zebra.Zebra",
+	HandlerType: (*ZebraServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "RouteIPv4Add",
-			Handler:    _ZebraApi_RouteIPv4Add_Handler,
+			StreamName:    "InterfaceService",
+			Handler:       _Zebra_InterfaceService_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 		{
-			MethodName: "RouteIPv4Delete",
-			Handler:    _ZebraApi_RouteIPv4Delete_Handler,
+			StreamName:    "RouterIdService",
+			Handler:       _Zebra_RouterIdService_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 		{
-			MethodName: "RouteIPv6Add",
-			Handler:    _ZebraApi_RouteIPv6Add_Handler,
+			StreamName:    "RedistributeIPv4Service",
+			Handler:       _Zebra_RedistributeIPv4Service_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 		{
-			MethodName: "RouteIPv6Delete",
-			Handler:    _ZebraApi_RouteIPv6Delete_Handler,
+			StreamName:    "RedistributeIPv6Service",
+			Handler:       _Zebra_RedistributeIPv6Service_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "RouteIPv4Service",
+			Handler:       _Zebra_RouteIPv4Service_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "RouteIPv6Service",
+			Handler:       _Zebra_RouteIPv6Service_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "zebra.proto",
 }
 
 func init() { proto.RegisterFile("zebra.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 629 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x55, 0xcb, 0x4e, 0xdb, 0x4c,
-	0x14, 0x26, 0x8e, 0x63, 0x3b, 0xc7, 0x5c, 0x86, 0xc9, 0xff, 0x83, 0x4b, 0x55, 0x15, 0x45, 0x5d,
-	0x50, 0x16, 0x48, 0x31, 0x68, 0x56, 0x95, 0x2a, 0x13, 0x0c, 0xb5, 0x88, 0x1c, 0xcb, 0x0e, 0x6a,
-	0xd5, 0x8d, 0x95, 0xe0, 0xa1, 0x58, 0xa2, 0x89, 0x65, 0x3b, 0x55, 0xe8, 0x13, 0x74, 0xdd, 0x57,
-	0xe8, 0x0b, 0xf6, 0x11, 0xaa, 0x19, 0x5f, 0xea, 0x90, 0xa4, 0x82, 0x45, 0xd5, 0x5d, 0xbe, 0xcb,
-	0x7c, 0xe7, 0xcc, 0x97, 0x89, 0x02, 0xea, 0x57, 0x3a, 0x8a, 0x87, 0x47, 0x51, 0x3c, 0x49, 0x27,
-	0xb8, 0xc1, 0x41, 0xfb, 0x05, 0x88, 0x96, 0xf3, 0xe5, 0x04, 0xff, 0x0f, 0x52, 0xe2, 0x0f, 0x83,
-	0x20, 0xd6, 0x6a, 0xfb, 0xb5, 0x83, 0x0d, 0xb7, 0x91, 0x18, 0x41, 0x10, 0xb7, 0x4d, 0x00, 0x27,
-	0xa6, 0x37, 0xe1, 0x8c, 0x9b, 0x5e, 0x82, 0x58, 0x5a, 0x54, 0x5d, 0x3d, 0xca, 0xf2, 0x98, 0xe4,
-	0x72, 0x01, 0xef, 0x80, 0x74, 0x47, 0xc7, 0x9f, 0xd2, 0x5b, 0x4d, 0xe0, 0x29, 0x39, 0x6a, 0xbf,
-	0x03, 0xd5, 0xa6, 0xb3, 0xf4, 0x76, 0x12, 0x3d, 0x2e, 0x47, 0x03, 0x39, 0xbc, 0x09, 0xc7, 0x01,
-	0x9d, 0xe5, 0x41, 0x05, 0x6c, 0xc7, 0x7c, 0x5f, 0x82, 0x9f, 0x81, 0x92, 0x10, 0xbe, 0x70, 0x27,
-	0xdf, 0x58, 0x4e, 0x08, 0x5b, 0xb9, 0x53, 0x91, 0xf4, 0xe2, 0x74, 0x26, 0xe9, 0x15, 0xe9, 0x58,
-	0xab, 0x57, 0xa5, 0xe3, 0x8a, 0x74, 0xa2, 0x89, 0x55, 0xe9, 0x64, 0xae, 0x04, 0xb2, 0x7a, 0x79,
-	0xf2, 0x94, 0x12, 0x1e, 0x91, 0xb3, 0xba, 0x84, 0x9f, 0x35, 0x68, 0xba, 0x93, 0x69, 0x4a, 0x79,
-	0x9b, 0xaf, 0x40, 0x4c, 0xef, 0x23, 0xca, 0x83, 0x36, 0x75, 0x94, 0x07, 0x71, 0x7d, 0x70, 0x1f,
-	0x51, 0x97, 0xab, 0xf8, 0x08, 0x94, 0x64, 0x3a, 0xf2, 0xb9, 0x53, 0xe0, 0xce, 0x56, 0xd5, 0xe9,
-	0x4d, 0x47, 0xdc, 0x2c, 0x27, 0xd9, 0x07, 0xfc, 0x1a, 0xa4, 0x88, 0x5f, 0x9a, 0x17, 0xa5, 0xea,
-	0xdb, 0xb9, 0xfb, 0xf7, 0x73, 0x70, 0x73, 0x03, 0xde, 0x03, 0x25, 0x08, 0x93, 0x74, 0x38, 0xbe,
-	0xa6, 0x79, 0x75, 0x25, 0x66, 0x65, 0x7c, 0xa6, 0x69, 0x1c, 0x5e, 0x6b, 0x8d, 0xac, 0x8c, 0x0c,
-	0xb1, 0x75, 0xc6, 0x59, 0x19, 0x89, 0x26, 0xed, 0xd7, 0x0f, 0x54, 0x1d, 0xe7, 0x03, 0x2a, 0x0f,
-	0xc5, 0x2d, 0x3d, 0xed, 0x16, 0x6c, 0x97, 0x37, 0x76, 0x69, 0x12, 0x4d, 0xc6, 0x09, 0x9d, 0xeb,
-	0x81, 0xfc, 0xab, 0x1e, 0xc8, 0x5f, 0xef, 0x81, 0x2c, 0xef, 0x81, 0x14, 0x3d, 0x1c, 0xfe, 0x28,
-	0x7a, 0xe0, 0x1b, 0x6f, 0x81, 0xea, 0x5a, 0xa7, 0xfe, 0x95, 0x7d, 0x69, 0xf7, 0xdf, 0xdb, 0x68,
-	0x0d, 0x6f, 0x02, 0x30, 0xe2, 0xd2, 0x74, 0x6d, 0xb3, 0x87, 0x6a, 0x78, 0x1b, 0x36, 0x18, 0xee,
-	0xf6, 0x6d, 0xdb, 0xec, 0x0e, 0xcc, 0x33, 0x24, 0x14, 0x16, 0x6f, 0x60, 0x0c, 0xac, 0x2e, 0xaa,
-	0x63, 0x15, 0x64, 0x86, 0x5d, 0xcb, 0x41, 0x22, 0xde, 0x80, 0x66, 0x0e, 0xec, 0x0b, 0xd4, 0xc0,
-	0xeb, 0xa0, 0x30, 0xd8, 0xf7, 0x9c, 0x73, 0x24, 0x15, 0x22, 0x43, 0x04, 0xc9, 0xc5, 0xc1, 0xd3,
-	0x0b, 0x07, 0x29, 0x85, 0xd3, 0xf2, 0x2c, 0x0f, 0x35, 0x0f, 0xbf, 0x0b, 0xb0, 0x5e, 0xed, 0x18,
-	0xb7, 0x60, 0x8b, 0x0f, 0xbd, 0xca, 0x8e, 0xfb, 0x96, 0x81, 0xd6, 0xf0, 0x2e, 0xb4, 0xe6, 0x48,
-	0xdb, 0xf3, 0x0c, 0xbf, 0x83, 0x6a, 0xcb, 0x05, 0x1d, 0x09, 0xf8, 0x39, 0xec, 0xce, 0x09, 0xe6,
-	0x87, 0x81, 0xe9, 0xda, 0x46, 0xcf, 0xef, 0xa0, 0xfa, 0x6a, 0x51, 0x47, 0x22, 0xfe, 0x0f, 0x50,
-	0x21, 0x9e, 0x5e, 0x38, 0xbe, 0xc5, 0xb6, 0x6e, 0x3c, 0x64, 0x4d, 0xc6, 0x4a, 0x78, 0x07, 0x70,
-	0x95, 0xed, 0xf6, 0xed, 0x73, 0xf3, 0x0c, 0xc9, 0xd5, 0x4b, 0xb0, 0x7b, 0xfa, 0xbd, 0x0e, 0x52,
-	0x16, 0x49, 0x1d, 0x35, 0x17, 0x48, 0xcb, 0x40, 0xa0, 0x7f, 0x13, 0x40, 0xf9, 0xc8, 0xbe, 0x6f,
-	0x23, 0x0a, 0xf1, 0x9b, 0xbc, 0x20, 0xf6, 0xc8, 0x8d, 0x20, 0xc0, 0x73, 0x6f, 0x98, 0x91, 0x7b,
-	0xda, 0x43, 0xa6, 0xfc, 0x2d, 0xac, 0xe1, 0xb7, 0xb0, 0x55, 0xd2, 0x67, 0xf4, 0x8e, 0xa6, 0xf4,
-	0x89, 0x01, 0x95, 0xf1, 0x64, 0xd9, 0x78, 0xb2, 0x70, 0x9a, 0x2c, 0x1f, 0x4f, 0x56, 0x8c, 0xff,
-	0x63, 0xc0, 0x48, 0xe2, 0x7f, 0x4c, 0xc7, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x3f, 0xd4, 0xef,
-	0x4f, 0xa7, 0x06, 0x00, 0x00,
+	// 1055 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x57, 0x5b, 0x6f, 0xe3, 0x44,
+	0x14, 0xae, 0xe3, 0xdc, 0x7c, 0xdc, 0xcb, 0x74, 0x9a, 0xb6, 0xde, 0x22, 0x50, 0x15, 0x81, 0x14,
+	0xfa, 0xd0, 0xa5, 0xa1, 0xb2, 0x90, 0xe0, 0x25, 0x4d, 0xd3, 0x95, 0x61, 0xd7, 0xc9, 0xda, 0xa9,
+	0xb8, 0xbc, 0x58, 0x4e, 0x3c, 0x49, 0x2d, 0xa5, 0xb6, 0xb1, 0x9d, 0xd0, 0x45, 0xbc, 0xf2, 0x07,
+	0xe0, 0xef, 0xf0, 0xca, 0x0b, 0xbf, 0x0a, 0xcd, 0x78, 0xec, 0xd8, 0x6d, 0xbd, 0x2b, 0x8a, 0x84,
+	0xd8, 0xb7, 0x39, 0xe7, 0x7c, 0xe7, 0x3b, 0x97, 0x39, 0x19, 0x9f, 0x80, 0xfc, 0x33, 0x99, 0x84,
+	0xf6, 0x69, 0x10, 0xfa, 0xb1, 0x8f, 0x6b, 0x4c, 0x68, 0x5f, 0x02, 0xd2, 0xbc, 0x98, 0x84, 0x33,
+	0x7b, 0x4a, 0x0c, 0xf2, 0xe3, 0x92, 0x44, 0x31, 0x7e, 0x06, 0x15, 0x3f, 0x50, 0x84, 0x63, 0xa1,
+	0xb3, 0xdd, 0x95, 0x4e, 0x13, 0xa7, 0x61, 0x60, 0x54, 0xfc, 0x00, 0xef, 0x43, 0x7d, 0x15, 0xce,
+	0x2c, 0xd7, 0x51, 0x2a, 0xc7, 0x42, 0x67, 0xcb, 0xa8, 0xad, 0xc2, 0x99, 0xe6, 0xb4, 0x7f, 0xaf,
+	0xc0, 0x4e, 0x46, 0x73, 0x1d, 0x38, 0x76, 0x4c, 0xde, 0xc6, 0xa2, 0x40, 0x63, 0x7a, 0x63, 0x7b,
+	0x73, 0x92, 0xd2, 0xa4, 0x62, 0x8e, 0x5f, 0xcc, 0xf1, 0x63, 0x0c, 0x55, 0xcf, 0xbe, 0x25, 0x4a,
+	0xf5, 0x58, 0xe8, 0x48, 0x06, 0x3b, 0xe3, 0x16, 0xd4, 0x5c, 0xcf, 0x21, 0x77, 0x4a, 0x2d, 0x41,
+	0x32, 0x01, 0x23, 0x10, 0x6f, 0xe3, 0xa5, 0x52, 0x67, 0x3a, 0x7a, 0xc4, 0x07, 0x50, 0xbf, 0x25,
+	0x71, 0xe8, 0x4e, 0x95, 0x06, 0x53, 0x72, 0x09, 0x3f, 0x07, 0xc9, 0x76, 0x9c, 0xd0, 0x72, 0x83,
+	0xd5, 0xb9, 0xd2, 0x3c, 0x16, 0x3b, 0x72, 0x17, 0xf3, 0x34, 0x7b, 0x8e, 0x13, 0x92, 0x28, 0xd2,
+	0x46, 0xab, 0x73, 0xa3, 0x49, 0x41, 0x5a, 0xb0, 0x3a, 0xcf, 0x3b, 0xa8, 0x8a, 0x54, 0xe2, 0xa0,
+	0x66, 0x0e, 0x6a, 0xbb, 0x0f, 0x3b, 0x86, 0xbf, 0x8c, 0x49, 0xa8, 0x39, 0x4f, 0x6f, 0xed, 0x6b,
+	0xd8, 0x4e, 0x49, 0x78, 0x63, 0xd7, 0x40, 0x21, 0xdf, 0xa3, 0x0e, 0x48, 0x21, 0x03, 0xa6, 0x14,
+	0x72, 0x57, 0xe6, 0x11, 0x92, 0x42, 0x42, 0x4e, 0xd3, 0xfe, 0x05, 0x0e, 0x0d, 0xe2, 0xb8, 0x51,
+	0x1c, 0xba, 0x93, 0x65, 0x4c, 0x98, 0xf5, 0xa9, 0xf9, 0xe1, 0xe7, 0x00, 0x8c, 0xd8, 0x8a, 0xdf,
+	0x04, 0xc9, 0x05, 0x6d, 0x77, 0x11, 0xf7, 0x64, 0x89, 0x8f, 0xdf, 0x04, 0xc4, 0x48, 0x52, 0xa3,
+	0xc7, 0x47, 0xa2, 0xab, 0xff, 0x61, 0xf4, 0x0f, 0xa1, 0x4a, 0xeb, 0xa5, 0x7c, 0x91, 0x45, 0x6f,
+	0x2a, 0x6d, 0x62, 0x44, 0xef, 0xb0, 0xfd, 0x05, 0xc0, 0x28, 0x24, 0x33, 0xf7, 0x8e, 0x81, 0x30,
+	0x54, 0x33, 0xc8, 0xa6, 0xc1, 0xce, 0x74, 0x9c, 0x16, 0xc4, 0x9b, 0xc7, 0x37, 0x3c, 0x11, 0x2e,
+	0xb5, 0xbf, 0x04, 0x59, 0x27, 0x77, 0xf1, 0x8d, 0x1f, 0x94, 0xba, 0x2a, 0xd0, 0x70, 0x67, 0xc9,
+	0xcc, 0xf2, 0xb1, 0xe7, 0x62, 0xfb, 0x6b, 0x90, 0x73, 0x33, 0x87, 0x3f, 0xc9, 0x39, 0xcb, 0xdd,
+	0x5d, 0x5e, 0xcf, 0x3a, 0x31, 0xce, 0xd7, 0x82, 0xda, 0x6c, 0x61, 0xcf, 0xa3, 0xb4, 0x25, 0x4c,
+	0x28, 0x94, 0xa0, 0x3e, 0xbd, 0x04, 0xf5, 0xdf, 0x94, 0xa0, 0xbe, 0xab, 0x04, 0xf5, 0xad, 0x25,
+	0xfc, 0x55, 0x01, 0x89, 0xdd, 0x1e, 0xeb, 0xc6, 0x3f, 0x9f, 0x8a, 0x8f, 0xa1, 0xca, 0xe6, 0x41,
+	0x2c, 0x99, 0x07, 0x66, 0xc5, 0xa7, 0xd0, 0x8c, 0x96, 0x93, 0xfc, 0xe4, 0xec, 0xe5, 0x91, 0xe6,
+	0x72, 0xc2, 0xc0, 0x8d, 0x28, 0x39, 0xe0, 0x4f, 0xa1, 0x1e, 0xb0, 0xfc, 0xd9, 0x8b, 0xf3, 0xe8,
+	0xbd, 0x70, 0x00, 0x3e, 0x82, 0x26, 0x9d, 0x70, 0xdb, 0x9b, 0x12, 0xfe, 0x14, 0x65, 0x72, 0xe9,
+	0x7b, 0x84, 0x40, 0x8c, 0xed, 0xb9, 0xd2, 0x4c, 0x5e, 0xae, 0xd8, 0x9e, 0xd3, 0xe6, 0x4c, 0xfd,
+	0x85, 0x1f, 0xb2, 0xc7, 0x46, 0x32, 0x12, 0x81, 0xa6, 0xed, 0x25, 0xb7, 0x14, 0x29, 0x50, 0x78,
+	0x85, 0x72, 0xf3, 0x67, 0x64, 0x98, 0x42, 0x33, 0xd5, 0xf7, 0xa7, 0x99, 0xea, 0xff, 0xa6, 0x99,
+	0xea, 0xba, 0x99, 0x27, 0xbf, 0x0a, 0xbc, 0x99, 0xac, 0x88, 0x1d, 0x90, 0x0d, 0xed, 0xc2, 0xba,
+	0xd6, 0xbf, 0xd1, 0x87, 0xdf, 0xea, 0x68, 0x03, 0x6f, 0x03, 0x50, 0x85, 0xf9, 0xbd, 0x39, 0x1e,
+	0xbc, 0x42, 0x02, 0xde, 0x85, 0x2d, 0x2a, 0xf7, 0x87, 0xba, 0x3e, 0xe8, 0x8f, 0x07, 0x97, 0xa8,
+	0x92, 0x41, 0xc6, 0xbd, 0xb1, 0xd6, 0x47, 0x22, 0x96, 0xa1, 0x41, 0x65, 0x43, 0x1b, 0xa1, 0x2a,
+	0xde, 0x84, 0x26, 0x15, 0x86, 0xe6, 0xe8, 0x0a, 0xd5, 0x52, 0x49, 0x33, 0x35, 0x13, 0xd5, 0x53,
+	0xe0, 0xc5, 0x8b, 0x11, 0x6a, 0x9c, 0xfc, 0x56, 0x81, 0xcd, 0x7c, 0x63, 0xf1, 0x1e, 0xec, 0x30,
+	0xda, 0xeb, 0xc4, 0xdb, 0xd2, 0x7a, 0x68, 0x03, 0x1f, 0xc2, 0x5e, 0x41, 0xa9, 0x9b, 0x66, 0xcf,
+	0x3a, 0x43, 0xc2, 0xe3, 0x86, 0x2e, 0xaa, 0xe0, 0x0f, 0xe0, 0xb0, 0x60, 0x18, 0x7c, 0x37, 0x1e,
+	0x18, 0x7a, 0xef, 0xa5, 0x75, 0x86, 0xc4, 0x72, 0x63, 0x17, 0x55, 0x71, 0x0b, 0x50, 0x6a, 0xbc,
+	0x78, 0x31, 0xb2, 0x34, 0x9a, 0x67, 0xed, 0xbe, 0x76, 0x40, 0xb5, 0x75, 0x7c, 0x00, 0x38, 0xaf,
+	0xed, 0x0f, 0xf5, 0xab, 0xc1, 0x25, 0x6a, 0xe4, 0x8b, 0xa0, 0x45, 0x5b, 0x2f, 0xcf, 0x50, 0xf3,
+	0xa1, 0xb2, 0x8b, 0xa4, 0x07, 0x4a, 0xad, 0x87, 0xe0, 0xe4, 0x4f, 0x11, 0x2a, 0xc3, 0x80, 0xde,
+	0x8a, 0xee, 0x0f, 0x03, 0x12, 0xda, 0xb1, 0xeb, 0x7b, 0x68, 0x83, 0x86, 0xcb, 0x96, 0x13, 0x73,
+	0x39, 0x89, 0xa6, 0xa1, 0x3b, 0x21, 0x48, 0xc0, 0x0a, 0xb4, 0xd6, 0x4b, 0x8b, 0x17, 0x65, 0x96,
+	0x0a, 0xde, 0x87, 0xdd, 0xf4, 0xa3, 0xbb, 0x76, 0x10, 0x59, 0xdb, 0xd2, 0x6f, 0x71, 0x0e, 0x5f,
+	0xc5, 0x5b, 0x20, 0x25, 0xdf, 0xb4, 0x9e, 0xe3, 0xa0, 0x1a, 0x46, 0xb0, 0x99, 0x88, 0x97, 0x64,
+	0x41, 0x62, 0x82, 0xea, 0xac, 0x0f, 0x5c, 0x33, 0xb3, 0x97, 0x0b, 0x86, 0x6b, 0x30, 0xbe, 0xbc,
+	0x96, 0xc3, 0x9b, 0xec, 0xe6, 0x69, 0x20, 0x0a, 0x93, 0xd8, 0x98, 0x51, 0x89, 0x9b, 0x81, 0xf2,
+	0x67, 0x89, 0x53, 0x88, 0x4c, 0xfb, 0x91, 0x69, 0x38, 0x6c, 0x93, 0x06, 0xcd, 0xc3, 0x42, 0x0a,
+	0xdd, 0xa2, 0x41, 0x0b, 0x5a, 0x0e, 0xdf, 0xa6, 0x61, 0x72, 0x3b, 0x1c, 0xda, 0xa1, 0xd3, 0xbb,
+	0x26, 0xf5, 0x7f, 0xf2, 0x10, 0x2a, 0x38, 0x5f, 0x2d, 0xec, 0x79, 0x9f, 0xed, 0x6d, 0x68, 0xb7,
+	0x60, 0xd0, 0xed, 0x5b, 0xc2, 0x0d, 0xb8, 0xd0, 0xfc, 0x57, 0xf1, 0x92, 0xeb, 0xf7, 0xf0, 0x33,
+	0xd8, 0x5f, 0xeb, 0xd9, 0x8f, 0x96, 0x9b, 0x5a, 0xdd, 0x3f, 0x44, 0xa8, 0xfd, 0x40, 0x7f, 0x84,
+	0x58, 0xcb, 0x55, 0x60, 0x92, 0x70, 0xe5, 0x4e, 0x09, 0x3e, 0x4c, 0x97, 0x9a, 0x7b, 0x6b, 0xeb,
+	0xd1, 0xc1, 0x7d, 0x43, 0xb2, 0x2f, 0xb5, 0x37, 0x3a, 0xc2, 0x67, 0x02, 0xbe, 0x5a, 0x2f, 0x63,
+	0x29, 0xd3, 0x41, 0xfe, 0x85, 0x5a, 0x2f, 0x69, 0x47, 0xfb, 0xf7, 0xf4, 0x05, 0x9e, 0xd7, 0x0f,
+	0x97, 0xa7, 0x94, 0xef, 0xa3, 0xd4, 0xef, 0xf1, 0xe5, 0xea, 0xa8, 0xf0, 0x76, 0x52, 0x43, 0x29,
+	0xa5, 0xfa, 0x0e, 0x4a, 0xb5, 0x8c, 0x52, 0xe5, 0x94, 0x5f, 0x01, 0xca, 0xa2, 0xa4, 0x5c, 0x0f,
+	0xc2, 0x97, 0x26, 0x94, 0xf3, 0x56, 0xcb, 0xbc, 0xd5, 0xb2, 0xd8, 0x93, 0x3a, 0xfb, 0x83, 0xf1,
+	0xf9, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xfe, 0xf2, 0xa6, 0x08, 0x6f, 0x0c, 0x00, 0x00,
 }

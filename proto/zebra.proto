@@ -17,16 +17,14 @@ syntax = "proto3";
 package zebra;
 
 enum RouteType {
-	RIB_UNKNOWN   = 0;
-	RIB_KERNEL    = 1;
-	RIB_CONNECTED = 2;
-	RIB_STATIC    = 3;
-	RIB_RIP       = 4;
-	RIB_RIPNG     = 5;
-	RIB_OSPF      = 6;
-	RIB_OSPF6     = 7;
-	RIB_BGP       = 8;
-	RIB_ISIS      = 9;
+	RIB_UNKNOWN             = 0;
+	RIB_SYSTEM              = 1;
+	RIB_CONNECTED           = 2;
+	RIB_STATIC              = 3;
+	RIB_RIP                 = 4;
+	RIB_OSPF                = 5;
+	RIB_ISIS                = 6;
+	RIB_BGP                 = 7;
 }
 
 enum RouteSubType {
@@ -43,70 +41,134 @@ enum RouteSubType {
 	RIB_SUB_ISIS_IA         = 10;
 }
 
+enum Op {
+	NoOperation             = 0;
+	InterfaceSubscribe      = 1;
+	InterfaceUnsubscribe    = 2;
+	RouterIdSubscribe       = 3;
+	RouterIdUnsubscribe     = 4;
+	RedistAdd               = 5;
+	RedistDelete            = 6;
+	RedistDefaultAdd        = 7;  
+	RedistDefaultDelete     = 8;
+	RouteAdd                = 9;
+	RouteDelete             = 10;
+	InterfaceAdd            = 11;
+	InterfaceDelete         = 12;
+	InterfaceAddrAdd        = 13;
+	InterfaceAddrDelete     = 14;
+	InterfaceUp             = 15;
+	InterfaceDown           = 16;
+	InterfaceFlagChange     = 17;
+	InterfaceNameChange     = 18;
+	InterfaceMtuChange      = 19;
+	InterfaceMetricChange   = 20;
+}
+
+message InterfaceRequest {
+	Op op = 1;
+	uint32 vrf_id = 2;
+}
+
+message InterfaceUpdate {
+	Op op = 1;
+	uint32 changed = 2;
+	uint32 vrf_id = 3;
+	string name = 4;
+	uint32 index = 5;
+	uint32 mtu = 6;
+	uint32 metric = 7;
+	repeated AddressIPv4 addr_ipv4 = 8;
+	repeated AddressIPv6 addr_ipv6 = 9;
+}
+
+message RouterIdRequest {
+	Op op = 1;
+	uint32 vrf_id = 2;
+}
+
+message RouterIdUpdate {
+	uint32 vrf_id = 1;
+	IPv4 router_id = 2;
+}
+
+message RedistributeIPv4Request {
+	Op op = 1;
+	uint32 vrf_id = 2;
+    RouteType route_type = 4;
+}
+
+message RedistributeIPv6Request {
+	Op op = 1;
+	uint32 vrf_id = 2;
+    RouteType route_type = 4;
+}
+
 message IPv4 {
 	uint32 s_addr = 1;
 }
 
 message PrefixIPv4 {
-	IPv4 addr = 1;
+	bytes addr = 1;
 	uint32 length = 2;
 }
 
 message NexthopIPv4 {
-	IPv4 addr = 1;
+	bytes addr = 1;
 	uint32 ifindex = 2;
 }
 
-message IPv6 {
-    uint32 s6_addr1 = 1;
-    uint32 s6_addr2 = 2;
-    uint32 s6_addr3 = 3;
-    uint32 s6_addr4 = 4;
+message AddressIPv4 {
+	PrefixIPv4 addr = 1;
+	uint32 flags = 2;
 }
 
 message PrefixIPv6 {
-	IPv6 addr = 1;
+	bytes addr = 1;
 	uint32 length = 2;
 }
 
 message NexthopIPv6 {
-	IPv6 addr = 1;
+	bytes addr = 1;
 	uint32 ifindex = 2;
 }
 
-message RouteIPv4 {
-	RouteType type        = 1;
-	RouteSubType sub_type = 2;
-	PrefixIPv4 prefix = 3;
-	uint32 distance = 4;
-	uint32 metric = 5;
-	repeated NexthopIPv4 nexthops = 6;
+message AddressIPv6 {
+	PrefixIPv6 addr = 1;
+	uint32 flags = 2;
 }
 
-message RouteIPv4Response {
+message RouteIPv4 {
+	Op op = 1;
+	uint32 vrf_id = 2;
+	RouteType type = 3;
+	RouteSubType sub_type = 4;
+	PrefixIPv4 prefix = 5;
+	uint32 distance = 6;
+	uint32 metric = 7;
+	uint32 tag = 8;
+	repeated string color = 9;
+	repeated NexthopIPv4 nexthops = 10;
 }
 
 message RouteIPv6 {
-	RouteType type        = 1;
-	RouteSubType sub_type = 2;
-	PrefixIPv6 prefix = 3;
-	uint32 distance = 4;
-	uint32 metric = 5;
-	repeated NexthopIPv6 nexthops = 6;
+	Op op = 1;
+	uint32 vrf_id = 2;
+	RouteType type = 3;
+	RouteSubType sub_type = 4;
+	PrefixIPv6 prefix = 5;
+	uint32 distance = 6;
+	uint32 metric = 7;
+	uint32 tag = 8;
+	repeated string color = 9;
+	repeated NexthopIPv6 nexthops = 10;
 }
 
-message RouteIPv6Response {
+service Zebra {
+	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
+	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
+	rpc RedistributeIPv4Service(stream RedistributeIPv4Request) returns (stream RouteIPv4) {}
+	rpc RedistributeIPv6Service(stream RedistributeIPv6Request) returns (stream RouteIPv6) {}
+	rpc RouteIPv4Service(stream RouteIPv4) returns (stream RouteIPv4) {}
+	rpc RouteIPv6Service(stream RouteIPv6) returns (stream RouteIPv6) {}
 }
-
-service ZebraApi {
-	rpc RouteIPv4Add(RouteIPv4) returns (RouteIPv4Response) {}
-	rpc RouteIPv4Delete(RouteIPv4) returns (RouteIPv4Response) {}
-	rpc RouteIPv6Add(RouteIPv6) returns (RouteIPv6Response) {}
-	rpc RouteIPv6Delete(RouteIPv6) returns (RouteIPv6Response) {}
-	// rpc VrfAdd() returns () {}
-	// rpc VrfDelete() returns ()  {}
-	// rpc VrfBindInterface() returns () {}
-	// rpc VrfUnbindInterface() returns () {}
-	// rpc RedistributeAdd() returns () {}
-	// rpc RedistributeDelete() returns () {}
- }

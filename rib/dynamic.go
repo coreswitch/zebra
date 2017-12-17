@@ -20,7 +20,7 @@ import (
 
 	"github.com/coreswitch/cmd"
 	rpc "github.com/coreswitch/openconfigd/proto"
-	zebra "github.com/coreswitch/zebra/proto"
+	// zebra "github.com/coreswitch/zebra/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
@@ -138,27 +138,27 @@ func (s *ShowServer) Show(req *rpc.ShowRequest, stream rpc.Show_ShowServer) erro
 	return nil
 }
 
-type ZebraServer struct{}
+// type ZebraServer struct{}
 
-func NewZebraServer() *ZebraServer {
-	return &ZebraServer{}
-}
+// func NewZebraServer() *ZebraServer {
+// 	return &ZebraServer{}
+// }
 
-func (z *ZebraServer) RouteIPv4Add(_ context.Context, req *zebra.RouteIPv4) (*zebra.RouteIPv4Response, error) {
-	return nil, nil
-}
+// func (z *ZebraServer) RouteIPv4Add(_ context.Context, req *zebra.RouteIPv4) (*zebra.RouteIPv4Response, error) {
+// 	return nil, nil
+// }
 
-func (z *ZebraServer) RouteIPv4Delete(_ context.Context, req *zebra.RouteIPv4) (*zebra.RouteIPv4Response, error) {
-	return nil, nil
-}
+// func (z *ZebraServer) RouteIPv4Delete(_ context.Context, req *zebra.RouteIPv4) (*zebra.RouteIPv4Response, error) {
+// 	return nil, nil
+// }
 
-func (z *ZebraServer) RouteIPv6Add(_ context.Context, req *zebra.RouteIPv6) (*zebra.RouteIPv6Response, error) {
-	return nil, nil
-}
+// func (z *ZebraServer) RouteIPv6Add(_ context.Context, req *zebra.RouteIPv6) (*zebra.RouteIPv6Response, error) {
+// 	return nil, nil
+// }
 
-func (z *ZebraServer) RouteIPv6Delete(_ context.Context, req *zebra.RouteIPv6) (*zebra.RouteIPv6Response, error) {
-	return nil, nil
-}
+// func (z *ZebraServer) RouteIPv6Delete(_ context.Context, req *zebra.RouteIPv6) (*zebra.RouteIPv6Response, error) {
+// 	return nil, nil
+// }
 
 func RpcServer() {
 	lis, err := net.Listen("tcp", ":2601")
@@ -174,7 +174,7 @@ func RpcServer() {
 	rpc.RegisterShowServer(grpcServer, NewShowServer())
 
 	// Zebra API
-	zebra.RegisterZebraApiServer(grpcServer, NewZebraServer())
+	// zebra.RegisterZebraApiServer(grpcServer, NewZebraServer())
 
 	grpcServer.Serve(lis)
 }
