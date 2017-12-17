@@ -54,41 +54,6 @@ import (
 // |           VRF ID (2)          |          Command (2)          |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-// ZAPI version 2 message types.
-//
-// #define ZEBRA_INTERFACE_ADD                1
-// #define ZEBRA_INTERFACE_DELETE             2
-// #define ZEBRA_INTERFACE_ADDRESS_ADD        3
-// #define ZEBRA_INTERFACE_ADDRESS_DELETE     4
-// #define ZEBRA_INTERFACE_UP                 5
-// #define ZEBRA_INTERFACE_DOWN               6
-// #define ZEBRA_IPV4_ROUTE_ADD               7
-// #define ZEBRA_IPV4_ROUTE_DELETE            8
-// #define ZEBRA_IPV6_ROUTE_ADD               9
-// #define ZEBRA_IPV6_ROUTE_DELETE           10
-// #define ZEBRA_REDISTRIBUTE_ADD            11
-// #define ZEBRA_REDISTRIBUTE_DELETE         12
-// #define ZEBRA_REDISTRIBUTE_DEFAULT_ADD    13
-// #define ZEBRA_REDISTRIBUTE_DEFAULT_DELETE 14
-// #define ZEBRA_IPV4_NEXTHOP_LOOKUP         15
-// #define ZEBRA_IPV6_NEXTHOP_LOOKUP         16
-// #define ZEBRA_IPV4_IMPORT_LOOKUP          17
-// #define ZEBRA_IPV6_IMPORT_LOOKUP          18
-// #define ZEBRA_INTERFACE_RENAME            19
-// #define ZEBRA_ROUTER_ID_ADD               20
-// #define ZEBRA_ROUTER_ID_DELETE            21
-// #define ZEBRA_ROUTER_ID_UPDATE            22
-// #define ZEBRA_HELLO                       23
-// #define ZEBRA_IPV4_NEXTHOP_LOOKUP_MRIB    24
-// #define ZEBRA_MESSAGE_MAX                 25
-
-type Client struct {
-	Version   uint8
-	VrfId     int
-	RouterId  bool
-	Interface bool
-}
-
 var (
 	ClientMap   = map[net.Conn]*Client{}
 	ClientMutex sync.RWMutex
@@ -481,6 +446,38 @@ func InterfaceAdd(conn net.Conn, h *Header, data []byte) {
 	}()
 }
 
+func InterfaceUpdateSend(conn net.Conn, version uint8, ifp *Interface) {
+	body := NewInterfaceUpdateBody(ifp)
+
+	m := &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: version,
+			VrfId:   0,
+			Command: INTERFACE_ADD,
+		},
+		Body: body,
+	}
+	s, _ := m.Serialize()
+	conn.Write(s)
+}
+
+func InterfacePropagate(ifp *Interface) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
+	if ifp.Vrf == nil {
+		return
+	}
+
+	for conn, client := range ClientMap {
+		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
+			fmt.Println("InterfaceUpdateSend", ifp.Name, ifp.Vrf.Index)
+			InterfaceUpdateSend(conn, client.Version, ifp)
+		}
+	}
+}
+
 type IPRouteBody struct {
 	Type      ROUTE_TYPE
 	Flags     FLAG
@@ -577,7 +574,7 @@ func RedistIPv4Route(command COMMAND_TYPE, conn net.Conn, version uint8, vrfId i
 	}
 
 	body := &IPRouteBody{
-		Type:    ROUTE_CONNECT,
+		Type:    RibType2RouteType(rib.Type),
 		Flags:   0,
 		Message: MESSAGE_NEXTHOP,
 		SAFI:    SAFI_UNICAST,
@@ -968,6 +965,10 @@ func IPv4Route(command COMMAND_TYPE, version uint8, conn net.Conn, data []byte, 
 		Nexthops: body.Nexthops,
 		Src:      conn,
 		Metric:   body.Metric,
+		Distance: body.Distance,
+	}
+	if ri.Distance != 0 {
+		ri.SetFlag(flagDistance)
 	}
 
 	// Call RIB API.
@@ -978,6 +979,13 @@ func IPv4Route(command COMMAND_TYPE, version uint8, conn net.Conn, data []byte, 
 		fmt.Println("Route delete", body.Prefix)
 		vrf.RibDelete(body.Prefix, ri)
 	}
+}
+
+type Client struct {
+	Version   uint8
+	VrfId     int
+	RouterId  bool
+	Interface bool
 }
 
 // Redistribute message for:
@@ -1003,6 +1011,13 @@ func (b *RedistributeBody) DecodeFromBytes(data []byte) error {
 func (b *RedistributeBody) Process(conn net.Conn, h *Header) error {
 	fmt.Println("Processing", h.Command.String(), RouteTypeStringMap[ROUTE_TYPE(b.Type)])
 	return nil
+}
+
+// Redistribute default message:
+//
+// ZEBRA_REDISTRIBUTE_DEFAULT_ADD    13
+// ZEBRA_REDISTRIBUTE_DEFAULT_DELETE 14
+type RedistributeDefaultBody struct {
 }
 
 type IPv4NexthopLookupBody struct {

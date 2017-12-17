@@ -16,6 +16,7 @@ package rib
 
 import (
 	"strings"
+	//"github.com/hash-set/zebra/rib"
 )
 
 const (
@@ -279,5 +280,30 @@ func RouteType2RibType(t ROUTE_TYPE) uint8 {
 		return RIB_UNKNOWN
 	default:
 		return RIB_UNKNOWN
+	}
+}
+
+func RibType2RouteType(t uint8) ROUTE_TYPE {
+	switch t {
+	case RIB_KERNEL:
+		return ROUTE_KERNEL
+	case RIB_CONNECTED:
+		return ROUTE_CONNECT
+	case RIB_STATIC:
+		return ROUTE_STATIC
+	case RIB_RIP:
+		return ROUTE_RIP
+	case RIB_RIPNG:
+		return ROUTE_RIPNG
+	case RIB_OSPF:
+		return ROUTE_OSPF
+	case RIB_OSPF6:
+		return ROUTE_OSPF6
+	case RIB_ISIS:
+		return ROUTE_ISIS
+	case RIB_BGP:
+		return ROUTE_BGP
+	default:
+		return ROUTE_SYSTEM
 	}
 }

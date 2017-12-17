@@ -1,4 +1,4 @@
-// Copyright 2016, 2017 Zebra Project
+// Copyright 2016, 2017 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ func TestV2Hello(t *testing.T) {
 	conn, err := Dial()
 	if err != nil {
 		t.Errorf("Dial failed %v\n", err)
+		return
 	}
 	defer conn.Close()
 	msg := Message{
@@ -65,6 +66,7 @@ func TestV2Nexthop(t *testing.T) {
 	conn, err := Dial()
 	if err != nil {
 		t.Errorf("Dial failed %v\n", err)
+		return
 	}
 	defer conn.Close()
 
