@@ -420,6 +420,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 			}
 		}
 		ifp.Flags = ifi.Flags
+		// InterfacePropagate(ifp)
 
 		// Need to update status
 		if IfStatusChangeHook != nil {
