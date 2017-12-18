@@ -3,7 +3,7 @@
 ##
 PACKAGE_NAME:=openconfigd
 
-OPENCONFIGD_VERSION:=0.8.1
+OPENCONFIGD_VERSION:=0.8.0
 
 PACKAGE_VERSION:=$(OPENCONFIGD_VERSION)
 PACKAGE_LICENSE:=Apache License version 2.0
@@ -18,9 +18,9 @@ BUILD_DIR:=$(OUT_DIR)/build
 
 .PHONY: package stage clean files
 
-package: $(OUT_DIR)/timestamp.deb $(OUT_DIR)/timestamp.rpm
+package: $(OUT_DIR)/package.timestamp
 
-$(OUT_DIR)/timestamp.deb: stage
+$(OUT_DIR)/package.timestamp: stage
 	@echo "Creating package"
 	@rm -f $(OUT_DIR)/$(PACKAGE_NAME)_$(PACKAGE_VERSION)*.deb
 	@cd $(OUT_DIR) && \
@@ -39,26 +39,7 @@ $(OUT_DIR)/timestamp.deb: stage
 	--deb-changelog ../../ChangeLog \
 	--deb-no-default-config-files \
 	-t deb .
-	touch $(OUT_DIR)/timestamp.deb
-
-$(OUT_DIR)/timestamp.rpm: stage
-	@echo "Creating package"
-	@rm -f $(OUT_DIR)/$(PACKAGE_NAME)_$(PACKAGE_VERSION)*.rpm
-	@cd $(OUT_DIR) && \
-	fpm -s dir -C $(realpath $(STAGING_DIR)) \
-	--name $(PACKAGE_NAME) \
-	--version $(PACKAGE_VERSION) \
-	--license "$(PACKAGE_LICENSE)" \
-	--maintainer "$(PACKAGE_MAINTAINER)" \
-	--description "$(PACKAGE_DESCRIPTION)" \
-	--url "$(PACKAGE_URL)" \
-	--vendor "$(PACKAGE_VENDOR)" \
-	--before-install ../scripts/before_install.sh \
-	--after-install ../scripts/after_install.sh \
-	--before-remove ../scripts/before_remove.sh \
-	--after-remove ../scripts/after_remove.sh \
-	-t rpm .
-	touch $(OUT_DIR)/timestamp.rpm
+	touch $(OUT_DIR)/package.timestamp
 
 stage: files openconfigd cli
 
@@ -68,8 +49,8 @@ files: $(STAGING_DIR) $(STAGING_DIR)/etc $(STAGING_DIR)/etc/openconfigd
 	rsync -avz ../yang $(STAGING_DIR)/etc/openconfigd
 
 openconfigd: $(STAGING_DIR)/usr/bin
-	go get github.com/coreswitch/openconfigd/openconfigd
-	go get github.com/coreswitch/openconfigd/cli_command
+	go get github.com/hash-set/openconfigd/openconfigd
+	go get github.com/hash-set/openconfigd/cli_command
 	cp $(GOPATH)/bin/openconfigd $(STAGING_DIR)/usr/bin
 	cp $(GOPATH)/bin/cli_command $(STAGING_DIR)/usr/bin
 

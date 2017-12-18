@@ -15,7 +15,6 @@ module quagga {
         description "OSPF interface authentication";
         container md5 {
           description "MD5 parameters";
-          presence "md5";
           list key-id {
             key name;
             description "MD5 key id";
@@ -711,13 +710,9 @@ module quagga {
             type uint32;
             description "Confederation AS identifier [REQUIRED]";
           }
-          list peers {
-            key name;
+          leaf-list peers {
+            type uint32;
             description "Peer ASs in the BGP confederation";
-            leaf name {
-              type uint32;
-              description name;
-            }
           }
         }
         container dampening {
@@ -1261,7 +1256,6 @@ module quagga {
     }
     container ospf {
       description "Open Shortest Path First protocol (OSPF) parameters";
-      presence "ospf";
       list access-list {
         key name;
         description "Access list to filter networks in routing updates";
@@ -1269,13 +1263,9 @@ module quagga {
           type uint32;
           description name;
         }
-        list export {
-          key name;
+        leaf-list export {
+          type string;
           description "Filter for outgoing routing updates [REQUIRED]";
-          leaf name {
-            type string;
-            description name;
-          }
         }
       }
       list area {
@@ -1293,7 +1283,6 @@ module quagga {
           }
           container nssa {
             description "Nssa OSPF area";
-            presence "nssa";
             leaf default-cost {
               type uint32;
               description "Summary-default cost of nssa area";
@@ -1309,7 +1298,6 @@ module quagga {
           }
           container stub {
             description "Stub OSPF area";
-            presence "stub";
             leaf default-cost {
               type uint32;
               description "Summary-default cost of stub area";
@@ -1324,13 +1312,9 @@ module quagga {
           type string;
           description "OSPF area authentication type";
         }
-        list network {
-          key name;
+        leaf-list network {
+          type inet:ipv4-prefix;
           description "OSPF network [REQUIRED]";
-          leaf name {
-            type inet:ipv4-prefix;
-            description name;
-          }
         }
         list range {
           key name;
@@ -1367,7 +1351,6 @@ module quagga {
             description "Authentication";
             container md5 {
               description "MD5 key id";
-              presence "md5";
               list key-id {
                 key name;
                 description "MD5 key id";
@@ -1530,27 +1513,18 @@ module quagga {
           description "Override the default router identifier";
         }
       }
-      list passive-interface {
-        key name;
+      leaf-list passive-interface {
+        type string;
         description "Suppress routing updates on an interface";
-        leaf name {
-          type string;
-          description name;
-        }
       }
-      list passive-interface-exclude {
-        key name;
+      leaf-list passive-interface-exclude {
+        type string;
         description "Interface to exclude when using 'passive-interface default'";
-        leaf name {
-          type string;
-          description name;
-        }
       }
       container redistribute {
         description "Redistribute information from another routing protocol";
         container bgp {
           description "Redistribute BGP routes";
-          presence "bgp";
           leaf metric {
             type uint32;
             description "Metric for redistributed routes";
@@ -1566,7 +1540,6 @@ module quagga {
         }
         container connected {
           description "Redistribute connected routes";
-          presence "connected";
           leaf metric {
             type uint32;
             description "Metric for redistributed routes";
@@ -1582,7 +1555,6 @@ module quagga {
         }
         container kernel {
           description "Redistribute kernel routes";
-          presence "kernel";
           leaf metric {
             type uint32;
             description "Metric for redistributed routes";
@@ -1599,7 +1571,6 @@ module quagga {
         /*
         container rip {
           description "Redistribute RIP routes";
-          presence "rip";
           leaf metric {
             type uint32;
             description "Metric for redistributed routes";
@@ -1616,7 +1587,6 @@ module quagga {
         */
         container static {
           description "Redistribute static routes";
-          presence "static";
           leaf metric {
             type uint32;
             description "Metric for redistributed routes";
@@ -1662,7 +1632,6 @@ module quagga {
     }
     container ospfv3 {
       description "IPv6 Open Shortest Path First protocol (OSPFv3) parameters";
-      presence "ospfv3";
       list area {
         key name;
         description "OSPFv3 Area";
@@ -1678,13 +1647,9 @@ module quagga {
           type string;
           description "Name of import-list";
         }
-        list interface {
-          key name;
+        leaf-list interface {
+          type string;
           description "OSPFv3 area interface";
-          leaf name {
-            type string;
-            description name;
-          }
         }
         list range {
           key name;

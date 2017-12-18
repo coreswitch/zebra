@@ -3,7 +3,6 @@ package quagga
 import (
 	"fmt"
 	"github.com/coreswitch/cmd"
-	"io"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -276,22 +275,14 @@ func (config *quaggaConfigStateNode) values(path []string) []string {
 	return values
 }
 
-func quaggaConfigValid(f io.Writer) bool {
+func quaggaConfigValid() bool {
 	valid := true
 
-	if !quaggaConfigValidInterfacesOspf(f) {
+	if !quaggaConfigValidPolicy() {
 		valid = false
 	}
 
-	if !quaggaConfigValidPolicy(f) {
-		valid = false
-	}
-
-	if !quaggaConfigValidBgp(f) {
-		valid = false
-	}
-
-	if !quaggaConfigValidOspf(f) {
+	if !quaggaConfigValidBgp() {
 		valid = false
 	}
 

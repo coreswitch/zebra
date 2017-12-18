@@ -21,13 +21,15 @@ const (
 )
 
 const (
-	TUNTAP_MODE_TUN  TuntapMode = unix.IFF_TUN
-	TUNTAP_MODE_TAP  TuntapMode = unix.IFF_TAP
-	TUNTAP_DEFAULTS  TuntapFlag = unix.IFF_TUN_EXCL | unix.IFF_ONE_QUEUE
-	TUNTAP_VNET_HDR  TuntapFlag = unix.IFF_VNET_HDR
-	TUNTAP_TUN_EXCL  TuntapFlag = unix.IFF_TUN_EXCL
-	TUNTAP_NO_PI     TuntapFlag = unix.IFF_NO_PI
-	TUNTAP_ONE_QUEUE TuntapFlag = unix.IFF_ONE_QUEUE
+	TUNTAP_MODE_TUN             TuntapMode = unix.IFF_TUN
+	TUNTAP_MODE_TAP             TuntapMode = unix.IFF_TAP
+	TUNTAP_DEFAULTS             TuntapFlag = unix.IFF_TUN_EXCL | unix.IFF_ONE_QUEUE
+	TUNTAP_VNET_HDR             TuntapFlag = unix.IFF_VNET_HDR
+	TUNTAP_TUN_EXCL             TuntapFlag = unix.IFF_TUN_EXCL
+	TUNTAP_NO_PI                TuntapFlag = unix.IFF_NO_PI
+	TUNTAP_ONE_QUEUE            TuntapFlag = unix.IFF_ONE_QUEUE
+	TUNTAP_MULTI_QUEUE          TuntapFlag = 0x0100
+	TUNTAP_MULTI_QUEUE_DEFAULTS TuntapFlag = TUNTAP_MULTI_QUEUE | TUNTAP_NO_PI
 )
 
 var lookupByDump = false
@@ -107,6 +109,75 @@ func (h *Handle) SetPromiscOn(link Link) error {
 	msg.Flags = unix.IFF_PROMISC
 	msg.Index = int32(base.Index)
 	req.AddData(msg)
+
+	_, err := req.Execute(unix.NETLINK_ROUTE, 0)
+	return err
+}
+
+func MacvlanMACAddrAdd(link Link, addr net.HardwareAddr) error {
+	return pkgHandle.MacvlanMACAddrAdd(link, addr)
+}
+
+func (h *Handle) MacvlanMACAddrAdd(link Link, addr net.HardwareAddr) error {
+	return h.macvlanMACAddrChange(link, []net.HardwareAddr{addr}, nl.MACVLAN_MACADDR_ADD)
+}
+
+func MacvlanMACAddrDel(link Link, addr net.HardwareAddr) error {
+	return pkgHandle.MacvlanMACAddrDel(link, addr)
+}
+
+func (h *Handle) MacvlanMACAddrDel(link Link, addr net.HardwareAddr) error {
+	return h.macvlanMACAddrChange(link, []net.HardwareAddr{addr}, nl.MACVLAN_MACADDR_DEL)
+}
+
+func MacvlanMACAddrFlush(link Link) error {
+	return pkgHandle.MacvlanMACAddrFlush(link)
+}
+
+func (h *Handle) MacvlanMACAddrFlush(link Link) error {
+	return h.macvlanMACAddrChange(link, nil, nl.MACVLAN_MACADDR_FLUSH)
+}
+
+func MacvlanMACAddrSet(link Link, addrs []net.HardwareAddr) error {
+	return pkgHandle.MacvlanMACAddrSet(link, addrs)
+}
+
+func (h *Handle) MacvlanMACAddrSet(link Link, addrs []net.HardwareAddr) error {
+	return h.macvlanMACAddrChange(link, addrs, nl.MACVLAN_MACADDR_SET)
+}
+
+func (h *Handle) macvlanMACAddrChange(link Link, addrs []net.HardwareAddr, mode uint32) error {
+	base := link.Attrs()
+	h.ensureIndex(base)
+	req := h.newNetlinkRequest(unix.RTM_NEWLINK, unix.NLM_F_ACK)
+
+	msg := nl.NewIfInfomsg(unix.AF_UNSPEC)
+	msg.Index = int32(base.Index)
+	req.AddData(msg)
+
+	linkInfo := nl.NewRtAttr(unix.IFLA_LINKINFO, nil)
+	nl.NewRtAttrChild(linkInfo, nl.IFLA_INFO_KIND, nl.NonZeroTerminated(link.Type()))
+	inner := nl.NewRtAttrChild(linkInfo, nl.IFLA_INFO_DATA, nil)
+
+	// IFLA_MACVLAN_MACADDR_MODE = mode
+	b := make([]byte, 4)
+	native.PutUint32(b, mode)
+	nl.NewRtAttrChild(inner, nl.IFLA_MACVLAN_MACADDR_MODE, b)
+
+	// populate message with MAC addrs, if necessary
+	switch mode {
+	case nl.MACVLAN_MACADDR_ADD, nl.MACVLAN_MACADDR_DEL:
+		if len(addrs) == 1 {
+			nl.NewRtAttrChild(inner, nl.IFLA_MACVLAN_MACADDR, []byte(addrs[0]))
+		}
+	case nl.MACVLAN_MACADDR_SET:
+		mad := nl.NewRtAttrChild(inner, nl.IFLA_MACVLAN_MACADDR_DATA, nil)
+		for _, addr := range addrs {
+			nl.NewRtAttrChild(mad, nl.IFLA_MACVLAN_MACADDR, []byte(addr))
+		}
+	}
+
+	req.AddData(linkInfo)
 
 	_, err := req.Execute(unix.NETLINK_ROUTE, 0)
 	return err
@@ -643,6 +714,8 @@ func addVxlanAttrs(vxlan *Vxlan, linkInfo *nl.RtAttr) {
 	nl.NewRtAttrChild(data, nl.IFLA_VXLAN_RSC, boolAttr(vxlan.RSC))
 	nl.NewRtAttrChild(data, nl.IFLA_VXLAN_L2MISS, boolAttr(vxlan.L2miss))
 	nl.NewRtAttrChild(data, nl.IFLA_VXLAN_L3MISS, boolAttr(vxlan.L3miss))
+	nl.NewRtAttrChild(data, nl.IFLA_VXLAN_UDP_ZERO_CSUM6_TX, boolAttr(vxlan.UDP6ZeroCSumTx))
+	nl.NewRtAttrChild(data, nl.IFLA_VXLAN_UDP_ZERO_CSUM6_RX, boolAttr(vxlan.UDP6ZeroCSumRx))
 
 	if vxlan.UDPCSum {
 		nl.NewRtAttrChild(data, nl.IFLA_VXLAN_UDP_CSUM, boolAttr(vxlan.UDPCSum))
@@ -767,6 +840,12 @@ func addBondAttrs(bond *Bond, linkInfo *nl.RtAttr) {
 	}
 }
 
+func cleanupFds(fds []*os.File) {
+	for _, f := range fds {
+		f.Close()
+	}
+}
+
 // LinkAdd adds a new link device. The type and features of the device
 // are taken from the parameters in the link object.
 // Equivalent to: `ip link add $link`
@@ -792,39 +871,76 @@ func (h *Handle) linkModify(link Link, flags int) error {
 	if tuntap, ok := link.(*Tuntap); ok {
 		// TODO: support user
 		// TODO: support group
-		// TODO: multi_queue
 		// TODO: support non- persistent
 		if tuntap.Mode < unix.IFF_TUN || tuntap.Mode > unix.IFF_TAP {
 			return fmt.Errorf("Tuntap.Mode %v unknown!", tuntap.Mode)
 		}
-		file, err := os.OpenFile("/dev/net/tun", os.O_RDWR, 0)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
+
+		queues := tuntap.Queues
+
+		var fds []*os.File
 		var req ifReq
-		if tuntap.Flags == 0 {
-			req.Flags = uint16(TUNTAP_DEFAULTS)
-		} else {
-			req.Flags = uint16(tuntap.Flags)
-		}
-		req.Flags |= uint16(tuntap.Mode)
 		copy(req.Name[:15], base.Name)
-		_, _, errno := unix.Syscall(unix.SYS_IOCTL, file.Fd(), uintptr(unix.TUNSETIFF), uintptr(unsafe.Pointer(&req)))
-		if errno != 0 {
-			return fmt.Errorf("Tuntap IOCTL TUNSETIFF failed, errno %v", errno)
+
+		req.Flags = uint16(tuntap.Flags)
+
+		if queues == 0 { //Legacy compatibility
+			queues = 1
+			if tuntap.Flags == 0 {
+				req.Flags = uint16(TUNTAP_DEFAULTS)
+			}
+		} else {
+			// For best peformance set Flags to TUNTAP_MULTI_QUEUE_DEFAULTS | TUNTAP_VNET_HDR
+			// when a) KVM has support for this ABI and
+			//      b) the value of the flag is queryable using the TUNGETIFF ioctl
+			if tuntap.Flags == 0 {
+				req.Flags = uint16(TUNTAP_MULTI_QUEUE_DEFAULTS)
+			}
 		}
-		_, _, errno = unix.Syscall(unix.SYS_IOCTL, file.Fd(), uintptr(unix.TUNSETPERSIST), 1)
+
+		req.Flags |= uint16(tuntap.Mode)
+
+		for i := 0; i < queues; i++ {
+			localReq := req
+			file, err := os.OpenFile("/dev/net/tun", os.O_RDWR, 0)
+			if err != nil {
+				cleanupFds(fds)
+				return err
+			}
+
+			fds = append(fds, file)
+			_, _, errno := unix.Syscall(unix.SYS_IOCTL, file.Fd(), uintptr(unix.TUNSETIFF), uintptr(unsafe.Pointer(&localReq)))
+			if errno != 0 {
+				cleanupFds(fds)
+				return fmt.Errorf("Tuntap IOCTL TUNSETIFF failed [%d], errno %v", i, errno)
+			}
+		}
+
+		_, _, errno := unix.Syscall(unix.SYS_IOCTL, fds[0].Fd(), uintptr(unix.TUNSETPERSIST), 1)
 		if errno != 0 {
+			cleanupFds(fds)
 			return fmt.Errorf("Tuntap IOCTL TUNSETPERSIST failed, errno %v", errno)
 		}
+
 		h.ensureIndex(base)
 
 		// can't set master during create, so set it afterwards
 		if base.MasterIndex != 0 {
 			// TODO: verify MasterIndex is actually a bridge?
-			return h.LinkSetMasterByIndex(link, base.MasterIndex)
+			err := h.LinkSetMasterByIndex(link, base.MasterIndex)
+			if err != nil {
+				_, _, _ = unix.Syscall(unix.SYS_IOCTL, fds[0].Fd(), uintptr(unix.TUNSETPERSIST), 0)
+				cleanupFds(fds)
+				return err
+			}
 		}
+
+		if tuntap.Queues == 0 {
+			cleanupFds(fds)
+		} else {
+			tuntap.Fds = fds
+		}
+
 		return nil
 	}
 
@@ -883,6 +999,16 @@ func (h *Handle) linkModify(link Link, flags int) error {
 	if base.HardwareAddr != nil {
 		hwaddr := nl.NewRtAttr(unix.IFLA_ADDRESS, []byte(base.HardwareAddr))
 		req.AddData(hwaddr)
+	}
+
+	if base.NumTxQueues > 0 {
+		txqueues := nl.NewRtAttr(nl.IFLA_NUM_TX_QUEUES, nl.Uint32Attr(uint32(base.NumTxQueues)))
+		req.AddData(txqueues)
+	}
+
+	if base.NumRxQueues > 0 {
+		rxqueues := nl.NewRtAttr(nl.IFLA_NUM_RX_QUEUES, nl.Uint32Attr(uint32(base.NumRxQueues)))
+		req.AddData(rxqueues)
 	}
 
 	if base.Namespace != nil {
@@ -1560,6 +1686,10 @@ func parseVxlanData(link Link, data []syscall.NetlinkRouteAttr) {
 			vxlan.L3miss = int8(datum.Value[0]) != 0
 		case nl.IFLA_VXLAN_UDP_CSUM:
 			vxlan.UDPCSum = int8(datum.Value[0]) != 0
+		case nl.IFLA_VXLAN_UDP_ZERO_CSUM6_TX:
+			vxlan.UDP6ZeroCSumTx = int8(datum.Value[0]) != 0
+		case nl.IFLA_VXLAN_UDP_ZERO_CSUM6_RX:
+			vxlan.UDP6ZeroCSumRx = int8(datum.Value[0]) != 0
 		case nl.IFLA_VXLAN_GBP:
 			vxlan.GBP = true
 		case nl.IFLA_VXLAN_FLOWBASED:
@@ -1662,7 +1792,8 @@ func parseMacvtapData(link Link, data []syscall.NetlinkRouteAttr) {
 func parseMacvlanData(link Link, data []syscall.NetlinkRouteAttr) {
 	macv := link.(*Macvlan)
 	for _, datum := range data {
-		if datum.Attr.Type == nl.IFLA_MACVLAN_MODE {
+		switch datum.Attr.Type {
+		case nl.IFLA_MACVLAN_MODE:
 			switch native.Uint32(datum.Value[0:4]) {
 			case nl.MACVLAN_MODE_PRIVATE:
 				macv.Mode = MACVLAN_MODE_PRIVATE
@@ -1675,7 +1806,16 @@ func parseMacvlanData(link Link, data []syscall.NetlinkRouteAttr) {
 			case nl.MACVLAN_MODE_SOURCE:
 				macv.Mode = MACVLAN_MODE_SOURCE
 			}
-			return
+		case nl.IFLA_MACVLAN_MACADDR_COUNT:
+			macv.MACAddrs = make([]net.HardwareAddr, 0, int(native.Uint32(datum.Value[0:4])))
+		case nl.IFLA_MACVLAN_MACADDR_DATA:
+			macs, err := nl.ParseRouteAttr(datum.Value[:])
+			if err != nil {
+				panic(fmt.Sprintf("failed to ParseRouteAttr for IFLA_MACVLAN_MACADDR_DATA: %v", err))
+			}
+			for _, macDatum := range macs {
+				macv.MACAddrs = append(macv.MACAddrs, net.HardwareAddr(macDatum.Value[0:6]))
+			}
 		}
 	}
 }
@@ -1871,6 +2011,7 @@ func addXdpAttrs(xdp *LinkXdp, req *nl.NetlinkRequest) {
 	native.PutUint32(b, uint32(xdp.Fd))
 	nl.NewRtAttrChild(attrs, nl.IFLA_XDP_FD, b)
 	if xdp.Flags != 0 {
+		b := make([]byte, 4)
 		native.PutUint32(b, xdp.Flags)
 		nl.NewRtAttrChild(attrs, nl.IFLA_XDP_FLAGS, b)
 	}
@@ -1974,7 +2115,11 @@ func addSittunAttrs(sittun *Sittun, linkInfo *nl.RtAttr) {
 		nl.NewRtAttrChild(data, nl.IFLA_IPTUN_REMOTE, []byte(ip))
 	}
 
-	nl.NewRtAttrChild(data, nl.IFLA_IPTUN_TTL, nl.Uint8Attr(sittun.Ttl))
+	if sittun.Ttl > 0 {
+		// Would otherwise fail on 3.10 kernel
+		nl.NewRtAttrChild(data, nl.IFLA_IPTUN_TTL, nl.Uint8Attr(sittun.Ttl))
+	}
+
 	nl.NewRtAttrChild(data, nl.IFLA_IPTUN_TOS, nl.Uint8Attr(sittun.Tos))
 	nl.NewRtAttrChild(data, nl.IFLA_IPTUN_PMTUDISC, nl.Uint8Attr(sittun.PMtuDisc))
 	nl.NewRtAttrChild(data, nl.IFLA_IPTUN_ENCAP_TYPE, nl.Uint16Attr(sittun.EncapType))
@@ -2111,4 +2256,58 @@ func parseGTPData(link Link, data []syscall.NetlinkRouteAttr) {
 			gtp.Role = int(native.Uint32(datum.Value))
 		}
 	}
+}
+
+// LinkSetBondSlave add slave to bond link via ioctl interface.
+func LinkSetBondSlave(link Link, master *Bond) error {
+	fd, err := getSocketUDP()
+	if err != nil {
+		return err
+	}
+	defer syscall.Close(fd)
+
+	ifreq := newIocltSlaveReq(link.Attrs().Name, master.Attrs().Name)
+
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), unix.SIOCBONDENSLAVE, uintptr(unsafe.Pointer(ifreq)))
+	if errno != 0 {
+		return fmt.Errorf("Failed to enslave %q to %q, errno=%v", link.Attrs().Name, master.Attrs().Name, errno)
+	}
+	return nil
+}
+
+// VethPeerIndex get veth peer index.
+func VethPeerIndex(link *Veth) (int, error) {
+	fd, err := getSocketUDP()
+	if err != nil {
+		return -1, err
+	}
+	defer syscall.Close(fd)
+
+	ifreq, sSet := newIocltStringSetReq(link.Name)
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), SIOCETHTOOL, uintptr(unsafe.Pointer(ifreq)))
+	if errno != 0 {
+		return -1, fmt.Errorf("SIOCETHTOOL request for %q failed, errno=%v", link.Attrs().Name, errno)
+	}
+
+	gstrings := &ethtoolGstrings{
+		cmd:       ETHTOOL_GSTRINGS,
+		stringSet: ETH_SS_STATS,
+		length:    sSet.data[0],
+	}
+	ifreq.Data = uintptr(unsafe.Pointer(gstrings))
+	_, _, errno = syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), SIOCETHTOOL, uintptr(unsafe.Pointer(ifreq)))
+	if errno != 0 {
+		return -1, fmt.Errorf("SIOCETHTOOL request for %q failed, errno=%v", link.Attrs().Name, errno)
+	}
+
+	stats := &ethtoolStats{
+		cmd:    ETHTOOL_GSTATS,
+		nStats: gstrings.length,
+	}
+	ifreq.Data = uintptr(unsafe.Pointer(stats))
+	_, _, errno = syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), SIOCETHTOOL, uintptr(unsafe.Pointer(ifreq)))
+	if errno != 0 {
+		return -1, fmt.Errorf("SIOCETHTOOL request for %q failed, errno=%v", link.Attrs().Name, errno)
+	}
+	return int(stats.data[0]), nil
 }
