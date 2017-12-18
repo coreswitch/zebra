@@ -42,12 +42,14 @@ func main() {
 	ribComponent := rib.NewServer()
 	restComponent := rib.NewRestComponent()
 	grpcComponent := rib.NewGrpcComponent()
+	rpcComponent := rib.NewRpcComponent(ribComponent)
 
 	systemMap := component.SystemMap{
 		"fea":  feaComponent,
 		"rib":  component.ComponentWith(ribComponent, "fea"),
 		"rest": component.ComponentWith(restComponent, "rib"),
 		"grpc": component.ComponentWith(grpcComponent, "rib"),
+		"rpc":  component.ComponentWith(rpcComponent, "rib"),
 	}
 	systemMap.Start()
 

@@ -19,19 +19,19 @@ import (
 	"net"
 	"runtime"
 	"sync"
-	"time"
 
+	"github.com/coreswitch/component"
 	pb "github.com/coreswitch/zebra/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 )
 
-type grpcServer struct {
+type rpcServer struct {
 	Mutex sync.RWMutex
-	Peers map[peer.Peer]*grpcPeer
+	Peers map[peer.Peer]*rpcPeer
 }
 
-type grpcPeer struct {
+type rpcPeer struct {
 	interfaceStream  pb.Zebra_InterfaceServiceServer
 	routerIdStream   pb.Zebra_RouterIdServiceServer
 	redistIPv4Stream pb.Zebra_RedistributeIPv4ServiceServer
@@ -42,8 +42,8 @@ type grpcPeer struct {
 	done             chan interface{}
 }
 
-func NewGrpcPeer() *grpcPeer {
-	p := &grpcPeer{
+func NewGrpcPeer() *rpcPeer {
+	p := &rpcPeer{
 		dispatCh: make(chan interface{}),
 		done:     make(chan interface{}),
 	}
@@ -51,7 +51,7 @@ func NewGrpcPeer() *grpcPeer {
 	return p
 }
 
-func (p *grpcPeer) Dispatch() {
+func (p *rpcPeer) Dispatch() {
 	for {
 		select {
 		case mes := <-p.dispatCh:
@@ -76,182 +76,180 @@ func (p *grpcPeer) Dispatch() {
 	}
 }
 
-func (s *grpcServer) PeerGet(p *peer.Peer) *grpcPeer {
-	s.Mutex.Lock()
-	peer, ok := s.Peers[*p]
+func (r *rpcServer) PeerGet(p *peer.Peer) *rpcPeer {
+	r.Mutex.Lock()
+	peer, ok := r.Peers[*p]
 	if !ok {
 		fmt.Println("New Peer", p)
 		peer = NewGrpcPeer()
-		s.Peers[*p] = peer
+		r.Peers[*p] = peer
 	} else {
 		fmt.Println("Existing Peer", p)
 	}
-	s.Mutex.Unlock()
+	r.Mutex.Unlock()
 	return peer
 }
 
-func (s *grpcServer) PeerDelete(p *peer.Peer) {
-	s.Mutex.Lock()
-	peer, ok := s.Peers[*p]
+func (r *rpcServer) PeerDelete(p *peer.Peer) {
+	r.Mutex.Lock()
+	peer, ok := r.Peers[*p]
 	if ok {
 		close(peer.done)
-		delete(s.Peers, *p)
+		delete(r.Peers, *p)
 	}
-	s.Mutex.Unlock()
+	r.Mutex.Unlock()
 }
 
-func NewGrpcServer() *grpcServer {
-	s := &grpcServer{
-		Peers: map[peer.Peer]*grpcPeer{},
+func NewGrpcServer() *rpcServer {
+	s := &rpcServer{
+		Peers: map[peer.Peer]*rpcPeer{},
 	}
 	return s
 }
 
-func (s *grpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) error {
+func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) error {
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.interfaceStream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func (s *grpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error {
+func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error {
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.routerIdStream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func (s *grpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4ServiceServer) error {
+func (r *rpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4ServiceServer) error {
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.redistIPv4Stream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func (s *grpcServer) RedistributeIPv6Service(stream pb.Zebra_RedistributeIPv6ServiceServer) error {
+func (r *rpcServer) RedistributeIPv6Service(stream pb.Zebra_RedistributeIPv6ServiceServer) error {
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.redistIPv6Stream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func (s *grpcServer) RouteIPv4Service(stream pb.Zebra_RouteIPv4ServiceServer) error {
+func (r *rpcServer) RouteIPv4Service(stream pb.Zebra_RouteIPv4ServiceServer) error {
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.routeIPv4Stream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func (s *grpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) error {
+func (r *rpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) error {
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
-	peer := s.PeerGet(p)
+	peer := r.PeerGet(p)
 	peer.routeIPv6Stream = stream
 
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			s.PeerDelete(p)
+			r.PeerDelete(p)
 			return nil
 		}
 		peer.dispatCh <- req
 	}
 }
 
-func Start() {
-	fmt.Println("Server start")
-	fmt.Println("goroutine", runtime.NumGoroutine())
+type RpcComponent struct {
+	s *Server
+}
 
-	lis, err := net.Listen("tcp", ":9999")
-	if err != nil {
-		fmt.Println("listen err", err)
-		return
-	}
-	s := grpc.NewServer()
-
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
-	gserver := NewGrpcServer()
-
-	pb.RegisterZebraServer(s, gserver)
-
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
-	go s.Serve(lis)
-
-	for {
-		fmt.Println("goroutine", runtime.NumGoroutine())
-		time.Sleep(time.Second)
+func NewRpcComponent(server *Server) *RpcComponent {
+	return &RpcComponent{
+		s: server,
 	}
 }
 
-func Stop() {
-	fmt.Println("Server stop")
+func (r *RpcComponent) Start() component.Component {
+	fmt.Println("Starting RPC component")
+	lis, err := net.Listen("tcp", ":9999")
+	if err != nil {
+		fmt.Println("listen err", err)
+		return r
+	}
+	s := grpc.NewServer()
+	gserver := NewGrpcServer()
+	pb.RegisterZebraServer(s, gserver)
+	go s.Serve(lis)
+
+	return r
+}
+
+func (r *RpcComponent) Stop() component.Component {
+	return r
 }
