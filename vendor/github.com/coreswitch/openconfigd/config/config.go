@@ -706,21 +706,6 @@ func (c *Config) jsonQuotedString(name, value string) string {
 	}
 }
 
-func (c *Config) jsonMarshalLeafList() string {
-	str := ""
-	for pos, val := range c.ValueList {
-		if pos != 0 {
-			str += ","
-		}
-		if c.needQuote() {
-			str += fmt.Sprintf(`"%s"`, val)
-		} else {
-			str += fmt.Sprintf(`%s`, val)
-		}
-	}
-	return fmt.Sprintf(`"%s":[%s]`, c.Name, str)
-}
-
 func (c *Config) jsonMarshal(pos int) (str string) {
 	if pos != 0 {
 		str += ","
@@ -735,12 +720,10 @@ func (c *Config) jsonMarshal(pos int) (str string) {
 			}
 			str += c.jsonQuotedString(c.Entry.Name, c.Name)
 		} else {
-			if c.Value != "" {
-				str += c.jsonQuotedString(c.Name, c.Value)
-			} else if len(c.ValueList) > 0 {
-				str += c.jsonMarshalLeafList()
-			} else {
+			if c.Value == "" {
 				str += fmt.Sprintf(`"%s":%s`, c.Name, YEntryJson(c.Entry))
+			} else {
+				str += c.jsonQuotedString(c.Name, c.Value)
 			}
 		}
 	}
@@ -911,7 +894,11 @@ func (this *ConfigComponent) Start() component.Component {
 
 // Config component stop method.
 func (this *ConfigComponent) Stop() component.Component {
-	DiscardConfigChange()
+	fmt.Println("component config: stop")
+
+	// Clean up etcd config.
+	//EtcdVrfClean()
+	Commit()
 	DhcpExitFunc()
 	VrrpServerStopAll()
 	RelayExitFunc()

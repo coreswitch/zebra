@@ -4,13 +4,14 @@
 [[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
-  revision = "89742aefa4b206dcf400792f3bd35b542998eb3b"
+  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
+  version = "v1.0.4"
 
 [[projects]]
   name = "github.com/coreos/etcd"
   packages = ["auth/authpb","clientv3","etcdserver/api/v3rpc/rpctypes","etcdserver/etcdserverpb","mvcc/mvccpb"]
-  revision = "bb66589f8cf18960c7f3d56b1b83753caeed9c7a"
-  version = "v3.2.7"
+  revision = "1e1dbb23924672c6cd72c62ee0db2b45f778da71"
+  version = "v3.2.11"
 
 [[projects]]
   branch = "master"
@@ -39,53 +40,66 @@
 [[projects]]
   name = "github.com/coreswitch/openconfigd"
   packages = ["proto"]
-  revision = "2093188adf5f5b184cee7c1e2ad5393e93eb0b96"
+  revision = "b329dc35683641e5e8b80af8176967af6ced4367"
+  version = "v0.8.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto"]
-  revision = "130e6b02ab059e7b717a096f397c5b60111cae74"
+  packages = ["proto","protoc-gen-go/descriptor","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
+  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
   packages = [".","nl"]
-  revision = "f7e518d6f016bc193fc496aafbdf4ae267dd47ef"
+  revision = "3ff4c2196115d804aa1c747781ad2b2a5c73e140"
 
 [[projects]]
+  branch = "master"
   name = "github.com/vishvananda/netns"
   packages = ["."]
-  revision = "86bef332bfc3b59b7624a600bd53009ce91a9829"
+  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "1351f936d976c60a0a48d728281922cf63eafb8d"
+  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "c8c74377599bd978aee1cf3b9b63a8634051cec2"
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "e48874b42435b4347fc52bdee0424a52abc974d7"
+  packages = ["unix","windows"]
+  revision = "571f7bbbe08da2a8955aed9d4db316e78630e9a3"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/text"
   packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "1cbadb444a806fd9430d14ad08967ed91da4fa0a"
+  revision = "d5a9226ed7dd70cade6ccae9d37517fe14dd9fee"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/api/annotations","googleapis/rpc/status"]
+  revision = "a8101f21cf983e773d0c1133ebc5424792003214"
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","codes","credentials","grpclog","internal","keepalive","metadata","naming","peer","stats","tap","transport"]
-  revision = "8050b9cbc271307e5a716a9d782803d09b0d6f2d"
-  version = "v1.2.1"
+  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","health/grpc_health_v1","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
+  revision = "e687fa4e6424368ece6e4fe727cea2c806a0fcb4"
+  version = "v1.8.2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c099c2a5b48b69aabb786b1023dfcfe166411fc12f8143092562fce1e6ba68a4"
+  inputs-digest = "55f7b40501d39ec050a22cd8785cb63cff8e1b081691fe3f88e9a68ec81b731b"
   solver-name = "gps-cdcl"
   solver-version = 1

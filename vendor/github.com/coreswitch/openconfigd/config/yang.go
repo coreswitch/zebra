@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/coreswitch/cmd"
@@ -119,20 +118,27 @@ func ExtHelp(e *yang.Entry) string {
 	return ""
 }
 
+///// API
+func YangProcess(path []string, ent *yang.Entry, config *Config) error {
+	fmt.Println("Process:", path)
+	Parse(path, rootEntry, config, nil)
+	return nil
+}
+
 func YangSet(Args []string) (inst int, instStr string) {
 	SubscribeMutex.Lock()
 	defer SubscribeMutex.Unlock()
 	inst = CliSuccess
 	instStr = ""
-	Parse(Args, rootEntry, configCandidate, nil)
+	YangProcess(Args, rootEntry, configCandidate)
 	return
 }
 
 func YangConfigPush(Args []string) {
 	SubscribeMutex.Lock()
 	defer SubscribeMutex.Unlock()
-	Parse(Args, rootEntry, configActive, nil)
-	Parse(Args, rootEntry, configCandidate, nil)
+	YangProcess(Args, rootEntry, configActive)
+	YangProcess(Args, rootEntry, configCandidate)
 }
 
 func YangConfigPull(Args []string) {
@@ -159,10 +165,10 @@ func YParseSet(param *cmd.Param) (int, cmd.Callback, []interface{}, cmd.CompSlic
 	}
 	status := &YMatchState{
 		state:    StateDir,
-		complete: true,
+		complete: param.Complete,
 		trailing: param.TrailingSpace,
 	}
-	ret, callback, _, comps := Parse(param.Command, rootEntry, configCandidate, status)
+	ret, callback, _, comps := Parse(param.Command, rootEntry, nil, status)
 	return ret, callback, cmd.String2Interface(param.Command), comps
 }
 
@@ -371,40 +377,12 @@ func CompChoice(ent *yang.Entry, comps cmd.CompSlice) cmd.CompSlice {
 	return comps
 }
 
-func IsCompDir(e *yang.Entry) bool {
-	if e == nil {
-		return false
-	}
-	if e.IsDir() {
-		if e.IsList() {
-			if len(e.Dir) > KeyLength(e) {
-				return true
-			}
-		} else {
-			if len(e.Dir) > 0 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func IsAdditive(e *yang.Entry) bool {
-	if e == nil {
-		return false
-	}
-	if e.IsList() && len(e.Key) > 0 {
-		return true
-	}
-	return false
-}
-
 func CompDir(ent *yang.Entry, comps cmd.CompSlice) cmd.CompSlice {
 	for _, e := range ent.Dir {
 		if e.IsChoice() {
 			comps = CompChoice(e, comps)
 		} else {
-			comps = append(comps, &cmd.Comp{Name: e.Name, Dir: IsCompDir(e), Additive: IsAdditive(e)})
+			comps = append(comps, &cmd.Comp{Name: e.Name, Dir: e.IsDir()})
 		}
 	}
 	return comps
@@ -426,7 +404,7 @@ func CompKey(ent *yang.Entry, index int) cmd.CompSlice {
 	comps := cmd.CompSlice{}
 	key := KeyEntry(ent, index)
 	if key != nil {
-		comps = append(comps, &cmd.Comp{Name: "<" + key.Name + ">", Dir: IsCompDir(ent), Additive: IsAdditive(ent)})
+		comps = append(comps, &cmd.Comp{Name: "<" + key.Name + ">"})
 	}
 	return comps
 }
@@ -437,7 +415,7 @@ func CompKeyMatched(ent *yang.Entry, comps cmd.CompSlice) cmd.CompSlice {
 			if e.IsChoice() {
 				comps = CompChoice(e, comps)
 			} else {
-				comps = append(comps, &cmd.Comp{Name: e.Name, Dir: IsCompDir(e), Additive: IsAdditive(e)})
+				comps = append(comps, &cmd.Comp{Name: e.Name})
 			}
 		}
 	}
@@ -486,15 +464,6 @@ func EntryNextState(e *yang.Entry) int {
 	return StateDir
 }
 
-func CompHasName(comps cmd.CompSlice, name string) bool {
-	for _, comp := range comps {
-		if comp.Name == name {
-			return true
-		}
-	}
-	return false
-}
-
 func Parse(cmds []string, ent *yang.Entry, config *Config, s *YMatchState) (int, cmd.Callback, []interface{}, cmd.CompSlice) {
 	str := cmds[0]
 
@@ -518,29 +487,6 @@ func Parse(cmds []string, ent *yang.Entry, config *Config, s *YMatchState) (int,
 		// Nothing to do.
 	case StateLeafList, StateLeafListMatched:
 		MatchLeaf(ent, str, s)
-	}
-
-	sort.Sort(s.comps)
-
-	// Set completion.
-	cs := &YMatchState{complete: true}
-	if config != nil && s.complete {
-		if config.HasDir() {
-			MatchConfigDir(config, str, cs)
-		} else {
-			MatchConfigValue(config, str, cs)
-			cs.index++
-		}
-		for _, comp := range cs.comps {
-			if !CompHasName(s.comps, comp.Name) {
-				s.comps = append(s.comps, comp)
-			}
-		}
-		if cs.count == 1 && cs.match == cmd.MatchTypeExact {
-			config = cs.config
-		} else {
-			config = nil
-		}
 	}
 
 	if s.count == 0 {
@@ -573,8 +519,7 @@ func Parse(cmds []string, ent *yang.Entry, config *Config, s *YMatchState) (int,
 		// Keep current state.
 	}
 
-	// Config set mode.
-	if config != nil && !s.complete {
+	if config != nil {
 		switch next {
 		case StateDir, StateDirMatched:
 			config = config.Set(matched)
@@ -618,22 +563,6 @@ func Parse(cmds []string, ent *yang.Entry, config *Config, s *YMatchState) (int,
 				s.comps = CompKey(ent, s.index)
 			case StateKeyMatched:
 				s.comps = CompKeyMatched(ent, s.comps)
-			}
-
-			sort.Sort(s.comps)
-
-			if config != nil {
-				cs.comps = cs.comps[:0]
-				if config.HasDir() {
-					cs.comps = CompConfig(config, cs.comps)
-				} else {
-					cs.comps = CompValue(config, cs.comps, cs.index)
-				}
-				for _, comp := range cs.comps {
-					if !CompHasName(s.comps, comp.Name) {
-						s.comps = append(s.comps, comp)
-					}
-				}
 			}
 		}
 
@@ -718,7 +647,7 @@ func CompValue(config *Config, comps cmd.CompSlice, index int) cmd.CompSlice {
 }
 
 func (c *Config) HasDir() bool {
-	return len(c.Configs) > 0 || len(c.Keys) > 0 || c.KeyConfig || c.Entry == nil
+	return len(c.Configs) > 0 || len(c.Keys) > 0 || c.KeyConfig
 }
 
 func ParseDelete(cmds []string, config *Config, s *YMatchState) (int, cmd.Callback, []interface{}, cmd.CompSlice) {
@@ -882,7 +811,7 @@ func (this *YangComponent) Start() component.Component {
 	}
 
 	// Add local subscription.
-	SubscribeLocalAdd([]string{"system"}, nil)
+	//SubscribeLocalAdd([]string{"system"}, nil)
 	SubscribeLocalAdd([]string{"system", "ntp"}, ntp.Configure)
 	SubscribeLocalAdd([]string{"protocols"}, nil)
 	SubscribeLocalAdd([]string{"vrrp"}, VrrpJsonConfig)

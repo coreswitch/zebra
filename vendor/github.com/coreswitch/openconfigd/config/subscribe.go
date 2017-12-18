@@ -349,7 +349,7 @@ func Commit() error {
 	for scanner.Scan() {
 		c := NewCommand(scanner.Text())
 		if c != nil {
-			fmt.Println("[cmd]Registering:", c.cmds)
+			fmt.Println("[cmd]Regsitering:", c.cmds)
 			entry = true
 			PathRegisterCommand(RootPath, c, false)
 		}
@@ -368,7 +368,8 @@ func Commit() error {
 		sub.Commit()
 	}
 
-	configActive = configCandidate.Copy(nil)
+	copy := configCandidate.Copy(nil)
+	configActive = copy
 
 	if !zeroConfig {
 		RollbackRevisionIncrement()
@@ -378,13 +379,6 @@ func Commit() error {
 	fmt.Println("[cmd]Commit(): Done")
 
 	return nil
-}
-
-func DiscardConfigChange() {
-	SubscribeMutex.Lock()
-	defer SubscribeMutex.Unlock()
-
-	configCandidate = configActive.Copy(nil)
 }
 
 func SubscribeSync() bool {
@@ -443,7 +437,7 @@ func UnregisterPath(p *Path) {
 }
 
 func SubscribeLocalAdd(path []string, json SubPathJsonCallback) {
-	fmt.Println("Lock:SubscribeLocalAdd", path)
+	fmt.Println("Lock:SubscribeLocalAdd")
 	SubscribeMutex.Lock()
 	defer SubscribeMutex.Unlock()
 

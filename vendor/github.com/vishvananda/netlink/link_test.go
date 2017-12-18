@@ -17,6 +17,8 @@ import (
 const (
 	testTxQLen    int = 100
 	defaultTxQLen int = 1000
+	testTxQueues  int = 1
+	testRxQueues  int = 1
 )
 
 func testLinkAddDel(t *testing.T, link Link) {
@@ -250,6 +252,12 @@ func compareVxlan(t *testing.T, expected, actual *Vxlan) {
 	if actual.FlowBased != expected.FlowBased {
 		t.Fatal("Vxlan.FlowBased doesn't match")
 	}
+	if actual.UDP6ZeroCSumTx != expected.UDP6ZeroCSumTx {
+		t.Fatal("Vxlan.UDP6ZeroCSumTx doesn't match")
+	}
+	if actual.UDP6ZeroCSumRx != expected.UDP6ZeroCSumRx {
+		t.Fatal("Vxlan.UDP6ZeroCSumRx doesn't match")
+	}
 	if expected.NoAge {
 		if !actual.NoAge {
 			t.Fatal("Vxlan.NoAge doesn't match")
@@ -431,11 +439,13 @@ func TestLinkAddDelVeth(t *testing.T) {
 	tearDown := setUpNetlinkTest(t)
 	defer tearDown()
 
-	veth := &Veth{LinkAttrs: LinkAttrs{Name: "foo", TxQLen: testTxQLen, MTU: 1400}, PeerName: "bar"}
+	veth := &Veth{LinkAttrs: LinkAttrs{Name: "foo", TxQLen: testTxQLen, MTU: 1400, NumTxQueues: testTxQueues, NumRxQueues: testRxQueues}, PeerName: "bar"}
 	testLinkAddDel(t, veth)
 }
 
 func TestLinkAddDelBond(t *testing.T) {
+	minKernelRequired(t, 3, 13)
+
 	tearDown := setUpNetlinkTest(t)
 	defer tearDown()
 
@@ -730,6 +740,37 @@ func TestLinkAddDelVxlan(t *testing.T) {
 	}
 }
 
+func TestLinkAddDelVxlanUdpCSum6(t *testing.T) {
+	minKernelRequired(t, 3, 16)
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	parent := &Dummy{
+		LinkAttrs{Name: "foo"},
+	}
+	if err := LinkAdd(parent); err != nil {
+		t.Fatal(err)
+	}
+
+	vxlan := Vxlan{
+		LinkAttrs: LinkAttrs{
+			Name: "bar",
+		},
+		VxlanId:        10,
+		VtepDevIndex:   parent.Index,
+		Learning:       true,
+		L2miss:         true,
+		L3miss:         true,
+		UDP6ZeroCSumTx: true,
+		UDP6ZeroCSumRx: true,
+	}
+
+	testLinkAddDel(t, &vxlan)
+	if err := LinkDel(parent); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLinkAddDelVxlanGbp(t *testing.T) {
 	minKernelRequired(t, 4, 0)
 
@@ -747,12 +788,14 @@ func TestLinkAddDelVxlanGbp(t *testing.T) {
 		LinkAttrs: LinkAttrs{
 			Name: "bar",
 		},
-		VxlanId:      10,
-		VtepDevIndex: parent.Index,
-		Learning:     true,
-		L2miss:       true,
-		L3miss:       true,
-		GBP:          true,
+		VxlanId:        10,
+		VtepDevIndex:   parent.Index,
+		Learning:       true,
+		L2miss:         true,
+		L3miss:         true,
+		UDP6ZeroCSumTx: true,
+		UDP6ZeroCSumRx: true,
+		GBP:            true,
 	}
 
 	testLinkAddDel(t, &vxlan)
@@ -1473,5 +1516,158 @@ func TestLinkByAliasWhenLinkIsNotFound(t *testing.T) {
 	_, ok := err.(LinkNotFoundError)
 	if !ok {
 		t.Errorf("Error returned expected to of LinkNotFoundError type: %v", err)
+	}
+}
+
+func TestLinkAddDelTuntap(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	testLinkAddDel(t, &Tuntap{
+		LinkAttrs: LinkAttrs{Name: "foo"},
+		Mode:      TUNTAP_MODE_TAP})
+
+}
+
+func TestLinkAddDelTuntapMq(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	testLinkAddDel(t, &Tuntap{
+		LinkAttrs: LinkAttrs{Name: "foo"},
+		Mode:      TUNTAP_MODE_TAP,
+		Queues:    4})
+
+	testLinkAddDel(t, &Tuntap{
+		LinkAttrs: LinkAttrs{Name: "foo"},
+		Mode:      TUNTAP_MODE_TAP,
+		Queues:    4,
+		Flags:     TUNTAP_MULTI_QUEUE_DEFAULTS | TUNTAP_VNET_HDR})
+}
+
+func TestVethPeerIndex(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	const (
+		vethPeer1 = "vethOne"
+		vethPeer2 = "vethTwo"
+	)
+
+	link := &Veth{
+		LinkAttrs: LinkAttrs{
+			Name:  vethPeer1,
+			MTU:   1500,
+			Flags: net.FlagUp,
+		},
+		PeerName: vethPeer2,
+	}
+
+	if err := LinkAdd(link); err != nil {
+		t.Fatal(err)
+	}
+
+	linkOne, err := LinkByName("vethOne")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	linkTwo, err := LinkByName("vethTwo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	peerIndexOne, err := VethPeerIndex(&Veth{LinkAttrs: *linkOne.Attrs()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	peerIndexTwo, err := VethPeerIndex(&Veth{LinkAttrs: *linkTwo.Attrs()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if peerIndexOne != linkTwo.Attrs().Index {
+		t.Errorf("VethPeerIndex(%s) mismatch %d != %d", linkOne.Attrs().Name, peerIndexOne, linkTwo.Attrs().Index)
+	}
+
+	if peerIndexTwo != linkOne.Attrs().Index {
+		t.Errorf("VethPeerIndex(%s) mismatch %d != %d", linkTwo.Attrs().Name, peerIndexTwo, linkOne.Attrs().Index)
+	}
+}
+
+func TestLinkSetBondSlave(t *testing.T) {
+	minKernelRequired(t, 3, 13)
+
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	const (
+		bondName     = "foo"
+		slaveOneName = "fooFoo"
+		slaveTwoName = "fooBar"
+	)
+
+	bond := NewLinkBond(LinkAttrs{Name: bondName})
+	bond.Mode = StringToBondModeMap["802.3ad"]
+	bond.AdSelect = BondAdSelect(BOND_AD_SELECT_BANDWIDTH)
+	bond.AdActorSysPrio = 1
+	bond.AdUserPortKey = 1
+	bond.AdActorSystem, _ = net.ParseMAC("06:aa:bb:cc:dd:ee")
+
+	if err := LinkAdd(bond); err != nil {
+		t.Fatal(err)
+	}
+
+	bondLink, err := LinkByName(bondName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer LinkDel(bondLink)
+
+	if err := LinkAdd(&Dummy{LinkAttrs{Name: slaveOneName}}); err != nil {
+		t.Fatal(err)
+	}
+
+	slaveOneLink, err := LinkByName(slaveOneName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer LinkDel(slaveOneLink)
+
+	if err := LinkAdd(&Dummy{LinkAttrs{Name: slaveTwoName}}); err != nil {
+		t.Fatal(err)
+	}
+	slaveTwoLink, err := LinkByName(slaveTwoName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer LinkDel(slaveTwoLink)
+
+	if err := LinkSetBondSlave(slaveOneLink, &Bond{LinkAttrs: *bondLink.Attrs()}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := LinkSetBondSlave(slaveTwoLink, &Bond{LinkAttrs: *bondLink.Attrs()}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Update info about interfaces
+	slaveOneLink, err = LinkByName(slaveOneName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	slaveTwoLink, err = LinkByName(slaveTwoName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slaveOneLink.Attrs().MasterIndex != bondLink.Attrs().Index {
+		t.Errorf("For %s expected %s to be master", slaveOneLink.Attrs().Name, bondLink.Attrs().Name)
+	}
+
+	if slaveTwoLink.Attrs().MasterIndex != bondLink.Attrs().Index {
+		t.Errorf("For %s expected %s to be master", slaveTwoLink.Attrs().Name, bondLink.Attrs().Name)
 	}
 }
