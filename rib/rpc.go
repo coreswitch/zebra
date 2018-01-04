@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/coreswitch/component"
+	"github.com/coreswitch/log"
 	pb "github.com/coreswitch/zebra/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
@@ -100,7 +101,7 @@ func (r *rpcServer) PeerDelete(p *peer.Peer) {
 	r.Mutex.Unlock()
 }
 
-func NewGrpcServer() *rpcServer {
+func NewRpcServer() *rpcServer {
 	s := &rpcServer{
 		Peers: map[peer.Peer]*rpcPeer{},
 	}
@@ -226,30 +227,34 @@ func (r *rpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) err
 }
 
 type RpcComponent struct {
-	s *Server
+	s    *Server
+	port int
+	gs   *grpc.Server
 }
 
-func NewRpcComponent(server *Server) *RpcComponent {
+func NewRpcComponent(server *Server, port int) *RpcComponent {
 	return &RpcComponent{
-		s: server,
+		s:    server,
+		port: port,
 	}
 }
 
 func (r *RpcComponent) Start() component.Component {
-	fmt.Println("Starting RPC component")
-	lis, err := net.Listen("tcp", ":9999")
+	log.Infof("Starting RPC component at port %d", r.port)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", r.port))
 	if err != nil {
-		fmt.Println("listen err", err)
+		log.Errorf("Starting RPC component failed: %s", err)
 		return r
 	}
-	s := grpc.NewServer()
-	gserver := NewGrpcServer()
-	pb.RegisterZebraServer(s, gserver)
-	go s.Serve(lis)
-
+	r.gs = grpc.NewServer()
+	pb.RegisterZebraServer(r.gs, NewRpcServer())
+	go r.gs.Serve(lis)
 	return r
 }
 
 func (r *RpcComponent) Stop() component.Component {
+	log.Info("Stopping RPC component")
+	r.gs.Stop()
 	return r
 }

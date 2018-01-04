@@ -42,7 +42,7 @@ func main() {
 	ribComponent := rib.NewServer()
 	restComponent := rib.NewRestComponent()
 	grpcComponent := rib.NewGrpcComponent()
-	rpcComponent := rib.NewRpcComponent(ribComponent)
+	rpcComponent := rib.NewRpcComponent(ribComponent, 9999)
 
 	systemMap := component.SystemMap{
 		"fea":  feaComponent,
