@@ -38,7 +38,7 @@ type IfShow struct {
 	HwAddr      string      `json:"hardware-adddress,omitempty"`
 	Desc        string      `json:"description,omitempty"`
 	Index       IfIndex     `json:"index,omitempty"`
-	Metric      int         `json:"metric,omitempty"`
+	Metric      uint32      `json:"metric,omitempty"`
 	Mtu         uint32      `json:"mtu,omitempty"`
 	Flags       string      `json:"flags,omitempty"`
 	Vrf         string      `json:"vrf,omitempty"`

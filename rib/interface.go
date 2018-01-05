@@ -35,7 +35,7 @@ type Interface struct {
 	IfType      uint8
 	Mtu         uint32
 	DefaultMtu  uint32
-	Metric      int
+	Metric      uint32
 	Flags       uint32
 	Stats       IfStats
 	Addrs       [AFI_MAX]IfAddrSlice
@@ -50,7 +50,7 @@ type IfInfo struct {
 	Name    string
 	Index   uint32
 	Mtu     uint32
-	Metric  int
+	Metric  uint32
 	Flags   uint32
 	IfType  uint8
 	HwAddr  net.HardwareAddr
