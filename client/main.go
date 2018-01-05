@@ -52,6 +52,7 @@ func (c *zebraClient) InterfaceSubscribe(vrfId uint32) error {
 		for {
 			res, err := stream.Recv()
 			if err != nil {
+				fmt.Println("XXX interface stream.Recv error", err)
 				return
 			}
 			c.dispatCh <- res
@@ -219,20 +220,23 @@ func main() {
 	// Dispatch function.
 	done := make(chan interface{})
 	go func() {
-		select {
-		case res := <-c.dispatCh:
-			switch res.(type) {
-			case *pb.InterfaceUpdate:
-				fmt.Println("IfUpdate res is processing")
-			case *pb.RouterIdUpdate:
-				fmt.Println("RouterId res is processing")
-			case *pb.RouteIPv4:
-				fmt.Println("")
-			case *pb.RouteIPv6:
-				fmt.Println("")
+		for {
+			select {
+			case res := <-c.dispatCh:
+				switch res.(type) {
+				case *pb.InterfaceUpdate:
+					mes := res.(*pb.InterfaceUpdate)
+					fmt.Println("IfUpdate res is processing", mes)
+				case *pb.RouterIdUpdate:
+					fmt.Println("RouterId res is processing")
+				case *pb.RouteIPv4:
+					fmt.Println("")
+				case *pb.RouteIPv6:
+					fmt.Println("")
+				}
+			case <-done:
+				return
 			}
-		case <-done:
-			return
 		}
 	}()
 
@@ -264,7 +268,7 @@ func main() {
 	c.RouteIPv6Add(r6)
 
 	// Close interafce stream -> Invoke all client EOF.
-	c.interfaceStream.CloseSend()
+	//c.interfaceStream.CloseSend()
 
 	for {
 		fmt.Println("goroutine", runtime.NumGoroutine())
