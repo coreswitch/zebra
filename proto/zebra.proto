@@ -87,7 +87,7 @@ message RouterIdRequest {
 
 message RouterIdUpdate {
 	uint32 vrf_id = 1;
-	IPv4 router_id = 2;
+	bytes router_id = 2;
 }
 
 message RedistributeIPv4Request {
@@ -100,10 +100,6 @@ message RedistributeIPv6Request {
 	Op op = 1;
 	uint32 vrf_id = 2;
     RouteType route_type = 4;
-}
-
-message IPv4 {
-	uint32 s_addr = 1;
 }
 
 message PrefixIPv4 {
