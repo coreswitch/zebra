@@ -235,7 +235,7 @@ func main() {
 				switch res.(type) {
 				case *pb.InterfaceUpdate:
 					mes := res.(*pb.InterfaceUpdate)
-					fmt.Println("IfUpdate:", mes.Name, mes.Index, mes.Metric, mes.Mtu)
+					fmt.Println("IfUpdate:", mes.Op, mes.Name, mes.Index, mes.Metric, mes.Mtu)
 					for _, addr := range mes.AddrIpv4 {
 						p := &netutil.Prefix{}
 						p.IP = addr.Addr.Addr

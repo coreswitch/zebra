@@ -188,6 +188,7 @@ func IfAddrAdd(ai *IfAddrInfo) {
 	}
 
 	IfAddrAddPropagate(ifp, addr)
+	WatcherNotifyAddressAdd(ifp, addr)
 
 	if IfAddrAddHook != nil {
 		IfAddrAddHook(ifp, ai.Prefix)
@@ -240,6 +241,7 @@ func IfAddrDelete(ai *IfAddrInfo) {
 	}
 
 	IfAddrDeletePropagate(ifp, found)
+	WatcherNotifyAddressDelete(ifp, found)
 
 	if IfAddrDeleteHook != nil {
 		IfAddrDeleteHook(ifp, ai.Prefix)

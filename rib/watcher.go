@@ -110,8 +110,27 @@ func WatcherNotifyInterfaceFlagChange(ifp *Interface) {
 	watcherNotifyInterface(ifp, pb.Op_InterfaceFlagChange)
 }
 
-func WatcherNotifyAddressAdd() {
+func NewInterfaceAddrUpdate(op pb.Op, ifp *Interface, addr *IfAddr) *pb.InterfaceUpdate {
+	update := NewInterfaceUpdate(op, ifp)
+	switch addr.Prefix.AFI() {
+	case AFI_IP:
+		update.AddrIpv4 = append(update.AddrIpv4, NewAddressIPv4(addr))
+	case AFI_IP6:
+		update.AddrIpv6 = append(update.AddrIpv6, NewAddressIPv6(addr))
+	}
+	return update
 }
 
-func WatcherNotifyAddressDelete() {
+func watcherNotifyIfAddr(op pb.Op, ifp *Interface, addr *IfAddr) {
+	for _, w := range ifp.Vrf.Watchers[WATCH_TYPE_INTERFACE] {
+		w.Notify(NewInterfaceAddrUpdate(op, ifp, addr))
+	}
+}
+
+func WatcherNotifyAddressAdd(ifp *Interface, addr *IfAddr) {
+	watcherNotifyIfAddr(pb.Op_InterfaceAddrAdd, ifp, addr)
+}
+
+func WatcherNotifyAddressDelete(ifp *Interface, addr *IfAddr) {
+	watcherNotifyIfAddr(pb.Op_InterfaceAddrDelete, ifp, addr)
 }
