@@ -263,11 +263,11 @@ func RouteType2RibType(t ROUTE_TYPE) uint8 {
 	case ROUTE_RIP:
 		return RIB_RIP
 	case ROUTE_RIPNG:
-		return RIB_RIPNG
+		return RIB_RIP
 	case ROUTE_OSPF:
 		return RIB_OSPF
 	case ROUTE_OSPF6:
-		return RIB_OSPF6
+		return RIB_OSPF
 	case ROUTE_ISIS:
 		return RIB_ISIS
 	case ROUTE_BGP:
@@ -293,12 +293,8 @@ func RibType2RouteType(t uint8) ROUTE_TYPE {
 		return ROUTE_STATIC
 	case RIB_RIP:
 		return ROUTE_RIP
-	case RIB_RIPNG:
-		return ROUTE_RIPNG
 	case RIB_OSPF:
 		return ROUTE_OSPF
-	case RIB_OSPF6:
-		return ROUTE_OSPF6
 	case RIB_ISIS:
 		return ROUTE_ISIS
 	case RIB_BGP:

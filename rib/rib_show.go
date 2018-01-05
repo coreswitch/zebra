@@ -54,9 +54,9 @@ func ribTypeShortString(rib *Rib) string {
 		return "C "
 	case RIB_STATIC:
 		return "S "
-	case RIB_RIP, RIB_RIPNG:
+	case RIB_RIP:
 		return "R "
-	case RIB_OSPF, RIB_OSPF6:
+	case RIB_OSPF:
 		return "O "
 	case RIB_BGP:
 		return "B "

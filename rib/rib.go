@@ -34,11 +34,9 @@ const (
 	RIB_CONNECTED
 	RIB_STATIC
 	RIB_RIP
-	RIB_RIPNG
 	RIB_OSPF
-	RIB_OSPF6
-	RIB_BGP
 	RIB_ISIS
+	RIB_BGP
 )
 
 var ribTypeString = map[uint8]string{
@@ -47,11 +45,9 @@ var ribTypeString = map[uint8]string{
 	RIB_CONNECTED: "connected",
 	RIB_STATIC:    "static",
 	RIB_RIP:       "rip",
-	RIB_RIPNG:     "ripng",
 	RIB_OSPF:      "ospf",
-	RIB_OSPF6:     "ospf6",
-	RIB_BGP:       "bgp",
 	RIB_ISIS:      "isis",
+	RIB_BGP:       "bgp",
 }
 
 var ribStringType = map[string]uint8{
@@ -60,11 +56,9 @@ var ribStringType = map[string]uint8{
 	"connected": RIB_CONNECTED,
 	"static":    RIB_STATIC,
 	"rip":       RIB_RIP,
-	"ripng":     RIB_RIPNG,
 	"ospf":      RIB_OSPF,
-	"ospf6":     RIB_OSPF6,
-	"bgp":       RIB_BGP,
 	"isis":      RIB_ISIS,
+	"bgp":       RIB_BGP,
 }
 
 const (
@@ -86,12 +80,10 @@ const (
 	DISTANCE_CONNECTED = 0
 	DISTANCE_STATIC    = 1
 	DISTANCE_RIP       = 120
-	DISTANCE_RIPNG     = 120
 	DISTANCE_OSPF      = 110
-	DISTANCE_OSPF6     = 110
+	DISTANCE_ISIS      = 115
 	DISTANCE_EBGP      = 20
 	DISTANCE_IBGP      = 200
-	DISTANCE_ISIS      = 115
 	DISTNACE_INFINITY  = 255
 )
 
@@ -100,11 +92,9 @@ var distanceMap = map[uint8]uint8{
 	RIB_CONNECTED: DISTANCE_CONNECTED,
 	RIB_STATIC:    DISTANCE_STATIC,
 	RIB_RIP:       DISTANCE_RIP,
-	RIB_RIPNG:     DISTANCE_RIPNG,
 	RIB_OSPF:      DISTANCE_OSPF,
-	RIB_OSPF6:     DISTANCE_OSPF6,
-	RIB_BGP:       DISTANCE_IBGP, // EBGP default distance is 20.
 	RIB_ISIS:      DISTANCE_ISIS,
+	RIB_BGP:       DISTANCE_IBGP, // EBGP default distance is 20.
 }
 
 type RibFlag uint

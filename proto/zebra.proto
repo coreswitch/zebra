@@ -18,7 +18,7 @@ package zebra;
 
 enum RouteType {
 	RIB_UNKNOWN              = 0;
-	RIB_SYSTEM               = 1;
+	RIB_KERNEL               = 1;
 	RIB_CONNECTED            = 2;
 	RIB_STATIC               = 3;
 	RIB_RIP                  = 4;
