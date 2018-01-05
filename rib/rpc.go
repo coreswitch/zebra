@@ -28,11 +28,13 @@ import (
 )
 
 type rpcServer struct {
-	Mutex sync.RWMutex
-	Peers map[peer.Peer]*rpcPeer
+	Mutex  sync.RWMutex
+	server *Server
+	peers  map[peer.Peer]*rpcPeer
 }
 
 type rpcPeer struct {
+	server           *Server
 	interfaceStream  pb.Zebra_InterfaceServiceServer
 	routerIdStream   pb.Zebra_RouterIdServiceServer
 	redistIPv4Stream pb.Zebra_RedistributeIPv4ServiceServer
@@ -43,8 +45,9 @@ type rpcPeer struct {
 	done             chan interface{}
 }
 
-func NewGrpcPeer() *rpcPeer {
+func NewRpcPeer(s *Server) *rpcPeer {
 	p := &rpcPeer{
+		server:   s,
 		dispatCh: make(chan interface{}),
 		done:     make(chan interface{}),
 	}
@@ -58,7 +61,9 @@ func (p *rpcPeer) Dispatch() {
 		case mes := <-p.dispatCh:
 			switch mes.(type) {
 			case *pb.InterfaceRequest:
-				fmt.Println("InterfaceRequest", mes)
+				req := mes.(*pb.InterfaceRequest)
+				log.With("VrfId", req.VrfId).Info("InterfaceRequest:", req.Op)
+				p.server.InterfaceSubscribe(p, req.VrfId)
 			case *pb.RouterIdRequest:
 				fmt.Println("RouterIdRequest:", mes)
 			case *pb.RedistributeIPv4Request:
@@ -77,13 +82,20 @@ func (p *rpcPeer) Dispatch() {
 	}
 }
 
+func (p *rpcPeer) Notify(mes interface{}) {
+	switch mes.(type) {
+	case *pb.InterfaceUpdate:
+		p.interfaceStream.Send(mes.(*pb.InterfaceUpdate))
+	}
+}
+
 func (r *rpcServer) PeerGet(p *peer.Peer) *rpcPeer {
 	r.Mutex.Lock()
-	peer, ok := r.Peers[*p]
+	peer, ok := r.peers[*p]
 	if !ok {
 		fmt.Println("New Peer", p)
-		peer = NewGrpcPeer()
-		r.Peers[*p] = peer
+		peer = NewRpcPeer(r.server)
+		r.peers[*p] = peer
 	} else {
 		fmt.Println("Existing Peer", p)
 	}
@@ -93,19 +105,20 @@ func (r *rpcServer) PeerGet(p *peer.Peer) *rpcPeer {
 
 func (r *rpcServer) PeerDelete(p *peer.Peer) {
 	r.Mutex.Lock()
-	peer, ok := r.Peers[*p]
+	peer, ok := r.peers[*p]
 	if ok {
 		close(peer.done)
-		delete(r.Peers, *p)
+		delete(r.peers, *p)
 	}
 	r.Mutex.Unlock()
 }
 
-func NewRpcServer() *rpcServer {
-	s := &rpcServer{
-		Peers: map[peer.Peer]*rpcPeer{},
+func NewRpcServer(s *Server) *rpcServer {
+	rs := &rpcServer{
+		server: s,
+		peers:  map[peer.Peer]*rpcPeer{},
 	}
-	return s
+	return rs
 }
 
 func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) error {
@@ -248,7 +261,7 @@ func (r *RpcComponent) Start() component.Component {
 		return r
 	}
 	r.gs = grpc.NewServer()
-	pb.RegisterZebraServer(r.gs, NewRpcServer())
+	pb.RegisterZebraServer(r.gs, NewRpcServer(r.s))
 	go r.gs.Serve(lis)
 	return r
 }

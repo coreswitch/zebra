@@ -48,8 +48,9 @@ type Vrf struct {
 	ZServer     *ZServer
 	Mutex       sync.RWMutex
 	IfMutex     sync.Mutex
-	Watcher     map[*IfWatcher]bool
+	Watcher     map[*IfWatcher]bool // Will be merged to Watchers
 	WMutex      sync.Mutex
+	Watchers    []Watchers
 }
 
 func VrfDefault() *Vrf {
@@ -72,11 +73,12 @@ func VrfLookupByName(name string) *Vrf {
 
 func NewVrf(name string, index int) *Vrf {
 	v := &Vrf{
-		Name:    name,
-		Index:   index,
-		IfTable: netutil.NewPtree(32),
-		IfMap:   make(map[string]*Interface),
-		Watcher: make(map[*IfWatcher]bool),
+		Name:     name,
+		Index:    index,
+		IfTable:  netutil.NewPtree(32),
+		IfMap:    make(map[string]*Interface),
+		Watcher:  make(map[*IfWatcher]bool),
+		Watchers: make([]Watchers, WATCH_TYPE_MAX),
 	}
 	v.ribTable[AFI_IP] = netutil.NewPtree(32)
 	v.ribTable[AFI_IP6] = netutil.NewPtree(128)

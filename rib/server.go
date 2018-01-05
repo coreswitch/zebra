@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net"
 	"syscall"
-	// "time"
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/netutil"
@@ -415,6 +414,46 @@ func (s *Server) IfUp(ifName string) error {
 		}
 		return nil
 	})
+}
+
+func (s *Server) InterfaceSubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(int(vrfId))
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF with id: %d", vrfId)
+		}
+		vrf.Watchers[WATCH_TYPE_INTERFACE] = append(vrf.Watchers[WATCH_TYPE_INTERFACE], w)
+		WatcherNotifyAllInterface(w, vrf)
+		return nil
+	})
+}
+
+func (s *Server) InterfaceUnubscribe() error {
+	return nil
+}
+
+func (s *Server) RouterIdSubscribe() error {
+	return nil
+}
+
+func (s *Server) RouterIdUnubscribe() error {
+	return nil
+}
+
+func (s *Server) RedistSubscribe() error {
+	return nil
+}
+
+func (s *Server) RedistUnsubscribe() error {
+	return nil
+}
+
+func (s *Server) RedistDefaultSubscribe() error {
+	return nil
+}
+
+func (s *Server) RedistDefaultUnubscribe() error {
+	return nil
 }
 
 func (s *Server) Start() component.Component {
