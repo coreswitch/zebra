@@ -217,16 +217,6 @@ func main() {
 	c.serv = pb.NewZebraClient(conn)
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
-	// Add services.
-	err = c.InterfaceSubscribe(DEFAULT_VRF)
-	if err != nil {
-		c.Stop()
-	}
-	err = c.RouterIdSubscribe(DEFAULT_VRF)
-	if err != nil {
-		c.Stop()
-	}
-
 	// Dispatch function.
 	done := make(chan interface{})
 	go func() {
@@ -267,25 +257,37 @@ func main() {
 
 	fmt.Println("goroutine", runtime.NumGoroutine())
 
-	fmt.Println("-- sleep start --")
-	time.Sleep(time.Second * 3)
-	fmt.Println("-- sleep end --")
+	// Subscribe to interface service.
+	err = c.InterfaceSubscribe(DEFAULT_VRF)
+	if err != nil {
+		c.Stop()
+	}
+	// Subscribe to router id service.
+	err = c.RouterIdSubscribe(DEFAULT_VRF)
+	if err != nil {
+		c.Stop()
+	}
 
-	// Route Add.
+	// fmt.Println("-- sleep start --")
+	// time.Sleep(time.Second * 3)
+	// fmt.Println("-- sleep end --")
+
+	// IPv4 route add.
 	p, _ := netutil.ParsePrefix("10.0.0.0/24")
 	r := &pb.RouteIPv4{
 		Type: pb.RIB_BGP,
-		Prefix: &pb.PrefixIPv4{
+		Prefix: &pb.Prefix{
 			Addr:   p.IP,
 			Length: uint32(p.Length),
 		},
 	}
 	c.RouteIPv4Add(r)
 
+	// IPv6 route add.
 	p6, _ := netutil.ParsePrefix("::1/128")
 	r6 := &pb.RouteIPv6{
 		Type: pb.RIB_BGP,
-		Prefix: &pb.PrefixIPv6{
+		Prefix: &pb.Prefix{
 			Addr:   p6.IP,
 			Length: uint32(p6.Length),
 		},

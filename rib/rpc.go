@@ -21,6 +21,7 @@ import (
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/log"
+	"github.com/coreswitch/netutil"
 	pb "github.com/coreswitch/zebra/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
@@ -54,34 +55,37 @@ func NewRpcPeer(s *Server) *rpcPeer {
 	return p
 }
 
+func NewPrefix(p *pb.Prefix) *netutil.Prefix {
+	return &netutil.Prefix{
+		IP:     p.Addr,
+		Length: int(p.Length),
+	}
+}
+
+// func NewRoute(p *pb.Route) *Rib {
+// 	return &Rib{}
+// }
+
 func (p *rpcPeer) Dispatch() {
 	for {
 		select {
 		case mes := <-p.dispatCh:
 			switch mes.(type) {
-			case *pb.InterfaceRequest:
-				req := mes.(*pb.InterfaceRequest)
-				log.With("VrfId", req.VrfId).Info("InterfaceRequest:", req.Op)
-				switch req.Op {
-				case pb.Op_InterfaceSubscribe:
-					p.server.InterfaceSubscribe(p, req.VrfId)
-				case pb.Op_InterfaceUnsubscribe:
-					p.server.InterfaceUnsubscribe(p, req.VrfId)
-				}
-			case *pb.RouterIdRequest:
-				req := mes.(*pb.RouterIdRequest)
-				log.With("VrfId", req.VrfId).Info("RouterIdRequest:", req.Op)
-				p.server.RouterIdSubscribe(p, req.VrfId)
 			case *pb.RedistributeIPv4Request:
 				log.Info("RedistributeIPv4Request:", mes)
 			case *pb.RedistributeIPv6Request:
 				log.Info("RedistributeIPv6Request:", mes)
 			case *pb.RouteIPv4:
 				req := mes.(*pb.RouteIPv4)
-				log.Info("RouteIPv4:", req)
+				//log.Info(req)
+				// vrf := VrfLookupByIndex(int(req.VrfId))
+				p := NewPrefix(req.Prefix)
+				//rib := NewRoute(req)
+				log.Info(req.Op, p)
 			case *pb.RouteIPv6:
 				req := mes.(*pb.RouteIPv6)
-				log.Info("RouteIPv6:", req)
+				p := NewPrefix(req.Prefix)
+				log.Info(req.Op, p)
 			}
 		case <-p.done:
 			log.Info("Peer dispatch is done.  Exiting goroutine")
@@ -145,7 +149,15 @@ func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) err
 			log.Info("InterfaceService Exit")
 			return nil
 		}
-		peer.dispatCh <- req
+
+		log.With("VrfId", req.VrfId).Info(req.Op)
+
+		switch req.Op {
+		case pb.Op_InterfaceSubscribe:
+			r.server.InterfaceSubscribe(peer, req.VrfId)
+		case pb.Op_InterfaceUnsubscribe:
+			r.server.InterfaceUnsubscribe(peer, req.VrfId)
+		}
 	}
 }
 
@@ -165,7 +177,8 @@ func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error
 			log.Info("RouterIdService Exit")
 			return nil
 		}
-		peer.dispatCh <- req
+		log.With("VrfId", req.VrfId).Info(req.Op)
+		r.server.RouterIdSubscribe(peer, req.VrfId)
 	}
 }
 

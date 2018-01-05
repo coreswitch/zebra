@@ -45,7 +45,7 @@ func NewInterfaceUpdate(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
 
 func NewAddressIPv4(addr *IfAddr) *pb.AddressIPv4 {
 	return &pb.AddressIPv4{
-		Addr: &pb.PrefixIPv4{
+		Addr: &pb.Prefix{
 			Addr:   addr.Prefix.IP,
 			Length: uint32(addr.Prefix.Length),
 		},
@@ -54,7 +54,7 @@ func NewAddressIPv4(addr *IfAddr) *pb.AddressIPv4 {
 
 func NewAddressIPv6(addr *IfAddr) *pb.AddressIPv6 {
 	return &pb.AddressIPv6{
-		Addr: &pb.PrefixIPv6{
+		Addr: &pb.Prefix{
 			Addr:   addr.Prefix.IP,
 			Length: uint32(addr.Prefix.Length),
 		},
