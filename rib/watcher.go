@@ -41,8 +41,77 @@ func NewInterfaceUpdate(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
 	}
 }
 
-func WatcherNotifyAllInterface(w Watcher, vrf *Vrf) {
-	for _, ifp := range vrf.IfMap {
-		w.Notify(NewInterfaceUpdate(pb.Op_InterfaceAdd, ifp))
+func NewAddressIPv4(addr *IfAddr) *pb.AddressIPv4 {
+	return &pb.AddressIPv4{
+		Addr: &pb.PrefixIPv4{
+			Addr:   addr.Prefix.IP,
+			Length: uint32(addr.Prefix.Length),
+		},
 	}
+}
+
+func NewAddressIPv6(addr *IfAddr) *pb.AddressIPv6 {
+	return &pb.AddressIPv6{
+		Addr: &pb.PrefixIPv6{
+			Addr:   addr.Prefix.IP,
+			Length: uint32(addr.Prefix.Length),
+		},
+	}
+}
+
+func NewInterfaceUpdateFull(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
+	update := NewInterfaceUpdate(op, ifp)
+	for _, addr := range ifp.Addrs[AFI_IP] {
+		update.AddrIpv4 = append(update.AddrIpv4, NewAddressIPv4(addr))
+	}
+	for _, addr := range ifp.Addrs[AFI_IP6] {
+		update.AddrIpv6 = append(update.AddrIpv6, NewAddressIPv6(addr))
+	}
+	return update
+}
+
+func WatcherNotifyAllInterfaces(w Watcher, vrf *Vrf) {
+	for _, ifp := range vrf.IfMap {
+		w.Notify(NewInterfaceUpdateFull(pb.Op_InterfaceAdd, ifp))
+	}
+}
+
+func watcherNotifyInterface(ifp *Interface, op pb.Op) {
+	for _, w := range ifp.Vrf.Watchers[WATCH_TYPE_INTERFACE] {
+		w.Notify(NewInterfaceUpdate(op, ifp))
+	}
+}
+
+func WatcherNotifyInterfaceAdd(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceAdd)
+}
+
+func WatcherNotifyInterfaceDelete(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceDelete)
+}
+
+func WatcherNotifyInterfaceNameChange(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceNameChange)
+}
+
+func WatcherNotifyInterfaceMtuChange(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceMtuChange)
+}
+
+func WatcherNotifyInterfaceUp(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceUp)
+}
+
+func WatcherNotifyInterfaceDown(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceDown)
+}
+
+func WatcherNotifyInterfaceFlagChange(ifp *Interface) {
+	watcherNotifyInterface(ifp, pb.Op_InterfaceFlagChange)
+}
+
+func WatcherNotifyAddressAdd() {
+}
+
+func WatcherNotifyAddressDelete() {
 }

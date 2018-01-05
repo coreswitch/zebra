@@ -20,6 +20,7 @@ import (
 	"syscall"
 
 	"github.com/coreswitch/component"
+	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
 	"github.com/coreswitch/zebra/fea"
 )
@@ -420,16 +421,30 @@ func (s *Server) InterfaceSubscribe(w Watcher, vrfId uint32) error {
 	return s.apiSync(func() error {
 		vrf := VrfLookupByIndex(int(vrfId))
 		if vrf == nil {
-			return fmt.Errorf("Can't find VRF with id: %d", vrfId)
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
 		}
 		vrf.Watchers[WATCH_TYPE_INTERFACE] = append(vrf.Watchers[WATCH_TYPE_INTERFACE], w)
-		WatcherNotifyAllInterface(w, vrf)
+		WatcherNotifyAllInterfaces(w, vrf)
 		return nil
 	})
 }
 
-func (s *Server) InterfaceUnubscribe() error {
-	return nil
+func (s *Server) InterfaceUnsubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(int(vrfId))
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		t := WATCH_TYPE_INTERFACE
+		log.Info("Len of watcher ", len(vrf.Watchers[t]))
+		for i, v := range vrf.Watchers[t] {
+			if w == v {
+				vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+			}
+		}
+		log.Info("Len of watcher ", len(vrf.Watchers[t]))
+		return nil
+	})
 }
 
 func (s *Server) RouterIdSubscribe() error {
@@ -454,6 +469,24 @@ func (s *Server) RedistDefaultSubscribe() error {
 
 func (s *Server) RedistDefaultUnubscribe() error {
 	return nil
+}
+
+func (s *Server) WatcherUnsubscribe(w Watcher) error {
+	return s.apiSync(func() error {
+		for _, vrf := range VrfMap {
+			for t, _ := range vrf.Watchers {
+				if len(vrf.Watchers[t]) > 0 {
+					log.Info("Len for VRF ID ", vrf.Index, " is non zero ", len(vrf.Watchers[t]))
+				}
+				for i, v := range vrf.Watchers[t] {
+					if w == v {
+						vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+					}
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func (s *Server) Start() component.Component {

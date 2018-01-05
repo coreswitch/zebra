@@ -68,6 +68,15 @@ func (c *zebraClient) InterfaceSubscribe(vrfId uint32) error {
 		return err
 	}
 
+	// req = &pb.InterfaceRequest{
+	// 	Op:    pb.Op_InterfaceUnsubscribe,
+	// 	VrfId: vrfId,
+	// }
+	// err = stream.Send(req)
+	// if err != nil {
+	// 	return err
+	// }
+
 	return nil
 }
 
@@ -226,7 +235,19 @@ func main() {
 				switch res.(type) {
 				case *pb.InterfaceUpdate:
 					mes := res.(*pb.InterfaceUpdate)
-					fmt.Println("IfUpdate res is processing", mes)
+					fmt.Println("IfUpdate:", mes.Name, mes.Index, mes.Metric, mes.Mtu)
+					for _, addr := range mes.AddrIpv4 {
+						p := &netutil.Prefix{}
+						p.IP = addr.Addr.Addr
+						p.Length = int(addr.Addr.Length)
+						fmt.Println("Addr:", p)
+					}
+					for _, addr := range mes.AddrIpv6 {
+						p := &netutil.Prefix{}
+						p.IP = addr.Addr.Addr
+						p.Length = int(addr.Addr.Length)
+						fmt.Println("Addr:", p)
+					}
 				case *pb.RouterIdUpdate:
 					fmt.Println("RouterId res is processing")
 				case *pb.RouteIPv4:

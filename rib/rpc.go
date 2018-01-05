@@ -17,7 +17,6 @@ package rib
 import (
 	"fmt"
 	"net"
-	"runtime"
 	"sync"
 
 	"github.com/coreswitch/component"
@@ -63,20 +62,25 @@ func (p *rpcPeer) Dispatch() {
 			case *pb.InterfaceRequest:
 				req := mes.(*pb.InterfaceRequest)
 				log.With("VrfId", req.VrfId).Info("InterfaceRequest:", req.Op)
-				p.server.InterfaceSubscribe(p, req.VrfId)
+				switch req.Op {
+				case pb.Op_InterfaceSubscribe:
+					p.server.InterfaceSubscribe(p, req.VrfId)
+				case pb.Op_InterfaceUnsubscribe:
+					p.server.InterfaceUnsubscribe(p, req.VrfId)
+				}
 			case *pb.RouterIdRequest:
-				fmt.Println("RouterIdRequest:", mes)
+				log.Info("RouterIdRequest:", mes)
 			case *pb.RedistributeIPv4Request:
-				fmt.Println("RedistributeIPv4Request", mes)
+				log.Info("RedistributeIPv4Request:", mes)
 			case *pb.RedistributeIPv6Request:
-				fmt.Println("RedistributeIPv6Request", mes)
+				log.Info("RedistributeIPv6Request:", mes)
 			case *pb.RouteIPv4:
-				fmt.Println("RouteIPv4", mes)
+				log.Info("RouteIPv4:", mes)
 			case *pb.RouteIPv6:
-				fmt.Println("RouteIPv6", mes)
+				log.Info("RouteIPv6:", mes)
 			}
 		case <-p.done:
-			fmt.Println("peer Dispatch: done")
+			log.Info("Peer dispatch is done.  Exiting goroutine")
 			return
 		}
 	}
@@ -93,11 +97,8 @@ func (r *rpcServer) PeerGet(p *peer.Peer) *rpcPeer {
 	r.Mutex.Lock()
 	peer, ok := r.peers[*p]
 	if !ok {
-		fmt.Println("New Peer", p)
 		peer = NewRpcPeer(r.server)
 		r.peers[*p] = peer
-	} else {
-		fmt.Println("Existing Peer", p)
 	}
 	r.Mutex.Unlock()
 	return peer
@@ -107,6 +108,7 @@ func (r *rpcServer) PeerDelete(p *peer.Peer) {
 	r.Mutex.Lock()
 	peer, ok := r.peers[*p]
 	if ok {
+		r.server.WatcherUnsubscribe(peer)
 		close(peer.done)
 		delete(r.peers, *p)
 	}
@@ -122,6 +124,7 @@ func NewRpcServer(s *Server) *rpcServer {
 }
 
 func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) error {
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -140,8 +143,7 @@ func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) err
 }
 
 func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -160,8 +162,7 @@ func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error
 }
 
 func (r *rpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4ServiceServer) error {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -180,8 +181,7 @@ func (r *rpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4Serv
 }
 
 func (r *rpcServer) RedistributeIPv6Service(stream pb.Zebra_RedistributeIPv6ServiceServer) error {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -200,8 +200,7 @@ func (r *rpcServer) RedistributeIPv6Service(stream pb.Zebra_RedistributeIPv6Serv
 }
 
 func (r *rpcServer) RouteIPv4Service(stream pb.Zebra_RouteIPv4ServiceServer) error {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -220,8 +219,7 @@ func (r *rpcServer) RouteIPv4Service(stream pb.Zebra_RouteIPv4ServiceServer) err
 }
 
 func (r *rpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) error {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
+	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
@@ -237,6 +235,10 @@ func (r *rpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) err
 		}
 		peer.dispatCh <- req
 	}
+}
+
+func logGoroutine() {
+	// log.Infof("goroutine %d", runtime.NumGoroutine())
 }
 
 type RpcComponent struct {
