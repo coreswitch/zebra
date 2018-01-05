@@ -20,7 +20,6 @@ import (
 	"syscall"
 
 	"github.com/coreswitch/component"
-	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
 	"github.com/coreswitch/zebra/fea"
 )
@@ -451,7 +450,7 @@ func (s *Server) RouterIdSubscribe(w Watcher, vrfId uint32) error {
 		if vrf == nil {
 			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
 		}
-		vrf.Watchers[WATCH_TYPE_ROUTER_ID] = append(vrf.Watchers[WATCH_TYPE_INTERFACE], w)
+		vrf.Watchers[WATCH_TYPE_ROUTER_ID] = append(vrf.Watchers[WATCH_TYPE_ROUTER_ID], w)
 		NotifyRouterId(w, vrf)
 		return nil
 	})
@@ -493,9 +492,6 @@ func (s *Server) WatcherUnsubscribe(w Watcher) error {
 	return s.apiSync(func() error {
 		for _, vrf := range VrfMap {
 			for t, _ := range vrf.Watchers {
-				if len(vrf.Watchers[t]) > 0 {
-					log.Info("Len for VRF ID ", vrf.Index, " is non zero ", len(vrf.Watchers[t]))
-				}
 				for i, v := range vrf.Watchers[t] {
 					if w == v {
 						vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)

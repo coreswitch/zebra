@@ -1,4 +1,4 @@
-// Copyright 2017 zebra Project
+// Copyright 2017, 2018 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,9 +77,11 @@ func (p *rpcPeer) Dispatch() {
 			case *pb.RedistributeIPv6Request:
 				log.Info("RedistributeIPv6Request:", mes)
 			case *pb.RouteIPv4:
-				log.Info("RouteIPv4:", mes)
+				req := mes.(*pb.RouteIPv4)
+				log.Info("RouteIPv4:", req)
 			case *pb.RouteIPv6:
-				log.Info("RouteIPv6:", mes)
+				req := mes.(*pb.RouteIPv6)
+				log.Info("RouteIPv6:", req)
 			}
 		case <-p.done:
 			log.Info("Peer dispatch is done.  Exiting goroutine")
@@ -140,6 +142,7 @@ func (r *rpcServer) InterfaceService(stream pb.Zebra_InterfaceServiceServer) err
 		req, err := stream.Recv()
 		if err != nil {
 			r.PeerDelete(p)
+			log.Info("InterfaceService Exit")
 			return nil
 		}
 		peer.dispatCh <- req
@@ -159,6 +162,7 @@ func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error
 		req, err := stream.Recv()
 		if err != nil {
 			r.PeerDelete(p)
+			log.Info("RouterIdService Exit")
 			return nil
 		}
 		peer.dispatCh <- req
