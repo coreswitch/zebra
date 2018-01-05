@@ -404,9 +404,24 @@ func interfaceAddressAdd(conn net.Conn, version byte, ifp *Interface, addr *IfAd
 		Body: body,
 	}
 	s, _ := m.Serialize()
-	//fmt.Println(s)
 	conn.Write(s)
-	//fmt.Println(written, err)
+}
+
+func interfaceAddressDelete(conn net.Conn, version byte, ifp *Interface, addr *IfAddr) {
+	body := NewInterfaceAddrUpdateBody(addr)
+	body.Index = uint32(ifp.Index)
+
+	m := &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: version,
+			VrfId:   0,
+			Command: INTERFACE_ADDRESS_DELETE,
+		},
+		Body: body,
+	}
+	s, _ := m.Serialize()
+	conn.Write(s)
 }
 
 func InterfaceAdd(conn net.Conn, h *Header, data []byte) {
@@ -474,6 +489,38 @@ func InterfacePropagate(ifp *Interface) {
 		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
 			fmt.Println("InterfaceUpdateSend", ifp.Name, ifp.Vrf.Index)
 			InterfaceUpdateSend(conn, client.Version, ifp)
+		}
+	}
+}
+
+func IfAddrAddPropagate(ifp *Interface, addr *IfAddr) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
+	if ifp.Vrf == nil {
+		return
+	}
+
+	for conn, client := range ClientMap {
+		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
+			fmt.Println("InterfaceAddrAddSend", ifp.Name, addr.Prefix.String())
+			interfaceAddressAdd(conn, client.Version, ifp, addr)
+		}
+	}
+}
+
+func IfAddrDeletePropagate(ifp *Interface, addr *IfAddr) {
+	ClientMutex.Lock()
+	defer ClientMutex.Unlock()
+
+	if ifp.Vrf == nil {
+		return
+	}
+
+	for conn, client := range ClientMap {
+		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
+			fmt.Println("InterfaceAddrDeleteSend", ifp.Name, addr.Prefix.String())
+			interfaceAddressDelete(conn, client.Version, ifp, addr)
 		}
 	}
 }

@@ -187,6 +187,8 @@ func IfAddrAdd(ai *IfAddrInfo) {
 		ifp.Vrf.RouterIdAdd(ifp, addr)
 	}
 
+	IfAddrAddPropagate(ifp, addr)
+
 	if IfAddrAddHook != nil {
 		IfAddrAddHook(ifp, ai.Prefix)
 	}
@@ -236,6 +238,8 @@ func IfAddrDelete(ai *IfAddrInfo) {
 			}
 		}
 	}
+
+	IfAddrDeletePropagate(ifp, found)
 
 	if IfAddrDeleteHook != nil {
 		IfAddrDeleteHook(ifp, ai.Prefix)
