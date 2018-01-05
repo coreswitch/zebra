@@ -17,52 +17,52 @@ syntax = "proto3";
 package zebra;
 
 enum RouteType {
-	RIB_UNKNOWN             = 0;
-	RIB_SYSTEM              = 1;
-	RIB_CONNECTED           = 2;
-	RIB_STATIC              = 3;
-	RIB_RIP                 = 4;
-	RIB_OSPF                = 5;
-	RIB_ISIS                = 6;
-	RIB_BGP                 = 7;
+	RIB_UNKNOWN              = 0;
+	RIB_SYSTEM               = 1;
+	RIB_CONNECTED            = 2;
+	RIB_STATIC               = 3;
+	RIB_RIP                  = 4;
+	RIB_OSPF                 = 5;
+	RIB_ISIS                 = 6;
+	RIB_BGP                  = 7;
 }
 
 enum RouteSubType {
-	RIB_SUB_OSPF_IA         = 0;
-	RIB_SUB_OSPF_NSSA_1     = 1;
-	RIB_SUB_OSPF_NSSA_2     = 2;
-	RIB_SUB_OSPF_EXTERNAL_1 = 3;
-	RIB_SUB_OSPF_EXTERNAL_2 = 4;
-	RIB_SUB_BGP_IBGP        = 5;
-	RIB_SUB_BGP_EBGP        = 6;
-	RIB_SUB_BGP_CONFED      = 7;
-	RIB_SUB_ISIS_L1         = 8;
-	RIB_SUB_ISIS_L2         = 9;
-	RIB_SUB_ISIS_IA         = 10;
+	RIB_SUB_OSPF_IA          = 0;
+	RIB_SUB_OSPF_NSSA_1      = 1;
+	RIB_SUB_OSPF_NSSA_2      = 2;
+	RIB_SUB_OSPF_EXTERNAL_1  = 3;
+	RIB_SUB_OSPF_EXTERNAL_2  = 4;
+	RIB_SUB_BGP_IBGP         = 5;
+	RIB_SUB_BGP_EBGP         = 6;
+	RIB_SUB_BGP_CONFED       = 7;
+	RIB_SUB_ISIS_L1          = 8;
+	RIB_SUB_ISIS_L2          = 9;
+	RIB_SUB_ISIS_IA          = 10;
 }
 
 enum Op {
-	NoOperation             = 0;
-	InterfaceSubscribe      = 1;
-	InterfaceUnsubscribe    = 2;
-	RouterIdSubscribe       = 3;
-	RouterIdUnsubscribe     = 4;
-	RedistAdd               = 5;
-	RedistDelete            = 6;
-	RedistDefaultAdd        = 7;  
-	RedistDefaultDelete     = 8;
-	RouteAdd                = 9;
-	RouteDelete             = 10;
-	InterfaceAdd            = 11;
-	InterfaceDelete         = 12;
-	InterfaceAddrAdd        = 13;
-	InterfaceAddrDelete     = 14;
-	InterfaceUp             = 15;
-	InterfaceDown           = 16;
-	InterfaceFlagChange     = 17;
-	InterfaceNameChange     = 18;
-	InterfaceMtuChange      = 19;
-	InterfaceMetricChange   = 20;
+	NoOperation              = 0;
+	InterfaceSubscribe       = 1;
+	InterfaceUnsubscribe     = 2;
+	RouterIdSubscribe        = 3;
+	RouterIdUnsubscribe      = 4;
+	RedistSubscribe          = 5;
+	RedistUnsubscribe        = 6;
+	RedistDefaultSubscribe   = 7;  
+	RedistDefaultUnsubscribe = 8;
+	RouteAdd                 = 9;
+	RouteDelete              = 10;
+	InterfaceAdd             = 11;
+	InterfaceDelete          = 12;
+	InterfaceAddrAdd         = 13;
+	InterfaceAddrDelete      = 14;
+	InterfaceUp              = 15;
+	InterfaceDown            = 16;
+	InterfaceFlagChange      = 17;
+	InterfaceNameChange      = 18;
+	InterfaceMtuChange       = 19;
+	InterfaceMetricChange    = 20;
 }
 
 message InterfaceRequest {
@@ -72,14 +72,13 @@ message InterfaceRequest {
 
 message InterfaceUpdate {
 	Op op = 1;
-	uint32 changed = 2;
-	uint32 vrf_id = 3;
-	string name = 4;
-	uint32 index = 5;
-	uint32 mtu = 6;
-	uint32 metric = 7;
-	repeated AddressIPv4 addr_ipv4 = 8;
-	repeated AddressIPv6 addr_ipv6 = 9;
+	uint32 vrf_id = 2;
+	string name = 3;
+	uint32 index = 4;
+	uint32 mtu = 5;
+	uint32 metric = 6;
+	repeated AddressIPv4 addr_ipv4 = 7;
+	repeated AddressIPv6 addr_ipv6 = 8;
 }
 
 message RouterIdRequest {
