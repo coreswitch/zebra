@@ -63,12 +63,19 @@ func NewPrefix(p *pb.Prefix) *netutil.Prefix {
 }
 
 func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix, src *rpcPeer) *Rib {
-	return &Rib{
+	rib := &Rib{
 		Prefix:  p,
 		Type:    uint8(r.Type),
 		SubType: uint8(r.SubType),
+		Metric:  r.Metric,
 		Src:     src,
 	}
+	if r.Distance != 0 {
+		rib.Distance = uint8(r.Distance)
+	} else {
+		rib.Distance = DistanceCalc(rib.Type, rib.SubType)
+	}
+	return rib
 }
 
 func (p *rpcPeer) Dispatch() {

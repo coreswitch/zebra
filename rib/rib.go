@@ -115,7 +115,7 @@ type Rib struct {
 	SubType  uint8
 	Distance uint8
 	Metric   uint32
-	IfAddr   *IfAddr
+	//IfAddr   *IfAddr
 	Nexthop  *Nexthop
 	Nexthops []*Nexthop
 	Src      interface{}
@@ -246,7 +246,6 @@ func NewRib(p *netutil.Prefix, ri *Rib) *Rib {
 		Type:     ri.Type,
 		SubType:  ri.SubType,
 		Prefix:   p,
-		IfAddr:   ri.IfAddr,
 		Nexthop:  ri.Nexthop,
 		Nexthops: ri.Nexthops,
 		Metric:   ri.Metric,
@@ -267,7 +266,7 @@ func (rib *Rib) Equal(ri *Rib) bool {
 	}
 	switch rib.Type {
 	case RIB_CONNECTED:
-		if rib.Nexthop.Equal(ri.Nexthop) && rib.IfAddr == ri.IfAddr {
+		if rib.Nexthop.Equal(ri.Nexthop) && rib.Src == ri.Src {
 			return true
 		} else {
 			return false

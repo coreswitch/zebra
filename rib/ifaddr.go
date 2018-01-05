@@ -182,7 +182,7 @@ func IfAddrAdd(ai *IfAddrInfo) {
 
 	if ifp.IsUp() {
 		p := ai.Prefix.Copy()
-		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), IfAddr: addr}
+		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), Src: addr}
 		ifp.Vrf.RibAdd(p, ri)
 		ifp.Vrf.RouterIdAdd(ifp, addr)
 	}
@@ -222,7 +222,7 @@ func IfAddrDelete(ai *IfAddrInfo) {
 
 	if ifp.IsUp() {
 		p := found.Prefix.Copy()
-		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), IfAddr: found}
+		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), Src: found}
 		ifp.Vrf.RibDelete(p, ri)
 		ifp.Vrf.RouterIdDelete(ifp, found)
 	}

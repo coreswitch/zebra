@@ -306,7 +306,7 @@ func IfDownRibRemove(ifp *Interface) {
 	for afi := AFI_IP; afi < AFI_MAX; afi++ {
 		for _, addr := range ifp.Addrs[afi] {
 			p := addr.Prefix.Copy()
-			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), Src: addr}
 			ifp.Vrf.RibDelete(p, ri)
 			ifp.Vrf.RouterIdDelete(ifp, addr)
 		}
@@ -317,7 +317,7 @@ func IfUpRibAdd(ifp *Interface) {
 	for afi := AFI_IP; afi < AFI_MAX; afi++ {
 		for _, addr := range ifp.Addrs[afi] {
 			p := addr.Prefix.Copy()
-			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), Src: addr}
 			ifp.Vrf.RibAdd(p, ri)
 			ifp.Vrf.RouterIdAdd(ifp, addr)
 		}
@@ -418,7 +418,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 				for afi := AFI_IP; afi < AFI_MAX; afi++ {
 					for _, addr := range ifp.Addrs[afi] {
 						p := addr.Prefix.Copy()
-						ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+						ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), Src: addr}
 						ifp.Vrf.RibAdd(p, ri)
 						ifp.Vrf.RouterIdAdd(ifp, addr)
 					}
