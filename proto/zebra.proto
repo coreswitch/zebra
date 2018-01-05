@@ -62,7 +62,6 @@ enum Op {
 	InterfaceFlagChange      = 17;
 	InterfaceNameChange      = 18;
 	InterfaceMtuChange       = 19;
-	InterfaceMetricChange    = 20;
 }
 
 message InterfaceRequest {
