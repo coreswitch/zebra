@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"runtime"
 	"sync"
 	"time"
@@ -240,16 +241,19 @@ func main() {
 						p := &netutil.Prefix{}
 						p.IP = addr.Addr.Addr
 						p.Length = int(addr.Addr.Length)
-						fmt.Println("Addr:", p)
+						fmt.Println("  Addr:", p)
 					}
 					for _, addr := range mes.AddrIpv6 {
 						p := &netutil.Prefix{}
 						p.IP = addr.Addr.Addr
 						p.Length = int(addr.Addr.Length)
-						fmt.Println("Addr:", p)
+						fmt.Println("  Addr:", p)
 					}
 				case *pb.RouterIdUpdate:
-					fmt.Println("RouterId res is processing")
+					mes := res.(*pb.RouterIdUpdate)
+					routerId := net.IP{}
+					routerId = mes.RouterId
+					fmt.Println("RouterId:", routerId)
 				case *pb.RouteIPv4:
 					fmt.Println("")
 				case *pb.RouteIPv6:

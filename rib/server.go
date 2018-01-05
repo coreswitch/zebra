@@ -424,7 +424,7 @@ func (s *Server) InterfaceSubscribe(w Watcher, vrfId uint32) error {
 			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
 		}
 		vrf.Watchers[WATCH_TYPE_INTERFACE] = append(vrf.Watchers[WATCH_TYPE_INTERFACE], w)
-		WatcherNotifyAllInterfaces(w, vrf)
+		NotifyInterfaces(w, vrf)
 		return nil
 	})
 }
@@ -436,23 +436,41 @@ func (s *Server) InterfaceUnsubscribe(w Watcher, vrfId uint32) error {
 			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
 		}
 		t := WATCH_TYPE_INTERFACE
-		log.Info("Len of watcher ", len(vrf.Watchers[t]))
 		for i, v := range vrf.Watchers[t] {
 			if w == v {
 				vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
 			}
 		}
-		log.Info("Len of watcher ", len(vrf.Watchers[t]))
 		return nil
 	})
 }
 
-func (s *Server) RouterIdSubscribe() error {
-	return nil
+func (s *Server) RouterIdSubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(int(vrfId))
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		vrf.Watchers[WATCH_TYPE_ROUTER_ID] = append(vrf.Watchers[WATCH_TYPE_INTERFACE], w)
+		NotifyRouterId(w, vrf)
+		return nil
+	})
 }
 
-func (s *Server) RouterIdUnubscribe() error {
-	return nil
+func (s *Server) RouterIdUnsubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(int(vrfId))
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		t := WATCH_TYPE_ROUTER_ID
+		for i, v := range vrf.Watchers[t] {
+			if w == v {
+				vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+			}
+		}
+		return nil
+	})
 }
 
 func (s *Server) RedistSubscribe() error {
@@ -467,7 +485,7 @@ func (s *Server) RedistDefaultSubscribe() error {
 	return nil
 }
 
-func (s *Server) RedistDefaultUnubscribe() error {
+func (s *Server) RedistDefaultUnsubscribe() error {
 	return nil
 }
 

@@ -14,7 +14,9 @@
 
 package rib
 
-import pb "github.com/coreswitch/zebra/proto"
+import (
+	pb "github.com/coreswitch/zebra/proto"
+)
 
 const (
 	WATCH_TYPE_INTERFACE   = 0
@@ -70,44 +72,44 @@ func NewInterfaceUpdateFull(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
 	return update
 }
 
-func WatcherNotifyAllInterfaces(w Watcher, vrf *Vrf) {
+func NotifyInterfaces(w Watcher, vrf *Vrf) {
 	for _, ifp := range vrf.IfMap {
 		w.Notify(NewInterfaceUpdateFull(pb.Op_InterfaceAdd, ifp))
 	}
 }
 
-func watcherNotifyInterface(ifp *Interface, op pb.Op) {
+func (ifp *Interface) NotifyInterface(op pb.Op) {
 	for _, w := range ifp.Vrf.Watchers[WATCH_TYPE_INTERFACE] {
 		w.Notify(NewInterfaceUpdate(op, ifp))
 	}
 }
 
-func WatcherNotifyInterfaceAdd(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceAdd)
+func (ifp *Interface) NotifyInterfaceAdd() {
+	ifp.NotifyInterface(pb.Op_InterfaceAdd)
 }
 
-func WatcherNotifyInterfaceDelete(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceDelete)
+func (ifp *Interface) NotifyInterfaceDelete() {
+	ifp.NotifyInterface(pb.Op_InterfaceDelete)
 }
 
-func WatcherNotifyInterfaceNameChange(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceNameChange)
+func (ifp *Interface) NotifyInterfaceNameChange() {
+	ifp.NotifyInterface(pb.Op_InterfaceNameChange)
 }
 
-func WatcherNotifyInterfaceMtuChange(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceMtuChange)
+func (ifp *Interface) NotifyInterfaceMtuChange() {
+	ifp.NotifyInterface(pb.Op_InterfaceMtuChange)
 }
 
-func WatcherNotifyInterfaceUp(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceUp)
+func (ifp *Interface) NotifyInterfaceUp() {
+	ifp.NotifyInterface(pb.Op_InterfaceUp)
 }
 
-func WatcherNotifyInterfaceDown(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceDown)
+func (ifp *Interface) NotifyInterfaceDown() {
+	ifp.NotifyInterface(pb.Op_InterfaceDown)
 }
 
-func WatcherNotifyInterfaceFlagChange(ifp *Interface) {
-	watcherNotifyInterface(ifp, pb.Op_InterfaceFlagChange)
+func (ifp *Interface) NotifyInterfaceFlagChange() {
+	ifp.NotifyInterface(pb.Op_InterfaceFlagChange)
 }
 
 func NewInterfaceAddrUpdate(op pb.Op, ifp *Interface, addr *IfAddr) *pb.InterfaceUpdate {
@@ -133,4 +135,17 @@ func WatcherNotifyAddressAdd(ifp *Interface, addr *IfAddr) {
 
 func WatcherNotifyAddressDelete(ifp *Interface, addr *IfAddr) {
 	watcherNotifyIfAddr(pb.Op_InterfaceAddrDelete, ifp, addr)
+}
+
+func NotifyRouterId(w Watcher, vrf *Vrf) {
+	w.Notify(&pb.RouterIdUpdate{
+		VrfId:    uint32(vrf.Index),
+		RouterId: vrf.RouterId(),
+	})
+}
+
+func (vrf *Vrf) NotifyRouterId() {
+	for _, w := range vrf.Watchers[WATCH_TYPE_ROUTER_ID] {
+		NotifyRouterId(w, vrf)
+	}
 }

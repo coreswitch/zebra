@@ -288,7 +288,7 @@ func IfAdd(ifi *IfInfo) {
 
 	IfForceUp(ifp.Name)
 
-	WatcherNotifyInterfaceAdd(ifp)
+	ifp.NotifyInterfaceAdd()
 
 	RibWalker()
 }
@@ -385,7 +385,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 
 			IfRegister(ifp)
 			vrf.IfRegister(ifp)
-			WatcherNotifyInterfaceNameChange(ifp)
+			ifp.NotifyInterfaceNameChange()
 		}
 	}
 
@@ -399,7 +399,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 				}
 				// ifp.Flags &= ^(uint32(syscall.IFF_UP))
 				ifp.Flags = ifi.Flags
-				WatcherNotifyInterfaceDown(ifp)
+				ifp.NotifyInterfaceDown()
 			}
 		} else {
 			if (ifi.Flags & syscall.IFF_UP) != 0 {
@@ -425,12 +425,12 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 				}
 				// ifp.Flags |= syscall.IFF_UP
 				ifp.Flags = ifi.Flags
-				WatcherNotifyInterfaceUp(ifp)
+				ifp.NotifyInterfaceUp()
 			}
 		}
 		if ifp.Flags != ifi.Flags {
 			ifp.Flags = ifi.Flags
-			WatcherNotifyInterfaceFlagChange(ifp)
+			ifp.NotifyInterfaceFlagChange()
 		}
 
 		// Need to update status
@@ -442,7 +442,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 
 	if ifp.Mtu != ifi.Mtu {
 		ifp.Mtu = ifi.Mtu
-		WatcherNotifyInterfaceMtuChange(ifp)
+		ifp.NotifyInterfaceMtuChange()
 	}
 }
 
@@ -468,8 +468,7 @@ func IfDelete(ifi *IfInfo) {
 
 	// Bring down the interface.  This may invoke other routes withdraw such as staic route.
 
-	// Notify interface delete.
-	WatcherNotifyInterfaceDelete(ifp)
+	ifp.NotifyInterfaceDelete()
 
 	// Remove from VRF table.
 	vrf := ifp.Vrf

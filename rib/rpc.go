@@ -69,7 +69,9 @@ func (p *rpcPeer) Dispatch() {
 					p.server.InterfaceUnsubscribe(p, req.VrfId)
 				}
 			case *pb.RouterIdRequest:
-				log.Info("RouterIdRequest:", mes)
+				req := mes.(*pb.RouterIdRequest)
+				log.With("VrfId", req.VrfId).Info("RouterIdRequest:", req.Op)
+				p.server.RouterIdSubscribe(p, req.VrfId)
 			case *pb.RedistributeIPv4Request:
 				log.Info("RedistributeIPv4Request:", mes)
 			case *pb.RedistributeIPv6Request:
@@ -90,6 +92,8 @@ func (p *rpcPeer) Notify(mes interface{}) {
 	switch mes.(type) {
 	case *pb.InterfaceUpdate:
 		p.interfaceStream.Send(mes.(*pb.InterfaceUpdate))
+	case *pb.RouterIdUpdate:
+		p.routerIdStream.Send(mes.(*pb.RouterIdUpdate))
 	}
 }
 
