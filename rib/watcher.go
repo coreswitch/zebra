@@ -43,17 +43,8 @@ func NewInterfaceUpdate(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
 	}
 }
 
-func NewAddressIPv4(addr *IfAddr) *pb.AddressIPv4 {
-	return &pb.AddressIPv4{
-		Addr: &pb.Prefix{
-			Addr:   addr.Prefix.IP,
-			Length: uint32(addr.Prefix.Length),
-		},
-	}
-}
-
-func NewAddressIPv6(addr *IfAddr) *pb.AddressIPv6 {
-	return &pb.AddressIPv6{
+func NewAddress(addr *IfAddr) *pb.Address {
+	return &pb.Address{
 		Addr: &pb.Prefix{
 			Addr:   addr.Prefix.IP,
 			Length: uint32(addr.Prefix.Length),
@@ -64,10 +55,10 @@ func NewAddressIPv6(addr *IfAddr) *pb.AddressIPv6 {
 func NewInterfaceUpdateFull(op pb.Op, ifp *Interface) *pb.InterfaceUpdate {
 	update := NewInterfaceUpdate(op, ifp)
 	for _, addr := range ifp.Addrs[AFI_IP] {
-		update.AddrIpv4 = append(update.AddrIpv4, NewAddressIPv4(addr))
+		update.AddrIpv4 = append(update.AddrIpv4, NewAddress(addr))
 	}
 	for _, addr := range ifp.Addrs[AFI_IP6] {
-		update.AddrIpv6 = append(update.AddrIpv6, NewAddressIPv6(addr))
+		update.AddrIpv6 = append(update.AddrIpv6, NewAddress(addr))
 	}
 	return update
 }
@@ -116,9 +107,9 @@ func NewInterfaceAddrUpdate(op pb.Op, ifp *Interface, addr *IfAddr) *pb.Interfac
 	update := NewInterfaceUpdate(op, ifp)
 	switch addr.Prefix.AFI() {
 	case AFI_IP:
-		update.AddrIpv4 = append(update.AddrIpv4, NewAddressIPv4(addr))
+		update.AddrIpv4 = append(update.AddrIpv4, NewAddress(addr))
 	case AFI_IP6:
-		update.AddrIpv6 = append(update.AddrIpv6, NewAddressIPv6(addr))
+		update.AddrIpv6 = append(update.AddrIpv6, NewAddress(addr))
 	}
 	return update
 }

@@ -112,7 +112,7 @@ type Rib struct {
 	Flags    RibFlag
 	Prefix   *netutil.Prefix
 	Type     uint8
-	Subtype  uint8
+	SubType  uint8
 	Distance uint8
 	Metric   uint32
 	IfAddr   *IfAddr
@@ -232,11 +232,19 @@ func (v *Vrf) AfiPtree(p *netutil.Prefix) *netutil.Ptree {
 	return v.ribTable[afi]
 }
 
+func DistanceCalc(typ uint8, subType uint8) uint8 {
+	distance := distanceMap[typ]
+	if typ == RIB_BGP && subType == RIB_SUB_BGP_EBGP {
+		distance = DISTANCE_EBGP
+	}
+	return distance
+}
+
 func NewRib(p *netutil.Prefix, ri *Rib) *Rib {
 	rib := &Rib{
 		Flags:    ri.Flags,
 		Type:     ri.Type,
-		Subtype:  ri.Subtype,
+		SubType:  ri.SubType,
 		Prefix:   p,
 		IfAddr:   ri.IfAddr,
 		Nexthop:  ri.Nexthop,
@@ -248,10 +256,7 @@ func NewRib(p *netutil.Prefix, ri *Rib) *Rib {
 	if ri.HasDistance() {
 		rib.Distance = ri.Distance
 	} else {
-		rib.Distance = distanceMap[ri.Type]
-		if ri.Type == RIB_BGP && ri.Subtype == RIB_SUB_BGP_EBGP {
-			rib.Distance = DISTANCE_EBGP
-		}
+		rib.Distance = DistanceCalc(ri.Type, ri.SubType)
 	}
 	return rib
 }

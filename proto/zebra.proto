@@ -76,8 +76,8 @@ message InterfaceUpdate {
 	uint32 index = 4;
 	uint32 mtu = 5;
 	uint32 metric = 6;
-	repeated AddressIPv4 addr_ipv4 = 7;
-	repeated AddressIPv6 addr_ipv6 = 8;
+	repeated Address addr_ipv4 = 7;
+	repeated Address addr_ipv6 = 8;
 }
 
 message RouterIdRequest {
@@ -112,7 +112,7 @@ message NexthopIPv4 {
 	uint32 ifindex = 2;
 }
 
-message AddressIPv4 {
+message Address {
 	Prefix addr = 1;
 	uint32 flags = 2;
 }
@@ -120,11 +120,6 @@ message AddressIPv4 {
 message NexthopIPv6 {
 	bytes addr = 1;
 	uint32 ifindex = 2;
-}
-
-message AddressIPv6 {
-	Prefix addr = 1;
-	uint32 flags = 2;
 }
 
 message RouteIPv4 {

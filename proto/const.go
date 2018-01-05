@@ -16,7 +16,7 @@ package zebra
 
 const (
 	RIB_UNKNOWN   = RouteType_RIB_UNKNOWN
-	RIB_SYSTEM    = RouteType_RIB_SYSTEM
+	RIB_KERNEL    = RouteType_RIB_KERNEL
 	RIB_CONNECTED = RouteType_RIB_CONNECTED
 	RIB_RIP       = RouteType_RIB_RIP
 	RIB_OSPF      = RouteType_RIB_OSPF

@@ -62,10 +62,12 @@ func NewPrefix(p *pb.Prefix) *netutil.Prefix {
 	}
 }
 
-func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix) *Rib {
+func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix, src *rpcPeer) *Rib {
 	return &Rib{
-		Prefix: p,
-		Type:   uint8(r.Type),
+		Prefix:  p,
+		Type:    uint8(r.Type),
+		SubType: uint8(r.SubType),
+		Src:     src,
 	}
 }
 
@@ -82,8 +84,8 @@ func (p *rpcPeer) Dispatch() {
 				req := mes.(*pb.RouteIPv4)
 				//log.Info(req)
 				// vrf := VrfLookupByIndex(int(req.VrfId))
-				p := NewPrefix(req.Prefix)
-				rib := NewRoute(req, p)
+				prefix := NewPrefix(req.Prefix)
+				rib := NewRoute(req, prefix, p)
 				log.Info(req.Op, p, rib)
 			case *pb.RouteIPv6:
 				req := mes.(*pb.RouteIPv6)
