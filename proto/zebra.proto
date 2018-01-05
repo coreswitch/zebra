@@ -102,7 +102,7 @@ message RedistributeIPv6Request {
     RouteType route_type = 4;
 }
 
-message PrefixIPv4 {
+message Prefix {
 	bytes addr = 1;
 	uint32 length = 2;
 }
@@ -113,13 +113,8 @@ message NexthopIPv4 {
 }
 
 message AddressIPv4 {
-	PrefixIPv4 addr = 1;
+	Prefix addr = 1;
 	uint32 flags = 2;
-}
-
-message PrefixIPv6 {
-	bytes addr = 1;
-	uint32 length = 2;
 }
 
 message NexthopIPv6 {
@@ -128,7 +123,7 @@ message NexthopIPv6 {
 }
 
 message AddressIPv6 {
-	PrefixIPv6 addr = 1;
+	Prefix addr = 1;
 	uint32 flags = 2;
 }
 
@@ -137,7 +132,7 @@ message RouteIPv4 {
 	uint32 vrf_id = 2;
 	RouteType type = 3;
 	RouteSubType sub_type = 4;
-	PrefixIPv4 prefix = 5;
+	Prefix prefix = 5;
 	uint32 distance = 6;
 	uint32 metric = 7;
 	uint32 tag = 8;
@@ -150,7 +145,7 @@ message RouteIPv6 {
 	uint32 vrf_id = 2;
 	RouteType type = 3;
 	RouteSubType sub_type = 4;
-	PrefixIPv6 prefix = 5;
+	Prefix prefix = 5;
 	uint32 distance = 6;
 	uint32 metric = 7;
 	uint32 tag = 8;
