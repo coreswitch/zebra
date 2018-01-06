@@ -411,14 +411,12 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	if n.Item != nil && ri.Type == RIB_BGP {
 		for _, rib := range n.Item.(RibSlice) {
 			if rib.Type == RIB_BGP {
-				src := ri.Src.(net.Conn)
-				dst := rib.Src.(net.Conn)
-				if ClientVersion(src) == 3 && ClientVersion(dst) == 2 {
+				if ZAPIVersion(ri.Src) == 3 && ZAPIVersion(rib.Src) == 2 {
 					ptree.Release(n)
 					return
 				}
 
-				if src == dst {
+				if ri.Src == rib.Src {
 					if rib.Nexthop != nil && ri.Nexthop != nil {
 						if rib.Nexthop.Equal(ri.Nexthop) {
 							fmt.Println("Same source and same nexthop, do nothing")
@@ -454,7 +452,7 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 
 	// Redistribute check.
 	if ri.Type == RIB_BGP {
-		if conn := ri.Src.(net.Conn); conn != nil && ClientVersion(conn) == 2 {
+		if ZAPIVersion(ri.Src) == 2 {
 			RedistIPv4Add(v.Index, p, rib, nil)
 			rib.Redist = true
 		}
@@ -465,6 +463,16 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 
 	// Invoke wakler.
 	v.RibWalker(p.AFI())
+}
+
+func ZAPIVersion(src interface{}) uint8 {
+	switch src.(type) {
+	case net.Conn:
+		fmt.Println("Src is net.Conn")
+		conn := src.(net.Conn)
+		return ClientVersion(conn)
+	}
+	return 0
 }
 
 func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
@@ -503,7 +511,7 @@ func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
 
 	// Redistribute check.
 	if found.Type == RIB_BGP {
-		if conn := found.Src.(net.Conn); conn != nil && ClientVersion(conn) == 2 {
+		if ZAPIVersion(found.Src) == 2 {
 			RedistIPv4Delete(v.Index, p, found)
 			found.Redist = true
 		}
@@ -542,7 +550,7 @@ func (v *Vrf) RibClean(src interface{}) {
 
 			p := netutil.PrefixFromIPPrefixlen(n.Key(), n.KeyLength())
 
-			if conn := src.(net.Conn); conn != nil && ClientVersion(conn) == 2 && found.IsFib() {
+			if ZAPIVersion(src) == 2 && found.IsFib() {
 				RedistIPv4Delete(v.Index, p, found)
 				found.Redist = true
 			}

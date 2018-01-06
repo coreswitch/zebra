@@ -90,10 +90,15 @@ func (p *rpcPeer) Dispatch() {
 			case *pb.RouteIPv4:
 				req := mes.(*pb.RouteIPv4)
 				//log.Info(req)
-				// vrf := VrfLookupByIndex(int(req.VrfId))
+				vrf := VrfLookupByIndex(int(req.VrfId))
+				if vrf == nil {
+					log.Errorf("VRF can't find with VRF ID %d", req.VrfId)
+					continue
+				}
 				prefix := NewPrefix(req.Prefix)
 				rib := NewRoute(req, prefix, p)
 				log.Info(req.Op, p, rib)
+				vrf.RibAdd(prefix, rib)
 			case *pb.RouteIPv6:
 				req := mes.(*pb.RouteIPv6)
 				p := NewPrefix(req.Prefix)
