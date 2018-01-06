@@ -107,7 +107,7 @@ message Prefix {
 	uint32 length = 2;
 }
 
-message NexthopIPv4 {
+message Nexthop {
 	bytes addr = 1;
 	uint32 ifindex = 2;
 }
@@ -115,11 +115,6 @@ message NexthopIPv4 {
 message Address {
 	Prefix addr = 1;
 	uint32 flags = 2;
-}
-
-message NexthopIPv6 {
-	bytes addr = 1;
-	uint32 ifindex = 2;
 }
 
 message RouteIPv4 {
@@ -132,7 +127,7 @@ message RouteIPv4 {
 	uint32 metric = 7;
 	uint32 tag = 8;
 	repeated string color = 9;
-	repeated NexthopIPv4 nexthops = 10;
+	repeated Nexthop nexthops = 10;
 }
 
 message RouteIPv6 {
@@ -145,7 +140,7 @@ message RouteIPv6 {
 	uint32 metric = 7;
 	uint32 tag = 8;
 	repeated string color = 9;
-	repeated NexthopIPv6 nexthops = 10;
+	repeated Nexthop nexthops = 10;
 }
 
 service Zebra {
