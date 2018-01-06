@@ -115,7 +115,6 @@ type Rib struct {
 	SubType  uint8
 	Distance uint8
 	Metric   uint32
-	//IfAddr   *IfAddr
 	Nexthop  *Nexthop
 	Nexthops []*Nexthop
 	Src      interface{}

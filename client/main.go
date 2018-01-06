@@ -274,6 +274,7 @@ func main() {
 
 	// IPv4 route add.
 	p, _ := netutil.ParsePrefix("10.0.0.0/24")
+	nhop := netutil.ParseIPv4("10.211.55.1")
 	r := &pb.RouteIPv4{
 		Type: pb.RIB_BGP,
 		Prefix: &pb.Prefix{
@@ -281,6 +282,10 @@ func main() {
 			Length: uint32(p.Length),
 		},
 	}
+	r.Nexthops = append(r.Nexthops, &pb.Nexthop{
+		Addr:    nhop,
+		Ifindex: 0,
+	})
 	c.RouteIPv4Add(r)
 
 	// IPv6 route add.

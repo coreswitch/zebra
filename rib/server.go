@@ -499,6 +499,7 @@ func (s *Server) WatcherUnsubscribe(w Watcher) error {
 				}
 			}
 		}
+		RibClearSrc(w)
 		return nil
 	})
 }

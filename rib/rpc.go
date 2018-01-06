@@ -62,6 +62,13 @@ func NewPrefix(p *pb.Prefix) *netutil.Prefix {
 	}
 }
 
+func NewNexthop(nhop *pb.Nexthop) *Nexthop {
+	return &Nexthop{
+		IP:    nhop.Addr,
+		Index: IfIndex(nhop.Ifindex),
+	}
+}
+
 func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix, src *rpcPeer) *Rib {
 	rib := &Rib{
 		Prefix:  p,
@@ -74,6 +81,9 @@ func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix, src *rpcPeer) *Rib {
 		rib.Distance = uint8(r.Distance)
 	} else {
 		rib.Distance = DistanceCalc(rib.Type, rib.SubType)
+	}
+	if len(r.Nexthops) == 1 {
+		rib.Nexthop = NewNexthop(r.Nexthops[0])
 	}
 	return rib
 }
