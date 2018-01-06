@@ -26,6 +26,7 @@ func EsiHook() {
 		rib.AddPathDefault = true
 		rib.IfForceUpFlag = true
 		rib.OspfMetricFilter = true
+		rib.LanInterfaceMonitorStart()
 		// rib.NoVRFDelete = true
 	}
 }

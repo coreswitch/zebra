@@ -328,9 +328,14 @@ var IfStatusChangeHook func(string, bool, bool)
 var IfForceUpFlag bool
 
 func IfForceUp(ifName string) {
-	time.AfterFunc(time.Second*3, func() {
-		server.IfUp(ifName)
-	})
+	if IsLanInterface(ifName) {
+		fmt.Println("Force LAN up:", ifName)
+		time.AfterFunc(time.Second*3, func() {
+			server.IfUp(ifName)
+		})
+	} else {
+		fmt.Println("Force LAN up: if is not LAN", ifName)
+	}
 }
 
 func IfSync(ifp *Interface, ifi *IfInfo) {
