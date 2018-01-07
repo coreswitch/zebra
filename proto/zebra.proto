@@ -120,9 +120,9 @@ message Address {
 message RouteIPv4 {
 	Op op = 1;
 	uint32 vrf_id = 2;
-	RouteType type = 3;
-	RouteSubType sub_type = 4;
-	Prefix prefix = 5;
+	Prefix prefix = 3;
+	RouteType type = 4;
+	RouteSubType sub_type = 5;
 	uint32 distance = 6;
 	uint32 metric = 7;
 	uint32 tag = 8;

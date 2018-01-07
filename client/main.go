@@ -287,6 +287,7 @@ func main() {
 		Ifindex: 0,
 	})
 	c.RouteIPv4Add(r)
+	c.RouteIPv4Delete(r)
 
 	// IPv6 route add.
 	p6, _ := netutil.ParsePrefix("::1/128")

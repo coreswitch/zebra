@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/coreswitch/netutil"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 const (
@@ -109,6 +110,7 @@ const (
 )
 
 type Rib struct {
+	pb.Rib
 	Flags    RibFlag
 	Prefix   *netutil.Prefix
 	Type     uint8
