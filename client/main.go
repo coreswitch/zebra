@@ -134,7 +134,7 @@ func (c *zebraClient) RouteIPv4Service() error {
 	return nil
 }
 
-func (c *zebraClient) RouteIPv4Add(r *pb.RouteIPv4) error {
+func (c *zebraClient) RouteIPv4Add(r *pb.Route) error {
 	if c.routeIPv4Stream == nil {
 		err := c.RouteIPv4Service()
 		if err != nil {
@@ -145,7 +145,7 @@ func (c *zebraClient) RouteIPv4Add(r *pb.RouteIPv4) error {
 	return c.routeIPv4Stream.Send(r)
 }
 
-func (c *zebraClient) RouteIPv4Delete(r *pb.RouteIPv4) error {
+func (c *zebraClient) RouteIPv4Delete(r *pb.Route) error {
 	if c.routeIPv4Stream == nil {
 		err := c.RouteIPv4Service()
 		if err != nil {
@@ -162,6 +162,7 @@ func (c *zebraClient) RouteIPv6Service() error {
 		return err
 	}
 	c.routeIPv6Stream = stream
+	fmt.Println("XXX IPv6 service", stream)
 
 	c.wg.Add(1)
 	go func() {
@@ -178,7 +179,7 @@ func (c *zebraClient) RouteIPv6Service() error {
 	return nil
 }
 
-func (c *zebraClient) RouteIPv6Add(r *pb.RouteIPv6) error {
+func (c *zebraClient) RouteIPv6Add(r *pb.Route) error {
 	if c.routeIPv6Stream == nil {
 		err := c.RouteIPv6Service()
 		if err != nil {
@@ -189,7 +190,7 @@ func (c *zebraClient) RouteIPv6Add(r *pb.RouteIPv6) error {
 	return c.routeIPv6Stream.Send(r)
 }
 
-func (c *zebraClient) RouteIPv6Delete(r *pb.RouteIPv6) error {
+func (c *zebraClient) RouteIPv6Delete(r *pb.Route) error {
 	if c.routeIPv6Stream == nil {
 		err := c.RouteIPv6Service()
 		if err != nil {
@@ -244,9 +245,7 @@ func main() {
 					routerId := net.IP{}
 					routerId = mes.RouterId
 					fmt.Println("RouterId:", routerId)
-				case *pb.RouteIPv4:
-					fmt.Println("")
-				case *pb.RouteIPv6:
+				case *pb.Route:
 					fmt.Println("")
 				}
 			case <-done:
@@ -275,7 +274,7 @@ func main() {
 	// IPv4 route add.
 	p, _ := netutil.ParsePrefix("10.0.0.0/24")
 	nhop := netutil.ParseIPv4("10.211.55.1")
-	r := &pb.RouteIPv4{
+	r := &pb.Route{
 		Type: pb.RIB_BGP,
 		Prefix: &pb.Prefix{
 			Addr:   p.IP,
@@ -287,17 +286,22 @@ func main() {
 		Ifindex: 0,
 	})
 	c.RouteIPv4Add(r)
-	c.RouteIPv4Delete(r)
+	//c.RouteIPv4Delete(r)
 
 	// IPv6 route add.
 	p6, _ := netutil.ParsePrefix("::1/128")
-	r6 := &pb.RouteIPv6{
+	r6 := &pb.Route{
 		Type: pb.RIB_BGP,
 		Prefix: &pb.Prefix{
 			Addr:   p6.IP,
 			Length: uint32(p6.Length),
 		},
 	}
+	nhop6 := net.ParseIP("a::1")
+	r6.Nexthops = append(r6.Nexthops, &pb.Nexthop{
+		Addr:    nhop6,
+		Ifindex: 0,
+	})
 	c.RouteIPv6Add(r6)
 
 	// Close interafce stream -> Invoke all client EOF.

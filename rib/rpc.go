@@ -69,7 +69,7 @@ func NewNexthop(nhop *pb.Nexthop) *Nexthop {
 	}
 }
 
-func NewRoute(r *pb.RouteIPv4, p *netutil.Prefix, src *rpcPeer) *Rib {
+func NewRoute(r *pb.Route, p *netutil.Prefix, src *rpcPeer) *Rib {
 	rib := &Rib{
 		Prefix:  p,
 		Type:    uint8(r.Type),
@@ -97,8 +97,8 @@ func (p *rpcPeer) Dispatch() {
 				log.Info("RedistributeIPv4Request:", mes)
 			case *pb.RedistributeIPv6Request:
 				log.Info("RedistributeIPv6Request:", mes)
-			case *pb.RouteIPv4:
-				req := mes.(*pb.RouteIPv4)
+			case *pb.Route:
+				req := mes.(*pb.Route)
 				vrf := VrfLookupByIndex(int(req.VrfId))
 				if vrf == nil {
 					log.Errorf("VRF can't find with VRF ID %d", req.VrfId)
@@ -117,10 +117,6 @@ func (p *rpcPeer) Dispatch() {
 				case pb.Op_RouteDelete:
 					vrf.RibDelete(prefix, rib)
 				}
-			case *pb.RouteIPv6:
-				req := mes.(*pb.RouteIPv6)
-				p := NewPrefix(req.Prefix)
-				log.Info(req.Op, p)
 			}
 		case <-p.done:
 			log.Info("Peer dispatch is done.  Exiting goroutine")
