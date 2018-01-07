@@ -117,7 +117,7 @@ message Address {
 	uint32 flags = 2;
 }
 
-message RouteIPv4 {
+message Route {
 	Op op = 1;
 	uint32 vrf_id = 2;
 	Prefix prefix = 3;
@@ -130,24 +130,11 @@ message RouteIPv4 {
 	repeated Nexthop nexthops = 10;
 }
 
-message RouteIPv6 {
-	Op op = 1;
-	uint32 vrf_id = 2;
-	RouteType type = 3;
-	RouteSubType sub_type = 4;
-	Prefix prefix = 5;
-	uint32 distance = 6;
-	uint32 metric = 7;
-	uint32 tag = 8;
-	repeated string color = 9;
-	repeated Nexthop nexthops = 10;
-}
-
 service Zebra {
 	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
 	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
-	rpc RedistributeIPv4Service(stream RedistributeIPv4Request) returns (stream RouteIPv4) {}
-	rpc RedistributeIPv6Service(stream RedistributeIPv6Request) returns (stream RouteIPv6) {}
-	rpc RouteIPv4Service(stream RouteIPv4) returns (stream RouteIPv4) {}
-	rpc RouteIPv6Service(stream RouteIPv6) returns (stream RouteIPv6) {}
+	rpc RedistributeIPv4Service(stream RedistributeIPv4Request) returns (stream Route) {}
+	rpc RedistributeIPv6Service(stream RedistributeIPv6Request) returns (stream Route) {}
+	rpc RouteIPv4Service(stream Route) returns (stream Route) {}
+	rpc RouteIPv6Service(stream Route) returns (stream Route) {}
 }
