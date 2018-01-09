@@ -17,17 +17,16 @@ import (
 const DEFAULT_VRF = 0
 
 type zebraClient struct {
-	conn             *grpc.ClientConn
-	serv             pb.ZebraClient
-	dispatCh         chan interface{}
-	done             chan interface{}
-	interfaceStream  pb.Zebra_InterfaceServiceClient
-	routerIdStream   pb.Zebra_RouterIdServiceClient
-	redistIPv4Stream pb.Zebra_RedistIPv4ServiceClient
-	redistIPv6Stream pb.Zebra_RedistIPv6ServiceClient
-	routeIPv4Stream  pb.Zebra_RouteIPv4ServiceClient
-	routeIPv6Stream  pb.Zebra_RouteIPv6ServiceClient
-	wg               *sync.WaitGroup
+	conn            *grpc.ClientConn
+	serv            pb.ZebraClient
+	dispatCh        chan interface{}
+	done            chan interface{}
+	interfaceStream pb.Zebra_InterfaceServiceClient
+	routerIdStream  pb.Zebra_RouterIdServiceClient
+	redistStream    pb.Zebra_RedistServiceClient
+	routeIPv4Stream pb.Zebra_RouteIPv4ServiceClient
+	routeIPv6Stream pb.Zebra_RouteIPv6ServiceClient
+	wg              *sync.WaitGroup
 }
 
 func NewZebraClient(conn *grpc.ClientConn) *zebraClient {
@@ -231,12 +230,12 @@ func (c *zebraClient) RouteIPv6Delete(r *pb.Route) error {
 	return c.routeIPv6Stream.Send(r)
 }
 
-func (c *zebraClient) RedistIPv4Service() error {
-	stream, err := c.serv.RedistIPv4Service(context.Background())
+func (c *zebraClient) RedistributeService() error {
+	stream, err := c.serv.RedistService(context.Background())
 	if err != nil {
 		return err
 	}
-	c.redistIPv4Stream = stream
+	c.redistStream = stream
 
 	c.wg.Add(1)
 	go func() {
@@ -254,14 +253,63 @@ func (c *zebraClient) RedistIPv4Service() error {
 }
 
 func (c *zebraClient) RedistIPv4Subscribe(vrfId uint32, typ pb.RouteType) error {
-	if c.redistIPv4Stream == nil {
-		err := c.RedistIPv4Service()
+	if c.redistStream == nil {
+		err := c.RedistributeService()
 		if err != nil {
 			return err
 		}
 	}
+	req := &pb.RedistRequest{
+		Op:    pb.Op_RedistSubscribe,
+		Afi:   pb.AFI_IP,
+		VrfId: vrfId,
+		Type:  typ,
+	}
+	return c.redistStream.Send(req)
+}
 
-	return nil
+func (c *zebraClient) RedistIPv4DefaultSubscribe(vrfId uint32) error {
+	if c.redistStream == nil {
+		err := c.RedistributeService()
+		if err != nil {
+			return err
+		}
+	}
+	req := &pb.RedistRequest{
+		Op:  pb.Op_RedistDefaultSubscribe,
+		Afi: pb.AFI_IP,
+	}
+	return c.redistStream.Send(req)
+}
+
+func (c *zebraClient) RedistIPv4Unubscribe(vrfId uint32, typ pb.RouteType) error {
+	if c.redistStream == nil {
+		err := c.RedistributeService()
+		if err != nil {
+			return err
+		}
+	}
+	req := &pb.RedistRequest{
+		Op:    pb.Op_RedistUnsubscribe,
+		Afi:   pb.AFI_IP,
+		VrfId: vrfId,
+		Type:  typ,
+	}
+	return c.redistStream.Send(req)
+}
+
+func (c *zebraClient) RedistIPv4DefaultUnsubscribe(vrfId uint32) error {
+	if c.redistStream == nil {
+		err := c.RedistributeService()
+		if err != nil {
+			return err
+		}
+	}
+	req := &pb.RedistRequest{
+		Op:  pb.Op_RedistDefaultUnsubscribe,
+		Afi: pb.AFI_IP,
+	}
+	return c.redistStream.Send(req)
 }
 
 func (c *zebraClient) Scenario1() {
@@ -321,6 +369,11 @@ func (c *zebraClient) Scenario2() {
 	}
 	// Redistribute BGP.
 	err = c.RedistIPv4Subscribe(DEFAULT_VRF, pb.RIB_BGP)
+	if err != nil {
+		c.Stop()
+		return
+	}
+	err = c.RedistIPv4DefaultSubscribe(DEFAULT_VRF)
 	if err != nil {
 		c.Stop()
 		return

@@ -34,15 +34,14 @@ type rpcServer struct {
 }
 
 type rpcPeer struct {
-	server           *Server
-	interfaceStream  pb.Zebra_InterfaceServiceServer
-	routerIdStream   pb.Zebra_RouterIdServiceServer
-	redistIPv4Stream pb.Zebra_RedistIPv4ServiceServer
-	redistIPv6Stream pb.Zebra_RedistIPv6ServiceServer
-	routeIPv4Stream  pb.Zebra_RouteIPv4ServiceServer
-	routeIPv6Stream  pb.Zebra_RouteIPv6ServiceServer
-	dispatCh         chan interface{}
-	done             chan interface{}
+	server          *Server
+	interfaceStream pb.Zebra_InterfaceServiceServer
+	routerIdStream  pb.Zebra_RouterIdServiceServer
+	redistStream    pb.Zebra_RedistServiceServer
+	routeIPv4Stream pb.Zebra_RouteIPv4ServiceServer
+	routeIPv6Stream pb.Zebra_RouteIPv6ServiceServer
+	dispatCh        chan interface{}
+	done            chan interface{}
 }
 
 func NewRpcPeer(s *Server) *rpcPeer {
@@ -93,10 +92,8 @@ func (p *rpcPeer) Dispatch() {
 		select {
 		case mes := <-p.dispatCh:
 			switch mes.(type) {
-			case *pb.RedistIPv4Request:
-				log.Info("RedistIPv4Request:", mes)
-			case *pb.RedistIPv6Request:
-				log.Info("RedistIPv6Request:", mes)
+			case *pb.RedistRequest:
+				log.Info("RedistRequest:", mes)
 			case *pb.Route:
 				req := mes.(*pb.Route)
 				vrf := VrfLookupByIndex(int(req.VrfId))
@@ -213,33 +210,14 @@ func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error
 	}
 }
 
-func (r *rpcServer) RedistIPv4Service(stream pb.Zebra_RedistIPv4ServiceServer) error {
+func (r *rpcServer) RedistService(stream pb.Zebra_RedistServiceServer) error {
 	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
 	peer := r.PeerGet(p)
-	peer.redistIPv4Stream = stream
-
-	for {
-		req, err := stream.Recv()
-		if err != nil {
-			r.PeerDelete(p)
-			return nil
-		}
-		peer.dispatCh <- req
-	}
-}
-
-func (r *rpcServer) RedistIPv6Service(stream pb.Zebra_RedistIPv6ServiceServer) error {
-	logGoroutine()
-	p, ok := peer.FromContext(stream.Context())
-	if !ok {
-		return fmt.Errorf("Can't get peer from context")
-	}
-	peer := r.PeerGet(p)
-	peer.redistIPv6Stream = stream
+	peer.redistStream = stream
 
 	for {
 		req, err := stream.Recv()

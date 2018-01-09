@@ -16,6 +16,12 @@ syntax = "proto3";
 
 package zebra;
 
+enum AFI {
+	AFI_IP                   = 0;
+	AFI_IP6                  = 1;
+	AFI_MAX                  = 2;
+}
+
 enum RouteType {
 	RIB_UNKNOWN              = 0;
 	RIB_KERNEL               = 1;
@@ -90,16 +96,11 @@ message RouterIdUpdate {
 	bytes router_id = 2;
 }
 
-message RedistIPv4Request {
+message RedistRequest {
 	Op op = 1;
-	uint32 vrf_id = 2;
-    RouteType route_type = 4;
-}
-
-message RedistIPv6Request {
-	Op op = 1;
-	uint32 vrf_id = 2;
-    RouteType route_type = 4;
+	AFI afi = 2;
+	uint32 vrf_id = 3;
+    RouteType type = 4;
 }
 
 message Prefix {
@@ -133,8 +134,7 @@ message Route {
 service Zebra {
 	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
 	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
-	rpc RedistIPv4Service(stream RedistIPv4Request) returns (stream Route) {}
-	rpc RedistIPv6Service(stream RedistIPv6Request) returns (stream Route) {}
+	rpc RedistService(stream RedistRequest) returns (stream Route) {}
 	rpc RouteIPv4Service(stream Route) returns (stream Route) {}
 	rpc RouteIPv6Service(stream Route) returns (stream Route) {}
 }

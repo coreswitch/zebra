@@ -15,6 +15,11 @@
 package zebra
 
 const (
+	AFI_IP  = AFI_AFI_IP
+	AFI_IP6 = AFI_AFI_IP6
+)
+
+const (
 	RIB_UNKNOWN   = RouteType_RIB_UNKNOWN
 	RIB_KERNEL    = RouteType_RIB_KERNEL
 	RIB_CONNECTED = RouteType_RIB_CONNECTED
