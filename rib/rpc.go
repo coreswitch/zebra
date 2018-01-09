@@ -38,8 +38,7 @@ type rpcPeer struct {
 	interfaceStream pb.Zebra_InterfaceServiceServer
 	routerIdStream  pb.Zebra_RouterIdServiceServer
 	redistStream    pb.Zebra_RedistServiceServer
-	routeIPv4Stream pb.Zebra_RouteIPv4ServiceServer
-	routeIPv6Stream pb.Zebra_RouteIPv6ServiceServer
+	routeStream     pb.Zebra_RouteServiceServer
 	dispatCh        chan interface{}
 	done            chan interface{}
 }
@@ -229,33 +228,14 @@ func (r *rpcServer) RedistService(stream pb.Zebra_RedistServiceServer) error {
 	}
 }
 
-func (r *rpcServer) RouteIPv4Service(stream pb.Zebra_RouteIPv4ServiceServer) error {
+func (r *rpcServer) RouteService(stream pb.Zebra_RouteServiceServer) error {
 	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
 		return fmt.Errorf("Can't get peer from context")
 	}
 	peer := r.PeerGet(p)
-	peer.routeIPv4Stream = stream
-
-	for {
-		req, err := stream.Recv()
-		if err != nil {
-			r.PeerDelete(p)
-			return nil
-		}
-		peer.dispatCh <- req
-	}
-}
-
-func (r *rpcServer) RouteIPv6Service(stream pb.Zebra_RouteIPv6ServiceServer) error {
-	logGoroutine()
-	p, ok := peer.FromContext(stream.Context())
-	if !ok {
-		return fmt.Errorf("Can't get peer from context")
-	}
-	peer := r.PeerGet(p)
-	peer.routeIPv6Stream = stream
+	peer.routeStream = stream
 
 	for {
 		req, err := stream.Recv()

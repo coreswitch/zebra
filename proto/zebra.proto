@@ -135,6 +135,5 @@ service Zebra {
 	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
 	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
 	rpc RedistService(stream RedistRequest) returns (stream Route) {}
-	rpc RouteIPv4Service(stream Route) returns (stream Route) {}
-	rpc RouteIPv6Service(stream Route) returns (stream Route) {}
+	rpc RouteService(stream Route) returns (stream Route) {}
 }

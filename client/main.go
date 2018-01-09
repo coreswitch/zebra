@@ -24,8 +24,7 @@ type zebraClient struct {
 	interfaceStream pb.Zebra_InterfaceServiceClient
 	routerIdStream  pb.Zebra_RouterIdServiceClient
 	redistStream    pb.Zebra_RedistServiceClient
-	routeIPv4Stream pb.Zebra_RouteIPv4ServiceClient
-	routeIPv6Stream pb.Zebra_RouteIPv6ServiceClient
+	routeStream     pb.Zebra_RouteServiceClient
 	wg              *sync.WaitGroup
 }
 
@@ -141,12 +140,12 @@ func (c *zebraClient) RouterIdSubscribe(vrfId uint32) error {
 	return nil
 }
 
-func (c *zebraClient) RouteIPv4Service() error {
-	stream, err := c.serv.RouteIPv4Service(context.Background())
+func (c *zebraClient) RouteService() error {
+	stream, err := c.serv.RouteService(context.Background())
 	if err != nil {
 		return err
 	}
-	c.routeIPv4Stream = stream
+	c.routeStream = stream
 
 	c.wg.Add(1)
 	go func() {
@@ -164,70 +163,47 @@ func (c *zebraClient) RouteIPv4Service() error {
 }
 
 func (c *zebraClient) RouteIPv4Add(r *pb.Route) error {
-	if c.routeIPv4Stream == nil {
-		err := c.RouteIPv4Service()
+	if c.routeStream == nil {
+		err := c.RouteService()
 		if err != nil {
 			return err
 		}
 	}
 	r.Op = pb.Op_RouteAdd
-	return c.routeIPv4Stream.Send(r)
+	return c.routeStream.Send(r)
 }
 
 func (c *zebraClient) RouteIPv4Delete(r *pb.Route) error {
-	if c.routeIPv4Stream == nil {
-		err := c.RouteIPv4Service()
+	if c.routeStream == nil {
+		err := c.RouteService()
 		if err != nil {
 			return err
 		}
 	}
 	r.Op = pb.Op_RouteDelete
-	return c.routeIPv4Stream.Send(r)
-}
-
-func (c *zebraClient) RouteIPv6Service() error {
-	stream, err := c.serv.RouteIPv6Service(context.Background())
-	if err != nil {
-		return err
-	}
-	c.routeIPv6Stream = stream
-	fmt.Println("XXX IPv6 service", stream)
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		for {
-			res, err := stream.Recv()
-			if err != nil {
-				return
-			}
-			c.dispatCh <- res
-		}
-	}()
-
-	return nil
+	return c.routeStream.Send(r)
 }
 
 func (c *zebraClient) RouteIPv6Add(r *pb.Route) error {
-	if c.routeIPv6Stream == nil {
-		err := c.RouteIPv6Service()
+	if c.routeStream == nil {
+		err := c.RouteService()
 		if err != nil {
 			return err
 		}
 	}
 	r.Op = pb.Op_RouteAdd
-	return c.routeIPv6Stream.Send(r)
+	return c.routeStream.Send(r)
 }
 
 func (c *zebraClient) RouteIPv6Delete(r *pb.Route) error {
-	if c.routeIPv6Stream == nil {
-		err := c.RouteIPv6Service()
+	if c.routeStream == nil {
+		err := c.RouteService()
 		if err != nil {
 			return err
 		}
 	}
 	r.Op = pb.Op_RouteDelete
-	return c.routeIPv6Stream.Send(r)
+	return c.routeStream.Send(r)
 }
 
 func (c *zebraClient) RedistributeService() error {
