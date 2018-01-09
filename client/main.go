@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -13,32 +14,70 @@ import (
 	"google.golang.org/grpc"
 )
 
+const DEFAULT_VRF = 0
+
 type zebraClient struct {
+	conn             *grpc.ClientConn
 	serv             pb.ZebraClient
 	dispatCh         chan interface{}
+	done             chan interface{}
 	interfaceStream  pb.Zebra_InterfaceServiceClient
 	routerIdStream   pb.Zebra_RouterIdServiceClient
-	redistIPv4Stream pb.Zebra_RedistributeIPv4ServiceClient
-	redistIPv6Stream pb.Zebra_RedistributeIPv6ServiceClient
+	redistIPv4Stream pb.Zebra_RedistIPv4ServiceClient
+	redistIPv6Stream pb.Zebra_RedistIPv6ServiceClient
 	routeIPv4Stream  pb.Zebra_RouteIPv4ServiceClient
 	routeIPv6Stream  pb.Zebra_RouteIPv6ServiceClient
 	wg               *sync.WaitGroup
 }
 
-func NewZebraClient() *zebraClient {
+func NewZebraClient(conn *grpc.ClientConn) *zebraClient {
 	client := &zebraClient{
+		conn:     conn,
 		wg:       &sync.WaitGroup{},
 		dispatCh: make(chan interface{}, 4096),
+		done:     make(chan interface{}),
 	}
+	go client.Dispatch()
 	return client
 }
 
 func (c *zebraClient) Stop() {
+	c.conn.Close()
 }
 
-const (
-	DEFAULT_VRF = 0
-)
+func (c *zebraClient) Dispatch() {
+	for {
+		select {
+		case res := <-c.dispatCh:
+			switch res.(type) {
+			case *pb.InterfaceUpdate:
+				mes := res.(*pb.InterfaceUpdate)
+				fmt.Println("IfUpdate:", mes.Op, mes.Name, mes.Index, mes.Metric, mes.Mtu)
+				for _, addr := range mes.AddrIpv4 {
+					p := &netutil.Prefix{}
+					p.IP = addr.Addr.Addr
+					p.Length = int(addr.Addr.Length)
+					fmt.Println("  Addr:", p)
+				}
+				for _, addr := range mes.AddrIpv6 {
+					p := &netutil.Prefix{}
+					p.IP = addr.Addr.Addr
+					p.Length = int(addr.Addr.Length)
+					fmt.Println("  Addr:", p)
+				}
+			case *pb.RouterIdUpdate:
+				mes := res.(*pb.RouterIdUpdate)
+				routerId := net.IP{}
+				routerId = mes.RouterId
+				fmt.Println("RouterId:", routerId)
+			case *pb.Route:
+				fmt.Println("")
+			}
+		case <-c.done:
+			return
+		}
+	}
+}
 
 func (c *zebraClient) InterfaceSubscribe(vrfId uint32) error {
 	stream, err := c.serv.InterfaceService(context.Background())
@@ -68,15 +107,6 @@ func (c *zebraClient) InterfaceSubscribe(vrfId uint32) error {
 	if err != nil {
 		return err
 	}
-
-	// req = &pb.InterfaceRequest{
-	// 	Op:    pb.Op_InterfaceUnsubscribe,
-	// 	VrfId: vrfId,
-	// }
-	// err = stream.Send(req)
-	// if err != nil {
-	// 	return err
-	// }
 
 	return nil
 }
@@ -201,77 +231,51 @@ func (c *zebraClient) RouteIPv6Delete(r *pb.Route) error {
 	return c.routeIPv6Stream.Send(r)
 }
 
-func main() {
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
-	// Create Client.
-	c := NewZebraClient()
-
-	// Dial.
-	conn, err := grpc.Dial(":9999", grpc.WithInsecure())
+func (c *zebraClient) RedistIPv4Service() error {
+	stream, err := c.serv.RedistIPv4Service(context.Background())
 	if err != nil {
-		fmt.Println("Dial fail", err)
+		return err
 	}
-	fmt.Println("goroutine", runtime.NumGoroutine())
+	c.redistIPv4Stream = stream
 
-	// Get server client.
-	c.serv = pb.NewZebraClient(conn)
-	fmt.Println("goroutine", runtime.NumGoroutine())
-
-	// Dispatch function.
-	done := make(chan interface{})
+	c.wg.Add(1)
 	go func() {
+		defer c.wg.Done()
 		for {
-			select {
-			case res := <-c.dispatCh:
-				switch res.(type) {
-				case *pb.InterfaceUpdate:
-					mes := res.(*pb.InterfaceUpdate)
-					fmt.Println("IfUpdate:", mes.Op, mes.Name, mes.Index, mes.Metric, mes.Mtu)
-					for _, addr := range mes.AddrIpv4 {
-						p := &netutil.Prefix{}
-						p.IP = addr.Addr.Addr
-						p.Length = int(addr.Addr.Length)
-						fmt.Println("  Addr:", p)
-					}
-					for _, addr := range mes.AddrIpv6 {
-						p := &netutil.Prefix{}
-						p.IP = addr.Addr.Addr
-						p.Length = int(addr.Addr.Length)
-						fmt.Println("  Addr:", p)
-					}
-				case *pb.RouterIdUpdate:
-					mes := res.(*pb.RouterIdUpdate)
-					routerId := net.IP{}
-					routerId = mes.RouterId
-					fmt.Println("RouterId:", routerId)
-				case *pb.Route:
-					fmt.Println("")
-				}
-			case <-done:
+			res, err := stream.Recv()
+			if err != nil {
 				return
 			}
+			c.dispatCh <- res
 		}
 	}()
 
-	fmt.Println("goroutine", runtime.NumGoroutine())
+	return nil
+}
 
-	// Subscribe to interface service.
-	err = c.InterfaceSubscribe(DEFAULT_VRF)
+func (c *zebraClient) RedistIPv4Subscribe(vrfId uint32, typ pb.RouteType) error {
+	if c.redistIPv4Stream == nil {
+		err := c.RedistIPv4Service()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *zebraClient) Scenario1() {
+	err := c.InterfaceSubscribe(DEFAULT_VRF)
 	if err != nil {
 		c.Stop()
+		return
 	}
-	// Subscribe to router id service.
 	err = c.RouterIdSubscribe(DEFAULT_VRF)
 	if err != nil {
 		c.Stop()
+		return
 	}
 
-	// fmt.Println("-- sleep start --")
-	// time.Sleep(time.Second * 3)
-	// fmt.Println("-- sleep end --")
-
-	// IPv4 route add.
 	p, _ := netutil.ParsePrefix("10.0.0.0/24")
 	nhop := netutil.ParseIPv4("10.211.55.1")
 	r := &pb.Route{
@@ -288,7 +292,6 @@ func main() {
 	c.RouteIPv4Add(r)
 	//c.RouteIPv4Delete(r)
 
-	// IPv6 route add.
 	p6, _ := netutil.ParsePrefix("::1/128")
 	r6 := &pb.Route{
 		Type: pb.RIB_BGP,
@@ -303,9 +306,59 @@ func main() {
 		Ifindex: 0,
 	})
 	c.RouteIPv6Add(r6)
+}
 
-	// Close interafce stream -> Invoke all client EOF.
-	//c.interfaceStream.CloseSend()
+func (c *zebraClient) Scenario2() {
+	err := c.InterfaceSubscribe(DEFAULT_VRF)
+	if err != nil {
+		c.Stop()
+		return
+	}
+	err = c.RouterIdSubscribe(DEFAULT_VRF)
+	if err != nil {
+		c.Stop()
+		return
+	}
+	// Redistribute BGP.
+	err = c.RedistIPv4Subscribe(DEFAULT_VRF, pb.RIB_BGP)
+	if err != nil {
+		c.Stop()
+		return
+	}
+}
+
+func main() {
+	fmt.Println("goroutine", runtime.NumGoroutine())
+
+	// Dial.
+	conn, err := grpc.Dial(":9999", grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("Dial fail", err)
+	}
+	fmt.Println("goroutine", runtime.NumGoroutine())
+
+	// Get server client.
+	// Create Client.
+	c := NewZebraClient(conn)
+
+	c.serv = pb.NewZebraClient(conn)
+
+	fmt.Println("goroutine", runtime.NumGoroutine())
+
+	//
+	fmt.Println("args", len(os.Args))
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "1":
+			c.Scenario1()
+		case "2":
+			c.Scenario2()
+		default:
+			c.Scenario1()
+		}
+	} else {
+		c.Scenario1()
+	}
 
 	for {
 		fmt.Println("goroutine", runtime.NumGoroutine())
@@ -324,7 +377,7 @@ func main() {
 
 	fmt.Println("Before wait group")
 	c.wg.Wait()
-	close(done)
+	close(c.done)
 	fmt.Println("After wait group")
 
 	for {

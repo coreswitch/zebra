@@ -37,8 +37,8 @@ type rpcPeer struct {
 	server           *Server
 	interfaceStream  pb.Zebra_InterfaceServiceServer
 	routerIdStream   pb.Zebra_RouterIdServiceServer
-	redistIPv4Stream pb.Zebra_RedistributeIPv4ServiceServer
-	redistIPv6Stream pb.Zebra_RedistributeIPv6ServiceServer
+	redistIPv4Stream pb.Zebra_RedistIPv4ServiceServer
+	redistIPv6Stream pb.Zebra_RedistIPv6ServiceServer
 	routeIPv4Stream  pb.Zebra_RouteIPv4ServiceServer
 	routeIPv6Stream  pb.Zebra_RouteIPv6ServiceServer
 	dispatCh         chan interface{}
@@ -93,10 +93,10 @@ func (p *rpcPeer) Dispatch() {
 		select {
 		case mes := <-p.dispatCh:
 			switch mes.(type) {
-			case *pb.RedistributeIPv4Request:
-				log.Info("RedistributeIPv4Request:", mes)
-			case *pb.RedistributeIPv6Request:
-				log.Info("RedistributeIPv6Request:", mes)
+			case *pb.RedistIPv4Request:
+				log.Info("RedistIPv4Request:", mes)
+			case *pb.RedistIPv6Request:
+				log.Info("RedistIPv6Request:", mes)
 			case *pb.Route:
 				req := mes.(*pb.Route)
 				vrf := VrfLookupByIndex(int(req.VrfId))
@@ -213,7 +213,7 @@ func (r *rpcServer) RouterIdService(stream pb.Zebra_RouterIdServiceServer) error
 	}
 }
 
-func (r *rpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4ServiceServer) error {
+func (r *rpcServer) RedistIPv4Service(stream pb.Zebra_RedistIPv4ServiceServer) error {
 	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
@@ -232,7 +232,7 @@ func (r *rpcServer) RedistributeIPv4Service(stream pb.Zebra_RedistributeIPv4Serv
 	}
 }
 
-func (r *rpcServer) RedistributeIPv6Service(stream pb.Zebra_RedistributeIPv6ServiceServer) error {
+func (r *rpcServer) RedistIPv6Service(stream pb.Zebra_RedistIPv6ServiceServer) error {
 	logGoroutine()
 	p, ok := peer.FromContext(stream.Context())
 	if !ok {
