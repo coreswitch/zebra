@@ -91,8 +91,6 @@ func (p *rpcPeer) Dispatch() {
 		select {
 		case mes := <-p.dispatCh:
 			switch mes.(type) {
-			case *pb.RedistRequest:
-				log.Info("RedistRequest:", mes)
 			case *pb.Route:
 				req := mes.(*pb.Route)
 				vrf := VrfLookupByIndex(int(req.VrfId))
@@ -127,6 +125,8 @@ func (p *rpcPeer) Notify(mes interface{}) {
 		p.interfaceStream.Send(mes.(*pb.InterfaceUpdate))
 	case *pb.RouterIdUpdate:
 		p.routerIdStream.Send(mes.(*pb.RouterIdUpdate))
+	case *pb.Route:
+		p.redistStream.Send(mes.(*pb.Route))
 	}
 }
 
@@ -224,7 +224,17 @@ func (r *rpcServer) RedistService(stream pb.Zebra_RedistServiceServer) error {
 			r.PeerDelete(p)
 			return nil
 		}
-		peer.dispatCh <- req
+		log.Info("RedistRequest:", req)
+		switch req.Op {
+		case pb.Op_RedistSubscribe:
+			r.server.RedistSubscribe(peer, req.VrfId, int(req.Afi), uint8(req.Type))
+		case pb.Op_RedistUnsubscribe:
+			r.server.RedistUnsubscribe(peer, req.VrfId, int(req.Afi), uint8(req.Type))
+		case pb.Op_RedistDefaultSubscribe:
+			r.server.RedistDefaultSubscribe(peer, req.VrfId, int(req.Afi))
+		case pb.Op_RedistDefaultUnsubscribe:
+			r.server.RedistDefaultUnsubscribe(peer, req.VrfId, int(req.Afi))
+		}
 	}
 }
 

@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	WATCH_TYPE_INTERFACE   = 0
-	WATCH_TYPE_ROUTER_ID   = 1
-	WATCH_TYPE_RIB         = 2
-	WATCH_TYPE_RIB_DEFAULT = 3
-	WATCH_TYPE_MAX         = 4
+	WATCH_TYPE_INTERFACE      = 0
+	WATCH_TYPE_ROUTER_ID      = 1
+	WATCH_TYPE_REDIST         = 2
+	WATCH_TYPE_REDIST_DEFAULT = 3
+	WATCH_TYPE_MAX            = 4
 )
 
 type Watcher interface {

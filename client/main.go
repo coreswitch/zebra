@@ -69,7 +69,8 @@ func (c *zebraClient) Dispatch() {
 				routerId = mes.RouterId
 				fmt.Println("RouterId:", routerId)
 			case *pb.Route:
-				fmt.Println("")
+				mes := res.(*pb.Route)
+				fmt.Println(mes)
 			}
 		case <-c.done:
 			return
@@ -333,18 +334,18 @@ func (c *zebraClient) Scenario1() {
 }
 
 func (c *zebraClient) Scenario2() {
-	err := c.InterfaceSubscribe(DEFAULT_VRF)
-	if err != nil {
-		c.Stop()
-		return
-	}
-	err = c.RouterIdSubscribe(DEFAULT_VRF)
-	if err != nil {
-		c.Stop()
-		return
-	}
+	// err := c.InterfaceSubscribe(DEFAULT_VRF)
+	// if err != nil {
+	// 	c.Stop()
+	// 	return
+	// }
+	// err = c.RouterIdSubscribe(DEFAULT_VRF)
+	// if err != nil {
+	// 	c.Stop()
+	// 	return
+	// }
 	// Redistribute BGP.
-	err = c.RedistIPv4Subscribe(DEFAULT_VRF, pb.RIB_BGP)
+	err := c.RedistIPv4Subscribe(DEFAULT_VRF, pb.RIB_BGP)
 	if err != nil {
 		c.Stop()
 		return

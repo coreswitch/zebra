@@ -35,6 +35,11 @@ var (
 	VrfMutex sync.RWMutex
 )
 
+type WatcherRedist struct {
+	typ [RIB_MAX]Watchers
+	def Watchers
+}
+
 type Vrf struct {
 	Name        string
 	Index       int
@@ -44,6 +49,7 @@ type Vrf struct {
 	nhopTable   [AFI_MAX]*netutil.Ptree
 	arpTable    [AFI_MAX]*netutil.Ptree
 	staticTable [AFI_MAX]*netutil.Ptree
+	redist      [AFI_MAX]WatcherRedist
 	routerId    RouterId
 	ZServer     *ZServer
 	Mutex       sync.RWMutex

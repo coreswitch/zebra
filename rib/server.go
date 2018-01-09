@@ -472,19 +472,26 @@ func (s *Server) RouterIdUnsubscribe(w Watcher, vrfId uint32) error {
 	})
 }
 
-func (s *Server) RedistSubscribe() error {
+func (s *Server) RedistSubscribe(w Watcher, vrfId uint32, afi int, typ uint8) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(int(vrfId))
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		vrf.redist[afi].typ[typ] = append(vrf.redist[afi].typ[typ], w)
+		return nil
+	})
+}
+
+func (s *Server) RedistUnsubscribe(w Watcher, vrfId uint32, afi int, typ uint8) error {
 	return nil
 }
 
-func (s *Server) RedistUnsubscribe() error {
+func (s *Server) RedistDefaultSubscribe(w Watcher, vrfId uint32, afi int) error {
 	return nil
 }
 
-func (s *Server) RedistDefaultSubscribe() error {
-	return nil
-}
-
-func (s *Server) RedistDefaultUnsubscribe() error {
+func (s *Server) RedistDefaultUnsubscribe(w Watcher, vrfId uint32, afi int) error {
 	return nil
 }
 

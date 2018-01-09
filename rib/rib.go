@@ -38,6 +38,7 @@ const (
 	RIB_OSPF
 	RIB_ISIS
 	RIB_BGP
+	RIB_MAX
 )
 
 var ribTypeString = map[uint8]string{
@@ -121,6 +122,7 @@ type Rib struct {
 	Nexthops []*Nexthop
 	Src      interface{}
 	Redist   bool
+	Color    []string
 }
 
 type RibSlice []*Rib
@@ -386,8 +388,59 @@ func (v *Vrf) RibProcess(p *netutil.Prefix, ribs RibSlice, del *Rib, resolve boo
 		if !selected.Redist {
 			RedistIPv4Add(v.Index, p, selected, nil)
 		}
+		v.RedistAdd(p, selected)
 		selected.SetFib()
 	}
+}
+
+func NexthopEncode(rib *Rib) []*pb.Nexthop {
+	if rib.Nexthop != nil {
+		nhop := &pb.Nexthop{
+			Addr:    rib.Nexthop.IP,
+			Ifindex: uint32(rib.Nexthop.Index),
+		}
+		return []*pb.Nexthop{nhop}
+	} else {
+	}
+	return nil
+}
+
+func (v *Vrf) Redistribute(op pb.Op, p *netutil.Prefix, rib *Rib) {
+	var watchers Watchers
+	redist := v.redist[p.AFI()]
+	if p.IsDefault() {
+		watchers = redist.def
+	} else {
+		watchers = redist.typ[rib.Type]
+	}
+	for _, w := range watchers {
+		// if rib.Src != w {
+		nhops := NexthopEncode(rib)
+		w.Notify(&pb.Route{
+			Op:    op,
+			VrfId: uint32(v.Index),
+			Prefix: &pb.Prefix{
+				Addr:   p.IP,
+				Length: uint32(p.Length),
+			},
+			Type:     pb.RouteType(rib.Type),
+			SubType:  pb.RouteSubType(rib.SubType),
+			Distance: uint32(rib.Distance),
+			Metric:   rib.Metric,
+			Tag:      rib.Tag,
+			Nexthops: nhops,
+			Color:    rib.Color,
+		})
+		// }
+	}
+}
+
+func (v *Vrf) RedistAdd(p *netutil.Prefix, rib *Rib) {
+	v.Redistribute(pb.Op_RouteAdd, p, rib)
+}
+
+func (v *Vrf) RedistDelete(p *netutil.Prefix, rib *Rib) {
+	v.Redistribute(pb.Op_RouteDelete, p, rib)
 }
 
 func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
@@ -396,11 +449,6 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	p.ApplyMask()
 	ptree := v.AfiPtree(p)
 	n := ptree.Acquire(p.IP, p.Length)
-
-	// System route is already in FIB.
-	// if ri.IsSystem() {
-	// 	ri.SetFib()
-	// }
 
 	// Resolve nexthop.
 	v.Resolve(ri)
