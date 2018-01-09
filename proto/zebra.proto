@@ -90,13 +90,13 @@ message RouterIdUpdate {
 	bytes router_id = 2;
 }
 
-message RedistributeIPv4Request {
+message RedistIPv4Request {
 	Op op = 1;
 	uint32 vrf_id = 2;
     RouteType route_type = 4;
 }
 
-message RedistributeIPv6Request {
+message RedistIPv6Request {
 	Op op = 1;
 	uint32 vrf_id = 2;
     RouteType route_type = 4;
@@ -133,8 +133,8 @@ message Route {
 service Zebra {
 	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
 	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
-	rpc RedistributeIPv4Service(stream RedistributeIPv4Request) returns (stream Route) {}
-	rpc RedistributeIPv6Service(stream RedistributeIPv6Request) returns (stream Route) {}
+	rpc RedistIPv4Service(stream RedistIPv4Request) returns (stream Route) {}
+	rpc RedistIPv6Service(stream RedistIPv6Request) returns (stream Route) {}
 	rpc RouteIPv4Service(stream Route) returns (stream Route) {}
 	rpc RouteIPv6Service(stream Route) returns (stream Route) {}
 }
