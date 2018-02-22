@@ -1,4 +1,4 @@
-// Copyright 2017 zebra project
+// Copyright 2017, 2018 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,20 @@ const (
 	Deny   = false
 )
 
-type Type bool
+type Action bool
 
-func (t Type) String() string {
+func (t Action) String() string {
 	if t {
 		return "permit"
 	} else {
 		return "deny"
+	}
+}
+
+func (t Action) MarshalJSON() ([]byte, error) {
+	if t {
+		return []byte(`"permit"`), nil
+	} else {
+		return []byte(`"deny"`), nil
 	}
 }
