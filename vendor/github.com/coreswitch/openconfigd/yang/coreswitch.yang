@@ -241,7 +241,7 @@ module coreswitch {
     leaf router-id {
       type inet:ipv4-address;
     }
-    container static {
+    container ipv4 {
       list route {
         key "prefix";
         leaf prefix {
@@ -265,9 +265,71 @@ module coreswitch {
           description "Distance of the route.";
         }
       }
+      list route-srv6 {
+        key "prefix";
+        leaf prefix {
+          type inet:ipv4-prefix;
+        }
+        list nexthop {
+          key "address";
+          leaf "address" {
+            type inet:ipv4-address;
+            description "Nexthop of the route";
+          }
+          list seg6 {
+            key "mode";
+            leaf mode {
+              type enumeration {
+                enum encap;
+              }
+            }
+            leaf-list segments {
+              type inet:ipv6-address;
+            }
+          }
+        }
+      }
+    }
+    container ipv6 {
+      list route {
+        key "prefix";
+        leaf prefix {
+          type inet:ipv6-prefix;
+        }
+        list nexthop {
+          key "address";
+          leaf "address" {
+            type inet:ipv6-address;
+          }
+        }
+      }
+      list route-srv6 {
+        key "prefix";
+        leaf prefix {
+          type inet:ipv6-prefix;
+        }
+        list nexthop {
+          key "address";
+          leaf "address" {
+            type inet:ipv6-address;
+          }
+          list seg6 {
+            key "mode";
+            leaf mode {
+              type enumeration {
+                enum inline;
+                enum encap;
+              }
+            }
+            leaf-list segments {
+              type inet:ipv6-address;
+            }
+          }
+        }
+      }
     }
   }
-
+  
   container protocols {
     ext:help "Routing protocol configuration";
     uses quagga:protocols;

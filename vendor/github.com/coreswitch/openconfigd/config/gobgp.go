@@ -17,9 +17,9 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreswitch/netutil"
@@ -361,7 +361,6 @@ func GobgpSetGlobal(client *client.Client, cfg *GobgpConfig) {
 func GobgpSetZebraRoutine() error {
 	client, err := client.New("")
 	if err != nil {
-		fmt.Println("GobgpSetZebraRouting", err)
 		return err
 	}
 	defer client.Close()
@@ -384,11 +383,10 @@ func GobgpSetZebra(client *client.Client, cfg *GobgpConfig, version uint8) {
 	zebra.Config.Enabled = true
 	zebra.Config.Url = "unix:/var/run/zserv.api"
 	zebra.Config.Version = version
+	zebra.Config.RedistributeRouteTypeList = []bgpconfig.InstallProtocolType{"bgp", "ospf"}
 	err := client.EnableZebra(zebra)
 	if err != nil {
-		fmt.Println("GobgpSetZebra:", err.Error())
 		if strings.Contains(err.Error(), "zserv") && !GobgpZebraRetry {
-			fmt.Println("Zebra connection error")
 			GobgpZebraRetry = true
 			go func() {
 				defer func() {
@@ -430,11 +428,9 @@ func GobgpSetNeighbor(client *client.Client, cfg *GobgpConfig) {
 }
 
 func GobgpSoftresetNeighbor(client *client.Client, cfg *GobgpConfig) {
-	for _, n := range cfg.Neighbors {
-		err := client.SoftReset(n.Config.NeighborAddress, 0)
-		if err != nil {
-			fmt.Println("GobgpSoftresetNeighbor:", err)
-		}
+	err := client.SoftReset("", 0)
+	if err != nil {
+		fmt.Println("GobgpSoftresetNeighbor:", err)
 	}
 }
 
@@ -691,13 +687,64 @@ func GobgpReset(cfg *GobgpConfig) error {
 }
 
 // Map for configured neighbor.
-var GobgpNeighborMap = map[string]bgpconfig.Neighbor{}
+var (
+	GobgpNeighborMap   = map[string]bgpconfig.Neighbor{}
+	GobgpNeighborCache GobgpConfig
+	GobgpNeighborMutex sync.Mutex
+	GobgpNeighborDelay time.Duration = 3
+	GobgpAfterFunc     *time.Timer
+)
 
 type NeighborConfig struct {
 	Neighbor bgpconfig.Neighbor `json:"neighbor"`
 }
 
+func GobgpNeighborUpdate(ncfg *bgpconfig.Neighbor, add bool) {
+	var cfg GobgpConfig
+	if GobgpAfterFunc == nil {
+		cfg = gobgpConfig
+		cfg.Neighbors = make([]bgpconfig.Neighbor, 0)
+		for _, n := range gobgpConfig.Neighbors {
+			if n.Config.NeighborAddress != ncfg.Config.NeighborAddress {
+				cfg.Neighbors = append(cfg.Neighbors, n)
+			}
+		}
+	} else {
+		cfg = GobgpNeighborCache
+		cfg.Neighbors = make([]bgpconfig.Neighbor, 0)
+		for _, n := range GobgpNeighborCache.Neighbors {
+			if n.Config.NeighborAddress != ncfg.Config.NeighborAddress {
+				cfg.Neighbors = append(cfg.Neighbors, n)
+			}
+		}
+	}
+
+	if add {
+		cfg.Neighbors = append(cfg.Neighbors, *ncfg)
+	}
+
+	if cfg.Global.Equal(&gobgpConfig.Global) {
+		GobgpNeighborCache = cfg
+		if GobgpAfterFunc == nil {
+			GobgpAfterFunc = time.AfterFunc(time.Second*GobgpNeighborDelay, func() {
+				GobgpNeighborMutex.Lock()
+				defer GobgpNeighborMutex.Unlock()
+
+				GobgpUpdate(&GobgpNeighborCache)
+				gobgpConfig = GobgpNeighborCache
+				GobgpAfterFunc = nil
+			})
+		}
+	} else {
+		GobgpReset(&cfg)
+		gobgpConfig = cfg
+	}
+}
+
 func GobgpNeighborAdd(id string, jsonStr string) {
+	GobgpNeighborMutex.Lock()
+	defer GobgpNeighborMutex.Unlock()
+
 	var jsonIntf interface{}
 	err := json.Unmarshal([]byte(jsonStr), &jsonIntf)
 	if err != nil {
@@ -723,53 +770,22 @@ func GobgpNeighborAdd(id string, jsonStr string) {
 
 	// Update neighbor map.
 	GobgpNeighborMap[id] = ncfg
-
-	// Update config
-	var cfg GobgpConfig
-	cfg = gobgpConfig
-	cfg.Neighbors = make([]bgpconfig.Neighbor, 0)
-
-	for _, n := range gobgpConfig.Neighbors {
-		if n.Config.NeighborAddress != ncfg.Config.NeighborAddress {
-			cfg.Neighbors = append(cfg.Neighbors, n)
-		}
-	}
-	cfg.Neighbors = append(cfg.Neighbors, ncfg)
-
-	if cfg.Global.Equal(&gobgpConfig.Global) {
-		GobgpUpdate(&cfg)
-	} else {
-		GobgpReset(&cfg)
-	}
-
-	gobgpConfig = cfg
+	GobgpNeighborUpdate(&ncfg, true)
 }
 
 func GobgpNeighborDelete(id string) {
+	GobgpNeighborMutex.Lock()
+	defer GobgpNeighborMutex.Unlock()
+
 	ncfg, ok := GobgpNeighborMap[id]
 	if !ok {
 		fmt.Println("GobgpNeighborDelete: can't find neighbor with id", id)
 		return
 	}
 
-	// Update config
-	var cfg GobgpConfig
-	cfg = gobgpConfig
-	cfg.Neighbors = make([]bgpconfig.Neighbor, 0)
-
-	for _, n := range gobgpConfig.Neighbors {
-		if n.Config.NeighborAddress != ncfg.Config.NeighborAddress {
-			cfg.Neighbors = append(cfg.Neighbors, n)
-		}
-	}
-
-	if cfg.Global.Equal(&gobgpConfig.Global) {
-		GobgpUpdate(&cfg)
-	} else {
-		GobgpReset(&cfg)
-	}
-
-	gobgpConfig = cfg
+	// Update neighbor map.
+	GobgpNeighborUpdate(&ncfg, false)
+	delete(GobgpNeighborMap, id)
 }
 
 func GobgpParse(jsonStr string) {
@@ -1012,9 +1028,6 @@ var GobgpWanProcess *process.Process
 var gobgpWanConfigLocal GobgpConfig
 var gobgpWanConfigGohan GobgpConfig
 
-// GoBGP WAN IP address.
-var gobgpWanAddress = map[string]string{}
-
 func GobgpSetRib(client *client.Client, cfg *GobgpConfig) {
 	for _, r := range cfg.Ribs {
 		path, err := GobgpVrfPath(&r)
@@ -1063,46 +1076,6 @@ func GobgpWanConfig(cfg *GobgpConfig) {
 	GobgpSetPolicyDefinition(c, cfg)
 	GobgpSetGlobalPolicy(c, cfg)
 	GobgpSetRib(c, cfg)
-
-	// WAN IP Address.
-	GobgpWanAddressClear()
-	if len(cfg.Interfaces.Interface) > 0 {
-		ifp := cfg.Interfaces.Interface[0]
-		ifName := ifp.Name
-
-		speed := "1000"
-		switch ifp.Speed {
-		case "100":
-			speed = "100"
-		case "10":
-			speed = "10"
-		}
-		duplex := "full"
-		if ifp.Duplex == "half" {
-			duplex = "half"
-		}
-		fmt.Println(speed, duplex)
-		err := exec.Command("ethtool", "-s", ifName, "duplex", duplex, "speed", speed).Run()
-		if err != nil {
-			fmt.Println("ethtool exec err:", err)
-		}
-
-		if len(ifp.IPv4.Address) > 0 {
-			ifAddr := ifp.IPv4.Address[0].Ip
-			fmt.Println("Setting WAN IP address:", ifName, ifAddr)
-			ExecLine(fmt.Sprintf("set interfaces interface %s ipv4 address %s", ifName, ifAddr))
-			Commit()
-			gobgpWanAddress[ifName] = ifAddr
-		}
-	}
-}
-
-func GobgpWanAddressClear() {
-	for ifName, ifAddr := range gobgpWanAddress {
-		ExecLine(fmt.Sprintf("delete interfaces interface %s ipv4 address %s", ifName, ifAddr))
-	}
-	Commit()
-	gobgpWanAddress = map[string]string{}
 }
 
 // GoBGP WAN
@@ -1164,7 +1137,10 @@ func GobgpWanStop(local bool) {
 }
 
 func GobgpWanExit() {
-	GobgpWanAddressClear()
+	if GobgpWanProcess != nil {
+		process.ProcessUnregister(GobgpWanProcess)
+		GobgpWanProcess = nil
+	}
 }
 
 func stringToCommunityValue(comStr string) uint32 {

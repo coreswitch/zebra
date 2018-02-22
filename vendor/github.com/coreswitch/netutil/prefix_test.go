@@ -40,3 +40,30 @@ func TestPrefixRange(t *testing.T) {
 	ip := net.IP(bytes)
 	fmt.Println(ip)
 }
+
+var prefixDefaltTests = []struct {
+	str    string
+	result bool
+}{
+	{"0.0.0.0/0", true},
+	{"0.0.0.0/8", false},
+	{"0.0.0.10/0", false},
+	{"10.0.0.0/8", false},
+	{"::/0", true},
+	{"::/128", false},
+	{"2001::/64", false},
+	{"00:ff::/64", false},
+	{"00:ff::/0", false},
+}
+
+func TestPrefixIsDefault(t *testing.T) {
+	for _, tt := range prefixDefaltTests {
+		p, err := ParsePrefix(tt.str)
+		if err != nil {
+			t.Errorf("Parse error %v", err)
+		}
+		if p.IsDefault() != tt.result {
+			t.Errorf("IsDefault() for %s failed", tt.str)
+		}
+	}
+}

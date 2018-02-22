@@ -1,0 +1,112 @@
+// Copyright 2017 zebra Project.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package zebra;
+
+enum RouteType {
+	RIB_UNKNOWN   = 0;
+	RIB_KERNEL    = 1;
+	RIB_CONNECTED = 2;
+	RIB_STATIC    = 3;
+	RIB_RIP       = 4;
+	RIB_RIPNG     = 5;
+	RIB_OSPF      = 6;
+	RIB_OSPF6     = 7;
+	RIB_BGP       = 8;
+	RIB_ISIS      = 9;
+}
+
+enum RouteSubType {
+	RIB_SUB_OSPF_IA         = 0;
+	RIB_SUB_OSPF_NSSA_1     = 1;
+	RIB_SUB_OSPF_NSSA_2     = 2;
+	RIB_SUB_OSPF_EXTERNAL_1 = 3;
+	RIB_SUB_OSPF_EXTERNAL_2 = 4;
+	RIB_SUB_BGP_IBGP        = 5;
+	RIB_SUB_BGP_EBGP        = 6;
+	RIB_SUB_BGP_CONFED      = 7;
+	RIB_SUB_ISIS_L1         = 8;
+	RIB_SUB_ISIS_L2         = 9;
+	RIB_SUB_ISIS_IA         = 10;
+}
+
+message IPv4 {
+	uint32 s_addr = 1;
+}
+
+message PrefixIPv4 {
+	IPv4 addr = 1;
+	uint32 length = 2;
+}
+
+message NexthopIPv4 {
+	IPv4 addr = 1;
+	uint32 ifindex = 2;
+}
+
+message IPv6 {
+    uint32 s6_addr1 = 1;
+    uint32 s6_addr2 = 2;
+    uint32 s6_addr3 = 3;
+    uint32 s6_addr4 = 4;
+}
+
+message PrefixIPv6 {
+	IPv6 addr = 1;
+	uint32 length = 2;
+}
+
+message NexthopIPv6 {
+	IPv6 addr = 1;
+	uint32 ifindex = 2;
+}
+
+message RouteIPv4 {
+	RouteType type        = 1;
+	RouteSubType sub_type = 2;
+	PrefixIPv4 prefix = 3;
+	uint32 distance = 4;
+	uint32 metric = 5;
+	repeated NexthopIPv4 nexthops = 6;
+}
+
+message RouteIPv4Response {
+}
+
+message RouteIPv6 {
+	RouteType type        = 1;
+	RouteSubType sub_type = 2;
+	PrefixIPv6 prefix = 3;
+	uint32 distance = 4;
+	uint32 metric = 5;
+	repeated NexthopIPv6 nexthops = 6;
+}
+
+message RouteIPv6Response {
+}
+
+service ZebraApi {
+	rpc RouteIPv4Add(RouteIPv4) returns (RouteIPv4Response) {}
+	rpc RouteIPv4Delete(RouteIPv4) returns (RouteIPv4Response) {}
+	rpc RouteIPv6Add(RouteIPv6) returns (RouteIPv6Response) {}
+	rpc RouteIPv6Delete(RouteIPv6) returns (RouteIPv6Response) {}
+	// rpc VrfAdd() returns () {}
+	// rpc VrfDelete() returns ()  {}
+	// rpc VrfBindInterface() returns () {}
+	// rpc VrfUnbindInterface() returns () {}
+	// rpc RedistributeAdd() returns () {}
+	// rpc RedistributeDelete() returns () {}
+ }

@@ -115,9 +115,9 @@ func EtcdRegisterCallback(callback chan bool, exiting chan struct{}) {
 
 func EtcdKeepWatch(cli *clientv3.Client, ctx context.Context, ctxS context.Context, watchPoint string, exiting chan struct{}, callback chan bool) {
 	//fmt.Println("EtcdKeepWatch - try Mutex lock")
-	EtcdEventMutex.Lock()
+	// EtcdEventMutex.Lock()
 	//fmt.Println("EtcdKeepWatch - Mutex locked")
-	defer EtcdEventMutex.Unlock()
+	// defer EtcdEventMutex.Unlock()
 	// Get
 	resp, err := cli.Get(ctx, watchPoint, clientv3.WithPrefix())
 	if err != nil {
@@ -223,29 +223,13 @@ func EtcdWatchStart(cfg clientv3.Config, watchPoint string) func() {
 			break
 		}
 
-		for {
-			//fmt.Println("[etcd]Start of EtcdKeepWatch")
-			EtcdKeepWatch(cli, ctx, ctxS, watchPoint, exiting, callback)
-			select {
-			case <-exiting:
-				//fmt.Println("Exiting EtcdWatchStart")
-				return
-			default:
-				//fmt.Println("[etcd]EtcdKeepWatch failed start timer")
-				etcdTimer = time.NewTimer(time.Second * 3)
-				select {
-				case <-exiting:
-					//fmt.Println("[etcd]EtcdKeepWatch exiting")
-					if etcdTimer != nil {
-						etcdTimer.Stop()
-						etcdTimer = nil
-					}
-					return
-				case <-etcdTimer.C:
-					//fmt.Println("[etcd]EtcdKeepWatch timer expired")
-					etcdTimer = nil
-				}
-			}
+		EtcdKeepWatch(cli, ctx, ctxS, watchPoint, exiting, callback)
+		select {
+		case <-exiting:
+			return
+		default:
+			time.AfterFunc(time.Second*3, EtcdWatchUpdate)
+			return
 		}
 	}()
 
@@ -270,12 +254,12 @@ func EtcdWatchStop() {
 // Update etcd endpoints.
 func EtcdWatchUpdate() {
 	// Stop current etcd watch.
-	EtcdWatchStop()
 	fmt.Println("EtcdWatchUpdate - try Mutex lock")
 	EtcdEventMutex.Lock()
 	fmt.Println("EtcdWatchUpdate - Mutex locked")
 	defer EtcdEventMutex.Unlock()
 
+	EtcdWatchStop()
 	ClearVrfCache() // Force resync ribd
 
 	// No path is specivied.
@@ -405,6 +389,17 @@ func EtcdKeyValueParse(key, value []byte, get bool) {
 		} else {
 			GobgpParse(jsonBody.Body)
 		}
+	case "quagga":
+		etcdLastValue = string(value)
+		etcdLastJson = *jsonBody
+		vrfId := 0
+		if len(path) > 1 {
+			vrfId, _ = strconv.Atoi(path[1])
+		}
+		if vrfId == 0 {
+			return
+		}
+		QuaggaConfigSync(etcdLastValue, vrfId, "local")
 	case "vrf":
 		etcdLastVrfJson = *jsonBody
 		vrfId := 0
@@ -475,6 +470,15 @@ func EtcdKeyDelete(key []byte) {
 		}
 	case "bgp_wan":
 		GobgpWanStop(local)
+	case "quagga":
+		vrfId := 0
+		if len(path) > 1 {
+			vrfId, _ = strconv.Atoi(path[1])
+		}
+		if vrfId == 0 {
+			return
+		}
+		ProcessQuaggaConfigDelete(vrfId, "local")
 	}
 }
 

@@ -15,6 +15,8 @@
 package config
 
 import (
+	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -61,6 +63,12 @@ func stopProcess(Args []string) (inst int, instStr string) {
 		}
 	}
 	instStr = ""
+	return
+}
+
+func showNumGoroutine(Args []string) (inst int, instStr string) {
+	inst = CliSuccessShow
+	instStr = fmt.Sprintf(`Number of goroutine: %v`, runtime.NumGoroutine())
 	return
 }
 
@@ -277,6 +285,8 @@ func (this *CliComponent) Start() component.Component {
 		&cmd.Param{Helps: []string{"", "System Information", "etcd endpoints and status"}})
 	mode.InstallLine("show process", showProcess,
 		&cmd.Param{Helps: []string{"", "Process Information"}})
+	mode.InstallLine("show numgoroutine", showNumGoroutine,
+		&cmd.Param{Helps: []string{"Show running system information", "Number of goroutine"}})
 
 	opNode := mode.Parser
 

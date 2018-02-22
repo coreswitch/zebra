@@ -23,9 +23,10 @@ import (
 )
 
 type Ospf struct {
-	Network   string `mapstructure:"network" json:"network,omitempty"`
-	Area      uint32 `mapstructure:"area" json:"area,omitempty"`
-	Interface string `mapstructure:"interface" json:"interface,omitempty"`
+	Network      string        `mapstructure:"network" json:"network,omitempty"`
+	Area         uint32        `mapstructure:"area" json:"area,omitempty"`
+	InterfaceIps []InterfaceIp `mapstructure:"interfaces" json:"interfaces,omitempty"`
+	Interface    string        `mapstructure:"interface" json:"interface,omitempty"` // Deplicated from 2.4
 }
 
 type OspfArray []Ospf
@@ -40,8 +41,21 @@ func (lhs *Ospf) Equal(rhs *Ospf) bool {
 	if lhs.Area != rhs.Area {
 		return false
 	}
-	if lhs.Interface != rhs.Interface {
+	if len(lhs.InterfaceIps) != len(rhs.InterfaceIps) {
 		return false
+	}
+	{
+		lmap := make(map[string]*InterfaceIp)
+		for i, l := range lhs.InterfaceIps {
+			lmap[mapkey(i, string(l.Name))] = &lhs.InterfaceIps[i]
+		}
+		for i, r := range rhs.InterfaceIps {
+			if l, y := lmap[mapkey(i, string(r.Name))]; !y {
+				return false
+			} else if !r.Equal(l) {
+				return false
+			}
+		}
 	}
 	return true
 }
@@ -58,17 +72,78 @@ func (lhs *OspfArray) Equal(rhs *OspfArray) bool {
 	return true
 }
 
-var ospfTemplate = `
-!
+var ospfTemplate = `!
 password 8 AU67iiPSXYm96
 service password-encryption
 !
+{{range $i, $v := .OspfArray}}{{interfaceIp2Config $v}}{{end}}
+!
 router ospf
-  redistribute bgp
+  redistribute bgp metric-type 1
+  redistribute connected metric-type 1
+  default-information originate metric-type 1
+  distance 220
+{{areaAuthentication .OspfArray}}
 {{range $i, $v := .OspfArray}}  network {{$v.Network}} area {{$v.Area}}
 {{end}}
 !
 `
+
+func areaAuthentication(ospfArray *OspfArray) string {
+	var areaAuth bool
+	for _, ospf := range *ospfArray {
+		for _, ifps := range ospf.InterfaceIps {
+			if ifps.Ip.OspfIp.AuthenticationKey != "" {
+				areaAuth = true
+			}
+		}
+	}
+	if areaAuth {
+		return "  area 0 authentication"
+	}
+	return ""
+}
+
+func interface2Config(ifp InterfaceIp) string {
+	cfg := ifp.Ip.OspfIp
+	// if cfg.AuthenticationKey == "" && cfg.Cost == 0 && cfg.DeadInterval == 0 &&
+	// 	cfg.HelloInterval == 0 && cfg.Priority == "" && cfg.RetransmitInterval == 0 && cfg.TransmitDelay == 0 {
+	// 	return ""
+	// }
+	str := fmt.Sprintf("interface %s\n", ifp.Name)
+	str += " ip ospf mtu-ignore\n"
+	if cfg.AuthenticationKey != "" {
+		str += fmt.Sprintf(" ip ospf authentication-key %s\n", cfg.AuthenticationKey)
+	}
+	if cfg.Cost != 0 {
+		str += fmt.Sprintf(" ip ospf cost %d\n", cfg.Cost)
+	}
+	if cfg.DeadInterval != 0 {
+		str += fmt.Sprintf(" ip ospf dead-interval %d\n", cfg.DeadInterval)
+	}
+	if cfg.HelloInterval != 0 {
+		str += fmt.Sprintf(" ip ospf hello-interval %d\n", cfg.HelloInterval)
+	}
+	if cfg.Priority != "" {
+		str += fmt.Sprintf(" ip ospf priority %s\n", cfg.Priority)
+	}
+	if cfg.RetransmitInterval != 0 {
+		str += fmt.Sprintf(" ip ospf retransmit-interval %d\n", cfg.RetransmitInterval)
+	}
+	if cfg.TransmitDelay != 0 {
+		str += fmt.Sprintf(" ip ospf transmit-delay %d\n", cfg.TransmitDelay)
+	}
+	return str
+}
+
+//func interfaceIp2Config(ifps []InterfaceIp) string {
+func interfaceIp2Config(ospf Ospf) string {
+	str := ""
+	for _, ifp := range ospf.InterfaceIps {
+		str += interface2Config(ifp)
+	}
+	return str
+}
 
 func OspfExec(vrfId int, ospfArray *OspfArray) {
 	// Config file name.
@@ -85,7 +160,10 @@ func OspfExec(vrfId int, ospfArray *OspfArray) {
 	type TemplValue struct {
 		OspfArray *OspfArray
 	}
-	tmpl := template.Must(template.New("ospfTmpl").Parse(ospfTemplate))
+	tmpl := template.Must(template.New("ospfTmpl").Funcs(template.FuncMap{
+		"areaAuthentication": areaAuthentication,
+		"interfaceIp2Config": interfaceIp2Config,
+	}).Parse(ospfTemplate))
 	tmpl.Execute(f, &TemplValue{OspfArray: ospfArray})
 
 	// Set args.
@@ -114,7 +192,7 @@ func OspfVrfStop(vrfId int) {
 }
 
 func OspfVrfSync(vrfId int, cfg *VrfsConfig) {
-	fmt.Println("XXX", cfg.Ospf)
+	fmt.Println("OSPF cfg", cfg.Ospf)
 
 	// Compare ospf config with previous one.  If it is same just return.
 	o := OspfVrfMap[vrfId]

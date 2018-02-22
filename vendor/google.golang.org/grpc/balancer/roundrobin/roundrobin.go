@@ -56,7 +56,7 @@ func (*rrBuilder) Build(cc balancer.ClientConn, opt balancer.BuildOptions) balan
 }
 
 func (*rrBuilder) Name() string {
-	return "round_robin"
+	return "roundrobin"
 }
 
 type rrBalancer struct {

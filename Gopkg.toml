@@ -1,4 +1,3 @@
-
 # Gopkg.toml example
 #
 # Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
@@ -20,15 +19,20 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
-
 [[constraint]]
+  branch = "master"
   name = "github.com/Sirupsen/logrus"
 
 [[constraint]]
-  name = "github.com/coreos/etcd"
-  version = "3.2.11"
+  branch = "master"
+  name = "github.com/coreswitch/log"
 
 [[constraint]]
+  name = "github.com/coreos/etcd"
+  version = "=3.2.15"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/coreswitch/cmd"
 
 [[constraint]]
@@ -36,24 +40,25 @@
   version = "1.0.0"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/coreswitch/netutil"
 
 [[constraint]]
-  name = "github.com/coreswitch/openconfigd"
+  branch = "master"
+  name = "github.com/golang/protobuf"
 
 [[constraint]]
-  name = "github.com/golang/protobuf"
+  branch = "master"
+  name = "github.com/coreswitch/openconfigd"
 
 [[constraint]]
   branch = "master"
   name = "github.com/vishvananda/netlink"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/vishvananda/netns"
 
 [[constraint]]
-  name = "golang.org/x/net"
-
-[[constraint]]
   name = "google.golang.org/grpc"
-  version = "1.7.4"
+  version = "=1.7.5"

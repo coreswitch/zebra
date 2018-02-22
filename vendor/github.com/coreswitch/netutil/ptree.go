@@ -350,7 +350,11 @@ func (this *Ptree) LookupByIPv6(key []byte) *PtreeNode {
 func (this *Ptree) LookupByUint32(keyInt uint32) *PtreeNode {
 	key := make([]byte, 4)
 	binary.BigEndian.PutUint32(key, keyInt)
-	return this.Lookup(key, 32)
+	node := this.Lookup(key, 32)
+	if node == nil || node.Item == nil {
+		return nil
+	}
+	return node
 }
 
 func (this *Ptree) AcquireByMaxBits(key []byte) *PtreeNode {

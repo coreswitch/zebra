@@ -177,11 +177,6 @@ func OspfStatusVrf(vrfName string) *OspfVrfStat {
 func OspfStatusUpdate() {
 	stats := OspfStat{}
 
-	OspfVrfMap = map[int]OspfArray{}
-	OspfVrfMap[1] = OspfArray{}
-
-	fmt.Println("OSPF status update")
-
 	for vrfId, _ := range OspfVrfMap {
 		s := OspfStatusVrf(VrfName(vrfId))
 		stats.Ospf = append(stats.Ospf, *s)

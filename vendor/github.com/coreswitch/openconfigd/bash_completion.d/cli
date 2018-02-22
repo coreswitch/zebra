@@ -61,7 +61,11 @@ _cli_prompt_setup ()
     CLI_MODE_CHAR="#"
   fi
 
-  export PS1="$(hostname)${CLI_MODE_PROMPT}${CLI_MODE_CHAR}"
+  if [ -n "$CLI_PROMPT" ]; then
+    export PS1="${CLI_PROMPT}${CLI_MODE_PROMPT}${CLI_MODE_CHAR}"
+  else
+    export PS1="$(hostname)${CLI_MODE_PROMPT}${CLI_MODE_CHAR}"
+  fi
 }
 
 _cli_pager_setup ()
@@ -93,9 +97,9 @@ _cli_print_help ()
   elif [ ${#help} -eq 0 ] ; then
     echo -ne "\n$pre $label"
   elif [ ${#label} -lt 6 ] ; then
-    echo -ne "\n$pre $label\t\t$help"
+    echo -ne "\n$pre $label\t\t\t$help"
   elif [ ${#label} -lt 14 ] ; then
-    echo -ne "\n$pre $label\t$help"
+    echo -ne "\n$pre $label\t\t$help"
   else
     echo -ne "\n$pre $label\t$help"
   fi

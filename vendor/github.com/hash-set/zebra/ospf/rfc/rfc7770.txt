@@ -1,0 +1,843 @@
+
+
+
+
+
+
+Internet Engineering Task Force (IETF)                    A. Lindem, Ed.
+Request for Comments: 7770                                       N. Shen
+Obsoletes: 4970                                              JP. Vasseur
+Category: Standards Track                                  Cisco Systems
+ISSN: 2070-1721                                              R. Aggarwal
+                                                                  Arktan
+                                                              S. Shaffer
+                                                                  Akamai
+                                                           February 2016
+
+
+    Extensions to OSPF for Advertising Optional Router Capabilities
+
+Abstract
+
+   It is useful for routers in an OSPFv2 or OSPFv3 routing domain to
+   know the capabilities of their neighbors and other routers in the
+   routing domain.  This document proposes extensions to OSPFv2 and
+   OSPFv3 for advertising optional router capabilities.  The Router
+   Information (RI) Link State Advertisement (LSA) is defined for this
+   purpose.  In OSPFv2, the RI LSA will be implemented with an Opaque
+   LSA type ID.  In OSPFv3, the RI LSA will be implemented with a unique
+   LSA type function code.  In both protocols, the RI LSA can be
+   advertised at any of the defined flooding scopes (link, area, or
+   autonomous system (AS)).  This document obsoletes RFC 4970 by
+   providing a revised specification that includes support for
+   advertisement of multiple instances of the RI LSA and a TLV for
+   functional capabilities.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by the
+   Internet Engineering Steering Group (IESG).  Further information on
+   Internet Standards is available in Section 2 of RFC 5741.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at
+   http://www.rfc-editor.org/info/rfc7770.
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 1]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+Copyright Notice
+
+   Copyright (c) 2016 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Requirements Notation . . . . . . . . . . . . . . . . . .   3
+     1.2.  Summary of Changes from RFC 4970  . . . . . . . . . . . .   3
+   2.  OSPF Router Information (RI) LSA  . . . . . . . . . . . . . .   4
+     2.1.  OSPFv2 Router Information (RI) Opaque LSA . . . . . . . .   4
+     2.2.  OSPFv3 Router Information (RI) Opaque LSA . . . . . . . .   5
+     2.3.  OSPF Router Information LSA TLV Format  . . . . . . . . .   6
+     2.4.  OSPF Router Informational Capabilities TLV  . . . . . . .   6
+     2.5.  Assigned OSPF Router Informational Capability Bits  . . .   7
+     2.6.  OSPF Router Functional Capabilities TLV . . . . . . . . .   8
+     2.7.  Flooding Scope of the Router Information LSA  . . . . . .   9
+   3.  Backwards Compatibility . . . . . . . . . . . . . . . . . . .   9
+   4.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  10
+     5.1.  OSPFv2 Opaque LSA Type Assignment . . . . . . . . . . . .  10
+     5.2.  OSPFv3 LSA Function Code Assignment . . . . . . . . . . .  10
+     5.3.  OSPF RI LSA TLV Type Assignment . . . . . . . . . . . . .  11
+     5.4.  Registry for OSPF Router Informational Capability Bits  .  12
+     5.5.  Registry for OSPF Router Functional Capability Bits . . .  12
+   6.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     6.1.  Normative References  . . . . . . . . . . . . . . . . . .  12
+     6.2.  Informative References  . . . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  15
+
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 2]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+1.  Introduction
+
+   It is useful for routers in an OSPFv2 [OSPF] or OSPFv3 [OSPFv3]
+   routing domain to know the capabilities of their neighbors and other
+   routers in the routing domain.  This can be useful for both the
+   advertisement and discovery of OSPFv2 and OSPFv3 capabilities.
+   Throughout this document, OSPF will be used when the specification is
+   applicable to both OSPFv2 and OSPFv3.  Similarly, OSPFv2 or OSPFv3
+   will be used when the text is protocol specific.
+
+   OSPF uses the options field in LSAs and hello packets to advertise
+   optional router capabilities.  In the case of OSPFv2, all the bits in
+   this field have been allocated so additional optional capabilities
+   cannot be advertised.  This document describes extensions to OSPF to
+   advertise these optional capabilities via Opaque LSAs in OSPFv2 and
+   LSAs with a unique type in OSPFv3.  For existing OSPF capabilities,
+   backwards compatibility issues dictate that this advertisement is
+   used primarily for informational purposes.  For future OSPF
+   extensions, this advertisement MAY be used as the sole mechanism for
+   advertisement and discovery.
+
+   This document obsoletes RFC 4970 by providing a revised specification
+   including support for advertisement of multiple instances of the RI
+   LSA and a TLV for functional capabilities.
+
+1.1.  Requirements Notation
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [RFC-KEYWORDS].
+
+1.2.  Summary of Changes from RFC 4970
+
+   This document includes the following changes from RFC 4970 [RFC4970]:
+
+   1. The main change is that an OSPF router will be able to advertise
+      multiple instances of the OSPF Router Information LSA.  This
+      change permeates through much of the document.
+
+   2. Additionally, Section 2.6 includes an additional TLV for
+      functional capabilities.  This is in contrast to the existing TLV
+      that is used to advertise capabilities for informational purposes
+      only.
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 3]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   3. The IANA allocation policy has been changed from "Standards
+      Action" to "IETF Review" [IANA-GUIDE] for the following
+      registries:
+
+      o  OSPFv3 LSA Function Codes
+      o  OSPF Router Information (RI) TLVs
+      o  OSPF Router Informational Capability Bits
+      o  OSPF Router Functional Capability Bits
+
+   4. Finally, references have been updated for documents that have
+      become RFCs and RFCs that have been obsoleted since the
+      publication of RFC 4970.
+
+2.  OSPF Router Information (RI) LSA
+
+2.1.  OSPFv2 Router Information (RI) Opaque LSA
+
+   OSPFv2 routers will advertise a link scoped, area-scoped, or AS-
+   scoped Opaque LSA [OPAQUE].  The OSPFv2 RI LSA has an Opaque type of
+   4 and the Opaque ID is the RI LSA Instance ID.  The first Opaque ID,
+   i.e., 0, SHOULD always contain the Router Informational Capabilities
+   TLV and, if advertised, the Router Functional Capabilities TLV.  RI
+   LSA instances subsequent to the first can be used for information
+   that doesn't fit in the first instance.
+
+   OSPFv2 routers will advertise a link-scoped, area-scoped, or AS-
+   scoped Opaque LSA [OPAQUE].  The OSPFv2 Router Information LSA has an
+   Opaque type of 4.  The Opaque ID specifies the LSA Instance ID with
+   the first instance always having an Instance ID of 0.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |            LS age             |     Options   |  9, 10, or 11 |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |       4       |     Opaque ID (Instance ID)                   |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+d-+-+-+-+-+-+-+-+-+-+-+
+      |                     Advertising Router                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                     LS sequence number                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |         LS checksum           |             length            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      +-                            TLVs                             -+
+      |                             ...                               |
+
+                Figure 1.  OSPFv2 Router Information Opaque LSA
+
+
+
+Lindem, et al.               Standards Track                    [Page 4]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   The format of the TLVs within the body of an RI LSA is as defined in
+   Section 2.3.
+
+2.2.  OSPFv3 Router Information (RI) Opaque LSA
+
+   The OSPFv3 Router Information LSA has a function code of 12 while the
+   S1/S2 bits are dependent on the desired flooding scope for the LSA.
+   The U bit will be set indicating that the OSPFv3 RI LSA should be
+   flooded even if it is not understood.  The Link State ID (LSID) value
+   for this LSA is the Instance ID.  The first Instance ID, i.e., 0,
+   SHOULD always contain the Router Informational Capabilities TLV and,
+   if advertised, the Router Functional Capabilities TLV.  OSPFv3 Router
+   Information LSAs subsequent to the first can be used for information
+   that doesn't fit in the first instance.  OSPFv3 routers MAY advertise
+   multiple RI LSAs per flooding scope.
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |            LS age             |1|S12|          12             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                       Link State ID (Instance ID)             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                       Advertising Router                      |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                       LS sequence number                      |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |        LS checksum            |            Length             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      +-                            TLVs                             -+
+      |                             ...                               |
+
+                  Figure 2.  OSPFv3 Router Information LSA
+
+   The format of the TLVs within the body of an RI LSA is as defined in
+   Section 2.3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 5]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+2.3.  OSPF Router Information LSA TLV Format
+
+   The format of the TLVs within the body of an RI LSA is the same as
+   the format used by the Traffic Engineering Extensions to OSPF [TE].
+   The LSA payload consists of one or more nested Type/Length/Value
+   (TLV) triplets.  The format of each TLV is:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |              Type             |             Length            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                            Value...                           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+                             Figure 3.  TLV Format
+
+   The Length field defines the length of the value portion in octets
+   (thus a TLV with no value portion would have a length of 0).  The TLV
+   is padded to 4-octet alignment; padding is not included in the length
+   field (so a 3-octet value would have a length of 3, but the total
+   size of the TLV would be 8 octets).  Nested TLVs are also 4-octet
+   aligned.  For example, a 1-octet value would have the length field
+   set to 1, and 3 octets of padding would be added to the end of the
+   value portion of the TLV.  The padding is composed of undefined bits.
+   Unrecognized types are ignored.
+
+   When a new Router Information LSA TLV is defined, the specification
+   MUST explicitly state whether the TLV is applicable to OSPFv2 only,
+   OSPFv3 only, or both OSPFv2 and OSPFv3.
+
+2.4.  OSPF Router Informational Capabilities TLV
+
+   An OSPF router advertising an OSPF RI LSA MAY include the Router
+   Informational Capabilities TLV.  If included, it MUST be the first
+   TLV in the first instance, i.e., Instance 0, of the OSPF RI LSA.
+   Additionally, the TLV MUST accurately reflect the OSPF router's
+   capabilities in the scope advertised.  However, the informational
+   capabilities advertised have no impact on OSPF protocol operation;
+   they are advertised purely for informational purposes.
+
+
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 6]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   The format of the Router Informational Capabilities TLV is as
+   follows:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |              Type             |             Length            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |             Informational Capabilities                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      Type     A 16-bit field set to 1.
+
+      Length   A 16-bit field that indicates the length of the value
+               portion in octets and will be a multiple of 4 octets
+               dependent on the number of capabilities advertised.
+               Initially, the length will be 4, denoting 4 octets of
+               informational capability bits.
+
+      Value    A variable-length sequence of capability bits rounded to
+               a multiple of 4 octets padded with undefined bits.
+               Initially, there are 4 octets of capability bits.  Bits
+               are numbered left to right starting with the most
+               significant bit being bit 0.
+
+           Figure 4.  OSPF Router Informational Capabilities TLV
+
+   The Router Informational Capabilities TLV MAY be followed by optional
+   TLVs that further specify a capability.
+
+2.5.  Assigned OSPF Router Informational Capability Bits
+
+   The following informational capability bits have been assigned:
+
+      Bit       Capabilities
+
+      0         OSPF graceful restart capable [GRACE]
+      1         OSPF graceful restart helper  [GRACE]
+      2         OSPF Stub Router support [STUB]
+      3         OSPF Traffic Engineering support [TE]
+      4         OSPF point-to-point over LAN [P2PLAN]
+      5         OSPF Experimental TE [EXP-TE]
+      6-31      Unassigned (IETF Review)
+
+      Figure 5.  OSPF Router Informational Capabilities Bits
+
+   References for [GRACE], [STUB], [TE], [P2PLAN], and [EXP-TE] are
+   included herein.
+
+
+
+Lindem, et al.               Standards Track                    [Page 7]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+2.6.  OSPF Router Functional Capabilities TLV
+
+   This specification also defines the Router Functional Capabilities
+   TLV for advertisement in the OSPF Router Information LSA.  An OSPF
+   router advertising an OSPF RI LSA MAY include the Router Functional
+   Capabilities TLV.  If included, it MUST be the included in the first
+   instance of the LSA.  Additionally, the TLV MUST reflect the
+   advertising OSPF router's actual functional capabilities since the
+   information will be used to dictate OSPF protocol operation in the
+   flooding scope of the containing OSPF RI LSA.  If the TLV is not
+   included or the length doesn't include the assigned OSPF functional
+   capability bit, the corresponding OSPF functional capability is
+   implicitly advertised as not being supported by the advertising OSPF
+   router.
+
+   The format of the Router Functional Capabilities TLV is as follows:
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |              Type             |             Length            |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |             Functional Capabilities                           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      Type     A 16-bit field set to 2.
+
+      Length   A 16-bit field that indicates the length of the value
+               portion in octets and will be a multiple of 4 octets
+               dependent on the number of capabilities advertised.
+               Initially, the length will be 4, denoting 4 octets of
+               informational capability bits.
+
+      Value    A variable-length sequence of capability bits rounded
+               to a multiple of 4 octets padded with undefined bits.
+               Initially, there are 4 octets of capability bits.  Bits
+               are numbered left to right starting with the most
+               significant bit being bit 0.
+
+             Figure 6.  OSPF Router Functional Capabilities TLV
+
+   The Router Functional Capabilities TLV MAY be followed by optional
+   TLVs that further specify a capability.  In contrast to the Router
+   Informational Capabilities TLV, the OSPF extensions advertised in
+   this TLV MAY be used by other OSPF routers to dictate protocol
+   operation.  The specifications for functional capabilities advertised
+   in this TLV MUST describe protocol behavior and address backwards
+   compatibility.
+
+
+
+Lindem, et al.               Standards Track                    [Page 8]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+2.7.  Flooding Scope of the Router Information LSA
+
+   The flooding scope for a Router Information LSA is determined by the
+   LSA type.  For OSPFv2, a type 9 (link-scoped), type 10 (area-scoped),
+   or type 11 (AS-scoped) Opaque LSA may be flooded.  For OSPFv3, the S1
+   and S2 bits in the LSA type determine the flooding scope.  If AS-wide
+   flooding scope is chosen, the originating router should also
+   advertise area-scoped LSA(s) into any attached Not-So-Stubby Area
+   (NSSA) area(s).  An OSPF router MAY advertise different capabilities
+   when both NSSA area-scoped LSA(s) and an AS-scoped LSA are
+   advertised.  This allows functional capabilities to be limited in
+   scope.  For example, a router may be an area border router but only
+   support traffic engineering (TE) in a subset of its attached areas.
+
+   The choice of flooding scope is made by the advertising router and is
+   a matter of local policy.  The originating router MAY advertise
+   multiple RI LSAs with the same Instance ID as long as the flooding
+   scopes differ.  TLV flooding-scope rules will be specified on a per-
+   TLV basis and MUST be specified in the accompanying specifications
+   for future Router Information LSA TLVs.
+
+3.  Backwards Compatibility
+
+   For backwards compatibility, previously advertised Router Information
+   TLVs SHOULD continue to be advertised in the first instance, i.e., 0,
+   of the Router Information LSA.  If a Router Information TLV is
+   advertised in multiple Router Information LSA instances and the
+   multiple instance processing is not explicitly specified in the RFC
+   defining that Router Information TLV, the Router Instance TLV in the
+   Router Information LSA with the numerically smallest Instance ID will
+   be used and subsequent instances will be ignored.
+
+4.  Security Considerations
+
+   This document describes both a generic mechanism for advertising
+   router capabilities and TLVs for advertising informational and
+   functional capabilities.  The capability TLVs are less critical than
+   the topology information currently advertised by the base OSPF
+   protocol.  The security considerations for the generic mechanism are
+   dependent on the future application and, as such, should be described
+   as additional capabilities are proposed for advertisement.  Security
+   considerations for the base OSPF protocol are covered in [OSPF] and
+   [OSPFv3].
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                    [Page 9]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+5.  IANA Considerations
+
+5.1.  OSPFv2 Opaque LSA Type Assignment
+
+   [RFC4970] defined the Router Information Opaque LSA as type 4 in the
+   "Opaque Link-State Advertisements (LSA) Option Types" registry.  IANA
+   has updated the reference for that entry to point to this RFC.
+
+5.2.  OSPFv3 LSA Function Code Assignment
+
+   [RFC4970] created the registry for "OSPFv3 LSA Function Codes".  IANA
+   has updated the reference for that registry to point to this RFC.
+   References within that registry to [RFC4970] have been updated to
+   point to this RFC; references to other RFCs are unchanged.
+
+   The definition and assignment policy has been updated as follows.
+
+   This registry is now comprised of the fields Value, LSA Function Code
+   Name, and Reference.  The OSPFv3 LSA function code is defined in
+   Appendix A.4.2.1 of [OSPFv3].  Values 1-11 and 13-15 have already
+   been assigned.  The OSPFv3 LSA function code 12 has been assigned to
+   the OSPFv3 Router Information (RI) LSA as defined herein.
+
+         +-----------+-------------------------------------+
+         | Range     | Assignment Policy                   |
+         +-----------+-------------------------------------+
+         | 0         | Reserved (not to be assigned)       |
+         |           |                                     |
+         | 16-255    | Unassigned (IETF Review)            |
+         |           |                                     |
+         | 256-8175  | Reserved (No assignments)           |
+         |           |                                     |
+         | 8176-8183 | Experimentation (No assignments)    |
+         |           |                                     |
+         | 8184-8190 | Vendor Private Use (No assignments) |
+         |           |                                     |
+         | 8191      | Reserved (not to be assigned)       |
+         +-----------+-------------------------------------+
+
+                Figure 7.  OSPFv3 LSA Function Codes
+
+   o  The assignment policy for OSPFv3 LSA function codes in the range
+      16-255 has changed and are now assigned subject to IETF Review.
+      New values are assigned through RFCs that have been shepherded
+      through the IESG as AD-Sponsored or IETF WG documents
+      [IANA-GUIDE].
+
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 10]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   o  OSPFv3 LSA function codes in the range 8176-8183 are for
+      experimental use; these will not be registered with IANA and MUST
+      NOT be mentioned by RFCs.
+
+   o  OSPFv3 LSAs with an LSA Function Code in the Vendor Private Use
+      range 8184-8190 MUST include the Enterprise Code [ENTERPRISE-CODE]
+      as the first 4 octets following the 20 octets of LSA header.
+
+   o  If a new LSA Function Code is documented, the documentation MUST
+      include the valid combinations of the U, S2, and S1 bits for the
+      LSA.  It SHOULD also describe how the Link State ID is to be
+      assigned.
+
+5.3.  OSPF RI LSA TLV Type Assignment
+
+   [RFC4970] created the registry for "OSPF Router Information (RI)
+   TLVs".  IANA has updated the reference for this registry to point to
+   this RFC.  References within that registry to [RFC4970] have been
+   updated to point to this RFC; references to other RFCs are unchanged.
+
+   The definition and assignment policy has been updated as follows.
+
+   The registry is now comprised of the fields Value, TLV Name, and
+   Reference.  Values 3-9 have already been assigned.  Value 1 has been
+   assigned to the Router Informational Capabilities TLV and value 2 has
+   been assigned to the Router Functional Capabilities TLV as defined
+   herein.
+
+            +-------------+-----------------------------------+
+            | Range       | Assignment Policy                 |
+            +-------------+-----------------------------------+
+            | 0           | Reserved (not to be assigned)     |
+            |             |                                   |
+            | 10-32767    | Unassigned (IETF Review)          |
+            |             |                                   |
+            | 32768-32777 | Experimentation (No assignments)  |
+            |             |                                   |
+            | 32778-65535 | Reserved (Not to be assigned)     |
+            +-------------+-----------------------------------+
+
+                         Figure 8.  OSPF RI TLVs
+
+   o  Types in the range 10-32767 are to be assigned subject to IETF
+      Review.  New values are assigned through RFCs that have been
+      shepherded through the IESG as AD-Sponsored or IETF WG documents
+      [IANA-GUIDE].
+
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 11]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   o  Types in the range 32778-65535 are reserved and are not to be
+      assigned at this time.  Before any assignments can be made in this
+      range, there MUST be a Standards Track RFC that specifies IANA
+      Considerations that cover the range being assigned.
+
+5.4.  Registry for OSPF Router Informational Capability Bits
+
+   [RFC4970] created the registry for "OSPF Router Informational
+   Capability Bits".  IANA has updated the reference for this registry
+   to point to this RFC.  The definition and assignment policy has been
+   updated as follows.
+
+   o  This registry is now comprised of the fields Bit Number,
+      Capability Name, and Reference.
+
+   o  The values are defined in Section 2.6.  All Router Informational
+      Capability TLV additions are to be assigned through IETF Review
+      [IANA-GUIDE].
+
+5.5.  Registry for OSPF Router Functional Capability Bits
+
+   IANA has created a subregistry for "OSPF Router Functional Capability
+   Bits" within the "Open Shortest Path First v2 (OSPFv2) Parameters"
+   registry.  This subregistry is comprised of the fields Bit Number,
+   Capability Name, and Reference.  Initially, the subregistry will be
+   empty but will be available for future capabilities.  All Router
+   Functional Capability TLV additions are to be assigned through IETF
+   Review [IANA-GUIDE].
+
+6.  References
+
+6.1.  Normative References
+
+   [OPAQUE]  Berger, L., Bryskin, I., Zinin, A., and R. Coltun, "The
+             OSPF Opaque LSA Option", RFC 5250, DOI 10.17487/RFC5250,
+             July 2008, <http://www.rfc-editor.org/info/rfc5250>.
+
+   [OSPF]    Moy, J., "OSPF Version 2", STD 54, RFC 2328,
+             DOI 10.17487/RFC2328, April 1998,
+             <http://www.rfc-editor.org/info/rfc2328>.
+
+   [OSPFv3]  Coltun, R., Ferguson, D., Moy, J., and A. Lindem, "OSPF for
+             IPv6", RFC 5340, DOI 10.17487/RFC5340, July 2008,
+             <http://www.rfc-editor.org/info/rfc5340>.
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 12]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+   [RFC-KEYWORDS]
+             Bradner, S., "Key words for use in RFCs to Indicate
+             Requirement Levels", BCP 14, RFC 2119,
+             DOI 10.17487/RFC2119, March 1997,
+             <http://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC4970] Lindem, A., Ed., Shen, N., Vasseur, JP., Aggarwal, R., and
+             S. Shaffer, "Extensions to OSPF for Advertising Optional
+             Router Capabilities", RFC 4970, DOI 10.17487/RFC4970,
+             July 2007, <http://www.rfc-editor.org/info/rfc4970>.
+
+   [TE]      Katz, D., Kompella, K., and D. Yeung, "Traffic Engineering
+             (TE) Extensions to OSPF Version 2", RFC 3630,
+             DOI 10.17487/RFC3630, September 2003,
+             <http://www.rfc-editor.org/info/rfc3630>.
+
+6.2.  Informative References
+
+   [ENTERPRISE-CODE]
+             Eronen, P. and D. Harrington, "Enterprise Number for
+             Documentation Use", RFC 5612, DOI 10.17487/RFC5612,
+             August 2009, <http://www.rfc-editor.org/info/rfc5612>.
+
+   [EXP-TE]  Srisuresh, P. and P. Joseph, "OSPF-xTE: Experimental
+             Extension to OSPF for Traffic Engineering", RFC 4973,
+             DOI 10.17487/RFC4973, July 2007,
+             <http://www.rfc-editor.org/info/rfc4973>.
+
+   [GRACE]   Moy, J., Pillay-Esnault, P., and A. Lindem, "Graceful OSPF
+             Restart", RFC 3623, DOI 10.17487/RFC3623, November 2003,
+             <http://www.rfc-editor.org/info/rfc3623>.
+
+   [IANA-GUIDE]
+             Narten, T. and H. Alvestrand, "Guidelines for Writing an
+             IANA Considerations Section in RFCs", BCP 26, RFC 5226,
+             DOI 10.17487/RFC5226, May 2008,
+             <http://www.rfc-editor.org/info/rfc5226>.
+
+   [P2PLAN]  Shen, N., Ed., and A. Zinin, Ed., "Point-to-Point Operation
+             over LAN in Link State Routing Protocols", RFC 5309,
+             DOI 10.17487/RFC5309, October 2008,
+             <http://www.rfc-editor.org/info/rfc5309>.
+
+   [STUB]    Retana, A., Nguyen, L., Zinin, A., White, R., and D.
+             McPherson, "OSPF Stub Router Advertisement", RFC 6987,
+             DOI 10.17487/RFC6987, September 2013,
+             <http://www.rfc-editor.org/info/rfc6987>.
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 13]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+Acknowledgments
+
+   The idea for this work grew out of a conversation with Andrew Partan
+   and we thank him for his contribution.  The authors thank Peter
+   Psenak for his review and helpful comments on early draft versions of
+   the document.
+
+   Special thanks to Tom Petch for providing the updated IANA text in
+   this document.
+
+   Comments from Abhay Roy, Vishwas Manral, Vivek Dubey, and Adrian
+   Farrel have been incorporated into later draft versions of this
+   document.
+
+   Thanks to Yingzhen Qu for acting as document shepherd.
+
+   Thanks to Chris Bowers, Alia Atlas, Shraddha Hegde, Dan Romascanu,
+   and Victor Kuarsingh for review of this document.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 14]
+
+RFC 7770               OSPF Capability Extensions          February 2016
+
+
+Authors' Addresses
+
+   Acee Lindem (editor)
+   Cisco Systems
+   301 Midenhall Way
+   Cary, NC  27513
+   United States
+
+   Email: acee@cisco.com
+
+
+   Naiming Shen
+   Cisco Systems
+   225 West Tasman Drive
+   San Jose, CA  95134
+   United States
+
+   Email: naiming@cisco.com
+
+
+   Jean-Philippe Vasseur
+   Cisco Systems
+   1414 Massachusetts Avenue
+   Boxborough, MA  01719
+   United States
+
+   Email: jpv@cisco.com
+
+
+   Rahul Aggarwal
+   Arktan
+
+   Email: raggarwa_1@yahoo.com
+
+
+   Scott Shaffer
+   Akamai
+   8 Cambridge Center
+   Cambridge, MA  02142
+   United States
+
+   Email: sshaffer@akamai.com
+
+
+
+
+
+
+
+
+
+Lindem, et al.               Standards Track                   [Page 15]
+

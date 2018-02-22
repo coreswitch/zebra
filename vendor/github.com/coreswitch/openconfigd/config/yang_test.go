@@ -306,6 +306,31 @@ func TestLeaf(t *testing.T) {
 	}
 }
 
+func TestLeafList(t *testing.T) {
+	// Load leaf-list YANG.
+	entry, err := YangSetUp("test-leaf-list.yang")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Empty value. Set test.
+	config := &Config{}
+	path := []string{"top", "segments", "a::1", "b::1"}
+	ret, _, _, _ := Parse(path, entry, config, nil)
+	if ret != cmd.ParseSuccess {
+		t.Error("Leaf parse failed for", path, "result", cmd.ParseResult2String(ret))
+	}
+
+	// Empty value. JSON test.
+	jsonStr := config.JsonMarshal()
+	targetStr := `{"top":{"segments":["a::1","b::1"]}}`
+	var result bool
+	result, err = EqualJSON(jsonStr, targetStr)
+	if err != nil || !result {
+		t.Error("List JSON error for", config.JsonMarshal(), targetStr)
+	}
+}
+
 // Multiple key.
 func TestMultiKey(t *testing.T) {
 	// Load multiple key YANG.
