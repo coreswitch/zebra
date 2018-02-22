@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"net"
 	"syscall"
-	// "time"
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/netutil"
 	"github.com/coreswitch/zebra/fea"
+	"github.com/coreswitch/zebra/policy"
 )
 
 type Fn struct {
@@ -38,10 +38,12 @@ type Server struct {
 	apiAsyncCh chan *Fn
 	sync       chan *Fn
 	async      chan *Fn
+	pm         *policy.PrefixListMaster
 }
 
 var (
-	server *Server
+	server        *Server
+	NewServerHook func()
 )
 
 func NewServer() *Server {
@@ -53,8 +55,12 @@ func NewServer() *Server {
 		apiAsyncCh: make(chan *Fn, 1024),
 		sync:       make(chan *Fn, 1024),
 		async:      make(chan *Fn, 1024),
+		pm:         policy.NewPrefixListMaster(),
 	}
 	server = inst
+	if NewServerHook != nil {
+		NewServerHook()
+	}
 	return inst
 }
 
@@ -98,7 +104,7 @@ func (s *Server) Serv() {
 					fmt.Println("If add:", ifi)
 					IfUpdate(&ifi)
 				} else {
-					//fmt.Println("If delete:", ifi)
+					fmt.Println("If del:", ifi)
 					IfDelete(&ifi)
 				}
 			case ifaddr := <-s.ifaddrChan:
@@ -112,10 +118,10 @@ func (s *Server) Serv() {
 			case route := <-s.routeChan:
 				if route.MsgType == syscall.RTM_NEWROUTE {
 					fmt.Println("Route add ", route)
-					RibAdd(route.Table, route.Prefix, &route.Rib)
+					RibAdd(uint32(route.Table), route.Prefix, &route.Rib)
 				} else {
 					fmt.Println("Route del ", route)
-					RibDelete(route.Table, route.Prefix, &route.Rib)
+					RibDelete(uint32(route.Table), route.Prefix, &route.Rib)
 				}
 			}
 		}
@@ -157,8 +163,8 @@ func (s *Server) vrfAdd(vrfName string, errCh chan error) error {
 
 	v.IfWatchAdd(IF_WATCH_REGISTER, vrfName, errCh)
 
-	fea.VrfAdd(v.Name, v.Index)
-	NetlinkVrfAdd(v.Name, v.Index)
+	fea.VrfAdd(v.Name, v.Id)
+	NetlinkVrfAdd(v.Name, v.Id)
 
 	return nil
 }
@@ -193,10 +199,10 @@ func (s *Server) vrfDelete(vrfName string, errCh chan error) error {
 	v.IfWatchAdd(IF_WATCH_UNREGISTER, vrfName, errCh)
 
 	//fea.VrfDelete(v.Name, v.Index)
-	NetlinkVrfDelete(v.Name, v.Index)
+	NetlinkVrfDelete(v.Name, v.Id)
 
 	delete(VrfMap, v.Name)
-	VrfTable[v.Index] = nil
+	VrfTable[v.Id] = nil
 
 	return nil
 }
@@ -294,9 +300,21 @@ func (s *Server) vifDelete(ifName string, vlanId uint64) error {
 }
 
 func (s *Server) IfVrfBind(ifName string, vrfName string) error {
-	return s.apiAsync(func() error {
+	retry := 5
+	err := s.apiAsync(func() error {
 		return s.ifVrfBindAsync(ifName, vrfName)
 	})
+	for err != nil && retry != 0 {
+		retry--
+		fmt.Printf("IfVrfBind failed, retry count %d\n", retry)
+		err = s.apiAsync(func() error {
+			return s.ifVrfBindAsync(ifName, vrfName)
+		})
+		if err == nil {
+			return err
+		}
+	}
+	return err
 }
 
 func (s *Server) ifVrfBindAsync(ifName string, vrfName string) error {
@@ -327,7 +345,11 @@ func (s *Server) ifVrfBind(ifName string, vrfName string, errCh chan error) erro
 
 	vrf.IfWatchAdd(IF_WATCH_REGISTER, ifName, errCh)
 
-	NetlinkVrfBindInterface(ifp.Name, ifp.Index, vrfIf.Index)
+	err := NetlinkVrfBindInterface(ifp.Name, ifp.Index, vrfIf.Index)
+	fmt.Println("IfVrfBind: NetlinkVrfBindInterface err", err)
+	if err != nil {
+		return fmt.Errorf("IfVrfBind: NetlinkVrfBindInterface err %s", err)
+	}
 
 	return nil
 }
@@ -407,12 +429,215 @@ func (s *Server) AddrDelete(ifName string, addr *netutil.Prefix) error {
 	})
 }
 
-func (s *Server) IfUp(ifName string) error {
+// func (s *Server) IfUp(ifName string) error {
+// 	return s.apiSync(func() error {
+// 		fmt.Println("[API] IfUp start:", ifName)
+// 		ifp := IfLookupByName(ifName)
+// 		if ifp != nil {
+// 			err := LinkSetUp(ifp)
+// 			fmt.Println("[API] IfUp end:", ifName, err)
+// 			return err
+// 		}
+// 		return nil
+// 	})
+// }
+
+func (s *Server) InterfaceSubscribe(w Watcher, vrfId uint32) error {
 	return s.apiSync(func() error {
-		ifp := IfLookupByName(ifName)
-		if ifp != nil && !ifp.IsUp() {
-			return LinkSetUp(ifp)
+		vrf := VrfLookupByIndex(vrfId)
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
 		}
+		t := WATCH_TYPE_INTERFACE
+		for _, v := range vrf.Watchers[t] {
+			if w == v {
+				return nil
+			}
+		}
+		vrf.Watchers[t] = append(vrf.Watchers[t], w)
+		NotifyInterfaces(w, vrf)
+		return nil
+	})
+}
+
+func (s *Server) InterfaceUnsubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(vrfId)
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		t := WATCH_TYPE_INTERFACE
+		for i, v := range vrf.Watchers[t] {
+			if w == v {
+				vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+			}
+		}
+		return nil
+	})
+}
+
+func (s *Server) RouterIdSubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(vrfId)
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		t := WATCH_TYPE_ROUTER_ID
+		for _, v := range vrf.Watchers[t] {
+			if w == v {
+				return nil
+			}
+		}
+		vrf.Watchers[t] = append(vrf.Watchers[t], w)
+		NotifyRouterId(w, vrf)
+		return nil
+	})
+}
+
+func (s *Server) RouterIdUnsubscribe(w Watcher, vrfId uint32) error {
+	return s.apiSync(func() error {
+		vrf := VrfLookupByIndex(vrfId)
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+		}
+		t := WATCH_TYPE_ROUTER_ID
+		for i, v := range vrf.Watchers[t] {
+			if w == v {
+				vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+			}
+		}
+		return nil
+	})
+}
+
+func RedistWatcherAdd(watchers Watchers, w Watcher) Watchers {
+	for _, v := range watchers {
+		if w == v {
+			return watchers
+		}
+	}
+	watchers = append(watchers, w)
+	return watchers
+}
+
+func RedistWatcherRemove(watchers Watchers, w Watcher) Watchers {
+	for i, v := range watchers {
+		if w == v {
+			watchers = append(watchers[:i], watchers[i+1:]...)
+		}
+	}
+	return watchers
+}
+
+func EsiNewServerHook() {
+	p1, _ := netutil.ParsePrefix("172.0.0.0/8")
+	p2, _ := netutil.ParsePrefix("198.0.0.0/8")
+	any, _ := netutil.ParsePrefix("0.0.0.0/0")
+	server.PrefixListOutAdd(policy.NewPrefixListEntry(5, policy.Deny, p1, policy.WithEq(12)))
+	server.PrefixListOutAdd(policy.NewPrefixListEntry(10, policy.Deny, p2, policy.WithEq(15)))
+	server.PrefixListOutAdd(policy.NewPrefixListEntry(15, policy.Permit, any, policy.WithLe(32)))
+}
+
+func (s *Server) PrefixListOutAdd(entry *policy.PrefixListEntry) {
+	s.pm.EntryAdd("*redist-out*", entry)
+}
+
+func (s *Server) PrefixListOut() *policy.PrefixList {
+	return s.pm.Lookup("*redist-out*")
+}
+
+func (s *Server) RedistSubscribe(w Watcher, allVrf bool, vrfId uint32, afi int, typ uint8) error {
+	return s.apiSync(func() error {
+		if allVrf {
+			Redist[afi].typ[typ] = RedistWatcherAdd(Redist[afi].typ[typ], w)
+			for _, vrf := range VrfMap {
+				vrf.RedistSync(w, afi, typ)
+			}
+		} else {
+			vrf := VrfLookupByIndex(vrfId)
+			if vrf == nil {
+				return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+			}
+			vrf.redist[afi].typ[typ] = RedistWatcherAdd(vrf.redist[afi].typ[typ], w)
+			vrf.RedistSync(w, afi, typ)
+		}
+		return nil
+	})
+}
+
+func (s *Server) RedistUnsubscribe(w Watcher, allVrf bool, vrfId uint32, afi int, typ uint8) error {
+	return s.apiSync(func() error {
+		if allVrf {
+			Redist[afi].typ[typ] = RedistWatcherRemove(Redist[afi].typ[typ], w)
+		} else {
+			vrf := VrfLookupByIndex(vrfId)
+			if vrf == nil {
+				return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+			}
+			vrf.redist[afi].typ[typ] = RedistWatcherRemove(vrf.redist[afi].typ[typ], w)
+		}
+		return nil
+	})
+}
+
+func (s *Server) RedistDefaultSubscribe(w Watcher, allVrf bool, vrfId uint32, afi int) error {
+	return s.apiSync(func() error {
+		if allVrf {
+			Redist[afi].def = RedistWatcherAdd(Redist[afi].def, w)
+			for _, vrf := range VrfMap {
+				vrf.RedistDefaultSync(w, afi)
+			}
+		} else {
+			vrf := VrfLookupByIndex(vrfId)
+			if vrf == nil {
+				return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+			}
+			vrf.redist[afi].def = RedistWatcherAdd(vrf.redist[afi].def, w)
+			vrf.RedistDefaultSync(w, afi)
+		}
+		return nil
+	})
+}
+
+func (s *Server) RedistDefaultUnsubscribe(w Watcher, allVrf bool, vrfId uint32, afi int) error {
+	return s.apiSync(func() error {
+		if allVrf {
+			Redist[afi].def = RedistWatcherRemove(Redist[afi].def, w)
+		} else {
+			vrf := VrfLookupByIndex(vrfId)
+			if vrf == nil {
+				return fmt.Errorf("Can't find VRF by VRF ID: %d", vrfId)
+			}
+			vrf.redist[afi].def = RedistWatcherRemove(vrf.redist[afi].def, w)
+		}
+		return nil
+	})
+}
+
+func (s *Server) WatcherUnsubscribe(w Watcher) error {
+	return s.apiSync(func() error {
+		for afi := AFI_IP; afi < AFI_MAX; afi++ {
+			Redist[afi].def = RedistWatcherRemove(Redist[afi].def, w)
+			for t := RIB_UNKNOWN; t < RIB_MAX; t++ {
+				Redist[afi].typ[t] = RedistWatcherRemove(Redist[afi].typ[t], w)
+			}
+		}
+		for _, vrf := range VrfMap {
+			for t, _ := range vrf.Watchers {
+				for i, v := range vrf.Watchers[t] {
+					if w == v {
+						vrf.Watchers[t] = append(vrf.Watchers[t][:i], vrf.Watchers[t][i+1:]...)
+					}
+				}
+			}
+			for afi := AFI_IP; afi < AFI_MAX; afi++ {
+				vrf.redist[afi].def = RedistWatcherRemove(vrf.redist[afi].def, w)
+				for t := RIB_UNKNOWN; t < RIB_MAX; t++ {
+					vrf.redist[afi].typ[t] = RedistWatcherRemove(vrf.redist[afi].typ[t], w)
+				}
+			}
+		}
+		RibClearSrc(w)
 		return nil
 	})
 }
