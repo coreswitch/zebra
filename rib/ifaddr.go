@@ -112,18 +112,13 @@ func EsiIfAddrAddHook(ifp *Interface, ifaddr *netutil.Prefix) {
 	}
 
 	if ifp.Name == "sproute0" {
-		fmt.Println("Reflecting sproute0 address to other sprouteX interface")
+		fmt.Println("Reflecting sproute0 addr add to other sprouteX interface", ifaddr)
 		for _, ifpp := range IfMap {
 			if regex.MatchString(ifpp.Name) && ifpp.Name != "sproute0" {
-				fmt.Println("Reflecting to interface", ifpp.Name)
-				ifc := InterfaceConfigGet(ifpp.Name)
-				if ifc == nil {
-					fmt.Println("InterfaceConfigGet failed:", ifpp.Name)
-					continue
-				}
+				fmt.Println("Reflecting addr add to interface", ifpp.Name, ifaddr)
 				addr := ifaddr.Copy()
 				addr.Length = EsiIfMask(ifaddr.IP)
-				ifc.AddrAdd(ifpp.Name, addr)
+				NetlinkIpAddrAdd(ifpp, addr)
 			}
 		}
 	}
@@ -139,19 +134,14 @@ func EsiIfAddrDeleteHook(ifp *Interface, ifaddr *netutil.Prefix) {
 	}
 
 	if ifp.Name == "sproute0" {
-		fmt.Println("Reflecting sproute0 address to other sprouteX interface")
+		fmt.Println("Reflecting sproute0 addr del to other sprouteX interface", ifaddr)
 
-		for _, ifcp := range InterfaceConfigMap {
-			if regex.MatchString(ifcp.Name) && ifcp.Name != "sproute0" {
-				fmt.Println("Reflecting to interface", ifcp.Name)
-				ifc := InterfaceConfigGet(ifcp.Name)
-				if ifc == nil {
-					fmt.Println("InterfaceConfigGet failed:", ifcp.Name)
-					continue
-				}
+		for _, ifpp := range IfMap {
+			if regex.MatchString(ifpp.Name) && ifpp.Name != "sproute0" {
+				fmt.Println("Reflecting addr del to interface", ifpp.Name, ifaddr)
 				addr := ifaddr.Copy()
 				addr.Length = EsiIfMask(ifaddr.IP)
-				ifc.AddrDelete(ifcp.Name, addr)
+				NetlinkIpAddrDelete(ifpp, addr)
 			}
 		}
 	}
@@ -182,12 +172,13 @@ func IfAddrAdd(ai *IfAddrInfo) {
 
 	if ifp.IsUp() {
 		p := ai.Prefix.Copy()
-		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), IfAddr: addr}
+		ri := &Rib{Type: RIB_CONNECTED, Nexthops: []*Nexthop{NewNexthopIf(ai.Index)}, Src: addr}
 		ifp.Vrf.RibAdd(p, ri)
 		ifp.Vrf.RouterIdAdd(ifp, addr)
 	}
 
-	IfAddrAddPropagate(ifp, addr)
+	// IfAddrAddPropagate(ifp, addr)
+	WatcherNotifyAddressAdd(ifp, addr)
 
 	if IfAddrAddHook != nil {
 		IfAddrAddHook(ifp, ai.Prefix)
@@ -221,25 +212,26 @@ func IfAddrDelete(ai *IfAddrInfo) {
 
 	if ifp.IsUp() {
 		p := found.Prefix.Copy()
-		ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ai.Index), IfAddr: found}
+		ri := &Rib{Type: RIB_CONNECTED, Nexthops: []*Nexthop{NewNexthopIf(ai.Index)}, Src: found}
 		ifp.Vrf.RibDelete(p, ri)
 		ifp.Vrf.RouterIdDelete(ifp, found)
 	}
 	ifp.Addrs[afi] = addrs
 
 	// Recover process if the address is configured.
-	if ifp.IsUp() {
-		ifc := InterfaceConfigLookup(ifp.Name)
-		if ifc != nil {
-			addr := ifc.Addrs[afi].Lookup(ai.Prefix)
-			if addr != nil {
-				fmt.Println("Recover configured address remove from kernel:", addr.Prefix)
-				NetlinkIpAddrAdd(ifp, addr.Prefix)
-			}
-		}
-	}
+	// if ifp.IsUp() {
+	// 	ifc := InterfaceConfigLookup(ifp.Name)
+	// 	if ifc != nil {
+	// 		addr := ifc.Addrs[afi].Lookup(ai.Prefix)
+	// 		if addr != nil {
+	// 			fmt.Println("Recover configured address remove from kernel:", addr.Prefix)
+	// 			NetlinkIpAddrAdd(ifp, addr.Prefix)
+	// 		}
+	// 	}
+	// }
 
-	IfAddrDeletePropagate(ifp, found)
+	// IfAddrDeletePropagate(ifp, found)
+	WatcherNotifyAddressDelete(ifp, found)
 
 	if IfAddrDeleteHook != nil {
 		IfAddrDeleteHook(ifp, ai.Prefix)
