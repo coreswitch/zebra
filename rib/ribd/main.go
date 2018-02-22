@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/coreswitch/component"
+	"github.com/coreswitch/log"
 	"github.com/coreswitch/zebra/fea"
 	"github.com/coreswitch/zebra/fea/linux"
 	"github.com/coreswitch/zebra/module"
@@ -25,14 +26,21 @@ func EsiHook() {
 		rib.ShutdownSkipHook = rib.EsiShutdownSkipHook
 		rib.AddPathDefault = true
 		rib.IfForceUpFlag = true
-		rib.OspfMetricFilter = true
 		rib.LanInterfaceMonitorStart()
 		// rib.NoVRFDelete = true
+		rib.NetlinkIPv4AddressEnsure = true
+		rib.LocalPolicy = true
+		rib.NewServerHook = rib.EsiNewServerHook
 	}
+	rib.NewServerHook = rib.EsiNewServerHook
 }
 
 func main() {
 	fmt.Println("Starting RIB daemon")
+
+	log.FuncField = false
+	log.SourceField = false
+	log.SetTextFormatter()
 
 	module.Init()
 	linux.Init()
@@ -41,14 +49,14 @@ func main() {
 
 	feaComponent := &fea.FeaComponent{}
 	ribComponent := rib.NewServer()
-	restComponent := rib.NewRestComponent()
 	grpcComponent := rib.NewGrpcComponent()
+	rpcComponent := rib.NewRpcComponent(ribComponent, 2699)
 
 	systemMap := component.SystemMap{
 		"fea":  feaComponent,
 		"rib":  component.ComponentWith(ribComponent, "fea"),
-		"rest": component.ComponentWith(restComponent, "rib"),
 		"grpc": component.ComponentWith(grpcComponent, "rib"),
+		"rpc":  component.ComponentWith(rpcComponent, "rib"),
 	}
 	systemMap.Start()
 
