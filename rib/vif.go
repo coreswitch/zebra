@@ -14,6 +14,8 @@
 
 package rib
 
+import "fmt"
+
 type VIF struct {
 	Id uint64
 }
@@ -49,9 +51,21 @@ func (ifp *Interface) UnregisterVIF(vlanId uint64) *VIF {
 }
 
 func VIFClean() {
+	type VifList struct {
+		name string
+		id   int
+	}
+	var vifList []*VifList
+
 	for _, ifp := range IfMap {
 		for _, vif := range ifp.VIFs {
-			server.VIFDelete(ifp.Name, vif.Id)
+			vifList = append(vifList, &VifList{
+				name: fmt.Sprintf("%s.%d", ifp.Name, vif.Id),
+				id:   int(vif.Id),
+			})
 		}
+	}
+	for _, vif := range vifList {
+		NetlinkVlanDelete(vif.name, vif.id)
 	}
 }
