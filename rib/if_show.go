@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"text/template"
 )
 
@@ -38,7 +39,7 @@ type IfShow struct {
 	HwAddr      string      `json:"hardware-adddress,omitempty"`
 	Desc        string      `json:"description,omitempty"`
 	Index       IfIndex     `json:"index,omitempty"`
-	Metric      int         `json:"metric,omitempty"`
+	Metric      uint32      `json:"metric,omitempty"`
 	Mtu         uint32      `json:"mtu,omitempty"`
 	Flags       string      `json:"flags,omitempty"`
 	Vrf         string      `json:"vrf,omitempty"`
@@ -46,22 +47,22 @@ type IfShow struct {
 	AddressIPv6 IfAddrSlice `json:"ipv6-address,omitempty"`
 }
 
-func IfVrfString(vrfIndex int) string {
-	if vrfIndex == 0 {
+func IfVrfString(vrfId uint32) string {
+	if vrfId == 0 {
 		return ""
 	}
-	vrf := VrfLookupByIndex(vrfIndex)
+	vrf := VrfLookupByIndex(vrfId)
 	if vrf != nil {
 		return vrf.Name
 	}
-	return fmt.Sprintf("VRF Interface Index %d", vrfIndex)
+	return fmt.Sprintf("VRF Interface Index %d", vrfId)
 }
 
 func (ifp *Interface) Show(jsonFlag bool) string {
 	ifShow := &IfShow{
 		Name:        ifp.Name,
 		Type:        IfTypeStringMap[ifp.IfType],
-		HwAddr:      ifp.HwAddr.String(),
+		HwAddr:      net.HardwareAddr(ifp.HwAddr).String(),
 		Desc:        ifp.Description,
 		Index:       ifp.Index,
 		Metric:      ifp.Metric,
