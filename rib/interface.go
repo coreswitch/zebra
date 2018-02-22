@@ -28,18 +28,19 @@ import (
 type IfIndex uint32
 
 type Interface struct {
-	Name        string
-	Index       IfIndex
-	VrfIndex    int
-	Vrf         *Vrf
-	IfType      uint8
-	Mtu         uint32
-	DefaultMtu  uint32
-	Metric      int
-	Flags       uint32
-	Stats       IfStats
-	Addrs       [AFI_MAX]IfAddrSlice
-	HwAddr      net.HardwareAddr
+	Name       string
+	Index      IfIndex
+	VrfIndex   uint32
+	Vrf        *Vrf
+	IfType     uint8
+	Mtu        uint32
+	DefaultMtu uint32
+	Metric     uint32
+	Flags      uint32
+	Stats      IfStats
+	Addrs      [AFI_MAX]IfAddrSlice
+	//HwAddr      net.HardwareAddr
+	HwAddr      []byte
 	Description string
 	Master      int
 	VIFs        []*VIF
@@ -50,11 +51,11 @@ type IfInfo struct {
 	Name    string
 	Index   uint32
 	Mtu     uint32
-	Metric  int
+	Metric  uint32
 	Flags   uint32
 	IfType  uint8
 	HwAddr  net.HardwareAddr
-	Table   int
+	Table   uint32
 	Master  int
 	Boot    bool
 }
@@ -118,6 +119,9 @@ func IfLookupByIndex(index IfIndex) *Interface {
 	if n == nil {
 		return nil
 	}
+	if n.Item == nil {
+		return nil
+	}
 	return n.Item.(*Interface)
 }
 
@@ -145,6 +149,9 @@ func (v *Vrf) IfLookupByIndex(index IfIndex) *Interface {
 	if n == nil {
 		return nil
 	}
+	if n.Item == nil {
+		return nil
+	}
 	return n.Item.(*Interface)
 }
 
@@ -157,7 +164,7 @@ func (v *Vrf) IfRegister(ifp *Interface) {
 
 	for w, _ := range v.Watcher {
 		if w.Type == IF_WATCH_REGISTER && w.IfName == ifp.Name {
-			WatcherDone(v, w)
+			WatcherDone(v, w, nil)
 		}
 	}
 }
@@ -171,15 +178,15 @@ func (v *Vrf) IfUnregister(ifp *Interface) {
 	for w, _ := range v.Watcher {
 		if w.Type == IF_WATCH_UNREGISTER && w.IfName == ifp.Name {
 			fmt.Println("IfUnregister watch", w.IfName)
-			WatcherDone(v, w)
+			WatcherDone(v, w, nil)
 		}
 	}
 }
 
-func WatcherDone(v *Vrf, w *IfWatcher) {
+func WatcherDone(v *Vrf, w *IfWatcher, err error) {
 	v.WMutex.Lock()
 	defer v.WMutex.Unlock()
-	w.Chan <- nil
+	w.Chan <- err
 	if w.Timer != nil {
 		w.Timer.Stop()
 	}
@@ -195,7 +202,7 @@ func (v *Vrf) IfWatchAdd(typ int, ifName string, errCh chan error) *IfWatcher {
 		func() {
 			fmt.Println("[API] IfWatch time out!")
 			w.Timer = nil
-			WatcherDone(v, w)
+			WatcherDone(v, w, fmt.Errorf("time out"))
 		})
 	v.Watcher[w] = true
 
@@ -288,6 +295,8 @@ func IfAdd(ifi *IfInfo) {
 
 	IfForceUp(ifp.Name)
 
+	ifp.NotifyInterfaceAdd()
+
 	RibWalker()
 }
 
@@ -304,7 +313,7 @@ func IfDownRibRemove(ifp *Interface) {
 	for afi := AFI_IP; afi < AFI_MAX; afi++ {
 		for _, addr := range ifp.Addrs[afi] {
 			p := addr.Prefix.Copy()
-			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+			ri := &Rib{Type: RIB_CONNECTED, Nexthops: []*Nexthop{NewNexthopIf(ifp.Index)}, Src: addr}
 			ifp.Vrf.RibDelete(p, ri)
 			ifp.Vrf.RouterIdDelete(ifp, addr)
 		}
@@ -315,7 +324,7 @@ func IfUpRibAdd(ifp *Interface) {
 	for afi := AFI_IP; afi < AFI_MAX; afi++ {
 		for _, addr := range ifp.Addrs[afi] {
 			p := addr.Prefix.Copy()
-			ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+			ri := &Rib{Type: RIB_CONNECTED, Nexthops: []*Nexthop{NewNexthopIf(ifp.Index)}, Src: addr}
 			ifp.Vrf.RibAdd(p, ri)
 			ifp.Vrf.RouterIdAdd(ifp, addr)
 		}
@@ -329,7 +338,10 @@ func IfForceUp(ifName string) {
 	if IsLanInterface(ifName) {
 		fmt.Println("Force LAN up:", ifName)
 		time.AfterFunc(time.Second*3, func() {
-			server.IfUp(ifName)
+			ifp := IfLookupByName(ifName)
+			if ifp != nil {
+				LinkSetUp(ifp)
+			}
 		})
 	} else {
 		fmt.Println("Force LAN up: if is not LAN", ifName)
@@ -369,7 +381,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 
 		// Update interface master.
 		ifp.Master = ifi.Master
-		ifp.VrfIndex = nvrf.Index
+		ifp.VrfIndex = nvrf.Id
 		ifp.Vrf = nvrf
 
 		if ifp.IsUp() {
@@ -388,6 +400,7 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 
 			IfRegister(ifp)
 			vrf.IfRegister(ifp)
+			ifp.NotifyInterfaceNameChange()
 		}
 	}
 
@@ -399,6 +412,9 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 				if IfForceUpFlag {
 					IfForceUp(ifp.Name)
 				}
+				// ifp.Flags &= ^(uint32(syscall.IFF_UP))
+				ifp.Flags = ifi.Flags
+				ifp.NotifyInterfaceDown()
 			}
 		} else {
 			if (ifi.Flags & syscall.IFF_UP) != 0 {
@@ -417,14 +433,20 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 				for afi := AFI_IP; afi < AFI_MAX; afi++ {
 					for _, addr := range ifp.Addrs[afi] {
 						p := addr.Prefix.Copy()
-						ri := &Rib{Type: RIB_CONNECTED, Nexthop: NewNexthopIf(ifp.Index), IfAddr: addr}
+						ri := &Rib{Type: RIB_CONNECTED, Nexthops: []*Nexthop{NewNexthopIf(ifp.Index)}, Src: addr}
 						ifp.Vrf.RibAdd(p, ri)
 						ifp.Vrf.RouterIdAdd(ifp, addr)
 					}
 				}
+				// ifp.Flags |= syscall.IFF_UP
+				ifp.Flags = ifi.Flags
+				ifp.NotifyInterfaceUp()
 			}
 		}
-		ifp.Flags = ifi.Flags
+		if ifp.Flags != ifi.Flags {
+			ifp.Flags = ifi.Flags
+			ifp.NotifyInterfaceFlagChange()
+		}
 		// InterfacePropagate(ifp)
 
 		// Need to update status
@@ -435,10 +457,9 @@ func IfSync(ifp *Interface, ifi *IfInfo) {
 		RibWalker()
 	}
 
-	if ifi.Mtu != 0 {
-		if ifp.Mtu != ifi.Mtu {
-			ifp.Mtu = ifi.Mtu
-		}
+	if ifi.Mtu != 0 && ifp.Mtu != ifi.Mtu {
+		ifp.Mtu = ifi.Mtu
+		ifp.NotifyInterfaceMtuChange()
 	}
 }
 
@@ -463,6 +484,8 @@ func IfDelete(ifi *IfInfo) {
 	IfDownRibRemove(ifp)
 
 	// Bring down the interface.  This may invoke other routes withdraw such as staic route.
+
+	ifp.NotifyInterfaceDelete()
 
 	// Remove from VRF table.
 	vrf := ifp.Vrf
