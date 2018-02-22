@@ -100,7 +100,7 @@ func PeerId(vrfId string, nexthop string) string {
 	return ""
 }
 
-func DtlsNexthop(vrfId int, nexthop net.IP) bool {
+func DtlsNexthop(vrfId uint32, nexthop net.IP) bool {
 	vrf := fmt.Sprintf("vrf%d", vrfId)
 	peerId := PeerId(vrf, nexthop.String())
 	fmt.Println("Peer ID:", peerId)
