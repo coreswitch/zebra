@@ -16,6 +16,7 @@ package rib
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -25,52 +26,53 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
+	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
+	"github.com/hash-set/zebra/policy"
+	pb "github.com/hash-set/zebra/proto"
 )
 
-// ZAPI version 2.
-//
-// Header length is 6.
-//
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |           Length (2)          |  Marker (1)   |  Version (1)  |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |          Command (2)          |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-// ZAPI version 3.
-//
-// Header length is 8.
-//
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |           Length (2)          |  Marker (1)   |  Version (1)  |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |           VRF ID (2)          |          Command (2)          |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+type Client struct {
+	conn      net.Conn
+	version   uint8
+	allVrf    bool
+	vrfId     uint32
+	routeType RouteType
+}
 
 var (
 	ClientMap   = map[net.Conn]*Client{}
 	ClientMutex sync.RWMutex
 )
 
-func ClientRegister(conn net.Conn) {
+func ClientRegister(conn net.Conn) *Client {
 	ClientMutex.Lock()
 	defer ClientMutex.Unlock()
-	fmt.Println("ClientRegister", conn)
-	ClientMap[conn] = &Client{}
+
+	log.Info("zapi:ClientRegister", conn)
+	client := &Client{conn: conn}
+	ClientMap[conn] = client
+	return client
 }
 
 func ClientUnregister(conn net.Conn) {
 	ClientMutex.Lock()
 	defer ClientMutex.Unlock()
-	fmt.Println("ClientUnregister", conn)
+
+	log.Info("zapi:ClientUnregister", conn)
 	delete(ClientMap, conn)
+}
+
+func (c *Client) Notify(mes interface{}) {
+	switch mes.(type) {
+	case *pb.InterfaceUpdate:
+		c.InterfaceNotify(mes.(*pb.InterfaceUpdate))
+	case *pb.RouterIdUpdate:
+		c.RouterIdUpdateNotify(mes.(*pb.RouterIdUpdate))
+	case *pb.Route:
+		c.RouteNotify(mes.(*pb.Route))
+	}
 }
 
 type Message struct {
@@ -95,37 +97,52 @@ func (m *Message) Serialize() ([]byte, error) {
 	return append(hdr, body...), nil
 }
 
+func (m *Message) Send(conn net.Conn) {
+	s, err := m.Serialize()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	conn.Write(s)
+}
+
 type Header struct {
 	Length  uint16
 	Marker  uint8
 	Version uint8
 	VrfId   uint16
-	Command COMMAND_TYPE
+	Command CommandType
 }
 
 const (
-	HEADER_V2_LEN = 6
-	HEADER_V3_LEN = 8
+	HEADER_V2_LEN    = 6
+	HEADER_V3_V4_LEN = 8
 )
 
 func HeaderSize(version uint8) int {
 	switch version {
 	case 2:
 		return HEADER_V2_LEN
-	case 3:
-		return HEADER_V3_LEN
+	case 3, 4:
+		return HEADER_V3_V4_LEN
 	default:
 		return HEADER_V2_LEN
 	}
 }
 
+func NewMessage(version uint8, command CommandType, body Body) *Message {
+	return &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: version,
+			VrfId:   0,
+			Command: command,
+		},
+		Body: body,
+	}
+}
+
 func (h *Header) Serialize() ([]byte, error) {
-	if h.Marker != HEADER_MARKER {
-		h.Marker = HEADER_MARKER
-	}
-	if h.Version != 3 {
-		h.Version = 2
-	}
 	buf := make([]byte, HeaderSize(h.Version))
 	binary.BigEndian.PutUint16(buf[0:], h.Length)
 	buf[2] = h.Marker
@@ -133,7 +150,7 @@ func (h *Header) Serialize() ([]byte, error) {
 	switch h.Version {
 	case 2:
 		binary.BigEndian.PutUint16(buf[4:], uint16(h.Command))
-	case 3:
+	case 3, 4:
 		binary.BigEndian.PutUint16(buf[4:6], uint16(h.VrfId))
 		binary.BigEndian.PutUint16(buf[6:], uint16(h.Command))
 	}
@@ -142,54 +159,91 @@ func (h *Header) Serialize() ([]byte, error) {
 
 func (h *Header) DecodeFromBytes(data []byte) error {
 	if len(data) < 4 {
-		return fmt.Errorf("ZAPI message header length is too small")
+		return fmt.Errorf("ZAPI message header length %d is too small", len(data))
 	}
 
 	h.Length = binary.BigEndian.Uint16(data[0:2])
 	h.Marker = data[2]
 	h.Version = data[3]
 
-	if h.Version != 2 && h.Version != 3 {
-		return fmt.Errorf("Unsupported ZAPI version")
-	}
-
 	switch h.Version {
 	case 2:
 		if len(data) < HEADER_V2_LEN {
 			return fmt.Errorf("Header length %d is smaller than minium vesion 2 length", len(data))
 		}
-		h.Command = COMMAND_TYPE(binary.BigEndian.Uint16(data[4:6]))
-	case 3:
-		if len(data) < HEADER_V3_LEN {
-			return fmt.Errorf("Header length %d is smaller than minium version 3 length", len(data))
+		h.Command = CommandType(binary.BigEndian.Uint16(data[4:6]))
+	case 3, 4:
+		if len(data) < HEADER_V3_V4_LEN {
+			return fmt.Errorf("Header length %d is smaller than minium version 3 or 4 length", len(data))
 		}
 		h.VrfId = binary.BigEndian.Uint16(data[4:6])
-		h.Command = COMMAND_TYPE(binary.BigEndian.Uint16(data[6:8]))
+		h.Command = CommandType(binary.BigEndian.Uint16(data[6:8]))
+	default:
+		return fmt.Errorf("Unsupported ZAPI version: %d", h.Version)
 	}
 	return nil
 }
 
 type Body interface {
-	DecodeFromBytes([]byte) error
+	DecodeFromBytes(CommandType, []byte) error
 	Serialize() ([]byte, error)
-	Process(net.Conn, *Header) error
+	Process(*Client, *Header) error
 }
 
-// ROUTER_ID_ADD
-type RouterIDUpdateBody struct {
-	IP     net.IP
-	Length uint8
+type HelloBody struct {
+	RouteType RouteType `json:"route-type"`
 }
 
-func (b *RouterIDUpdateBody) Serialize() ([]byte, error) {
+func (b *HelloBody) MarshalJSON() ([]byte, error) {
+	helloJSON := struct {
+		RouteType string `json:"route-type"`
+	}{
+		RouteType: b.RouteType.String(),
+	}
+	return json.Marshal(helloJSON)
+}
+
+func (b *HelloBody) DecodeFromBytes(command CommandType, data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if len(data) == 1 {
+		b.RouteType = RouteType(data[0])
+	}
+	bytes, _ := json.Marshal(b)
+	log.Infof("zapi:HELLO %s", string(bytes))
+	return nil
+}
+
+func (b *HelloBody) Serialize() ([]byte, error) {
+	return nil, nil
+}
+
+func (b *HelloBody) Process(client *Client, h *Header) error {
+	client.version = h.Version
+	client.vrfId = uint32(h.VrfId)
+	client.routeType = b.RouteType
+	return nil
+}
+
+// Router ID update.
+type RouterIdUpdateBody struct {
+	RouterId net.IP
+	Length   uint8
+}
+
+func (b *RouterIdUpdateBody) Serialize() ([]byte, error) {
 	buf := make([]byte, 1)
 	buf[0] = syscall.AF_INET
-	buf = append(buf, b.IP...)
+	buf = append(buf, b.RouterId...)
 	buf = append(buf, byte(b.Length))
 	return buf, nil
 }
 
-func (b *RouterIDUpdateBody) DecodeFromBytes(data []byte) error {
+func (b *RouterIdUpdateBody) DecodeFromBytes(command CommandType, data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
 	family := data[0]
 	var addrlen int8
 	switch family {
@@ -198,73 +252,26 @@ func (b *RouterIDUpdateBody) DecodeFromBytes(data []byte) error {
 	case syscall.AF_INET6:
 		addrlen = net.IPv6len
 	default:
-		return fmt.Errorf("unknown address family: %d", family)
+		return fmt.Errorf("Unknown address family: %d", family)
 	}
-	b.IP = data[1 : 1+addrlen]
+	b.RouterId = data[1 : 1+addrlen]
 	b.Length = data[1+addrlen]
 	return nil
 }
 
-func (b *RouterIDUpdateBody) String() string {
-	return fmt.Sprintf("id: %s/%d", b.IP, b.Length)
+func (b *RouterIdUpdateBody) Process(client *Client, h *Header) error {
+	return server.RouterIdSubscribe(client, client.vrfId)
 }
 
-func (b *RouterIDUpdateBody) Process(net.Conn, *Header) error {
-	return nil
-}
-
-func Hello(conn net.Conn, h *Header, data []byte) error {
-	fmt.Println("[zapi]HELLO handler", len(data), data)
-
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if client, ok := ClientMap[conn]; ok {
-		fmt.Println("[zapi]Register version", h.Version, "and vrfId", h.VrfId)
-		client.Version = h.Version
-		client.VrfId = int(h.VrfId)
+func (c *Client) RouterIdUpdateNotify(mes *pb.RouterIdUpdate) {
+	log.Info("zapi:SEND ", mes)
+	body := &RouterIdUpdateBody{
+		RouterId: mes.RouterId,
+		Length:   32,
 	}
-	return nil
-}
-
-func RouterIdUpdateSend(conn net.Conn, version byte, routerId net.IP) {
-	body := &RouterIDUpdateBody{IP: routerId, Length: 32}
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   0,
-			Command: ROUTER_ID_UPDATE,
-		},
-		Body: body,
-	}
+	m := NewMessage(c.version, ROUTER_ID_UPDATE, body)
 	s, _ := m.Serialize()
-	conn.Write(s)
-}
-
-func RouterIdAdd(conn net.Conn, version byte, data []byte) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if client, ok := ClientMap[conn]; ok {
-		client.RouterId = true
-
-		v := VrfLookupByIndex(client.VrfId)
-		if v != nil {
-			RouterIdUpdateSend(conn, version, v.RouterId())
-		}
-	}
-}
-
-func RouterIdUpdate(vrfId int, routerId net.IP) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	for conn, client := range ClientMap {
-		if client.Version == 2 && client.VrfId == vrfId && client.RouterId {
-			RouterIdUpdateSend(conn, client.Version, routerId)
-		}
-	}
+	c.conn.Write(s)
 }
 
 type INTERFACE_STATUS uint8
@@ -298,19 +305,21 @@ type InterfaceUpdateBody struct {
 	Mtu       uint32
 	Mtu6      uint32
 	Bandwidth uint32
-	HwAddr    net.HardwareAddr
+	HwAddr    []byte
 }
 
-func NewInterfaceUpdateBody(ifp *Interface) *InterfaceUpdateBody {
+func NewInterfaceUpdateBodyPb(mes *pb.InterfaceUpdate) *InterfaceUpdateBody {
 	body := &InterfaceUpdateBody{
-		Name:   ifp.Name,
-		Index:  uint32(ifp.Index),
+		Name:   mes.Name,
+		Index:  uint32(mes.Index),
 		Status: INTERFACE_ACTIVE,
-		Flags:  uint64(ifp.Flags),
-		Metric: uint32(ifp.Metric),
-		Mtu:    uint32(ifp.Mtu),
-		Mtu6:   uint32(ifp.Mtu),
-		HwAddr: ifp.HwAddr,
+		Flags:  uint64(mes.Flags),
+		Metric: uint32(mes.Metric),
+		Mtu:    uint32(mes.Mtu),
+		Mtu6:   uint32(mes.Mtu),
+	}
+	if mes.HwAddr != nil {
+		body.HwAddr = (*mes.HwAddr).Addr
 	}
 	return body
 }
@@ -334,12 +343,99 @@ func (b *InterfaceUpdateBody) Serialize() ([]byte, error) {
 	return buf, nil
 }
 
-func (b *InterfaceUpdateBody) DecodeFromBytes([]byte) error {
+func (b *InterfaceUpdateBody) DecodeFromBytes(CommandType, []byte) error {
 	return nil
 }
 
-func (b *InterfaceUpdateBody) Process(net.Conn, *Header) error {
+func (b *InterfaceUpdateBody) Process(client *Client, h *Header) error {
+	server.InterfaceSubscribe(client, client.vrfId)
+
+	if LocalPolicy {
+		if client.version == 2 && client.routeType == ROUTE_BGP {
+			log.Info("Force register BGP for LAN redistribute vrf Id ", h.VrfId)
+			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_STATIC)
+			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_CONNECTED)
+			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_OSPF)
+			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_BGP)
+		}
+		if client.version == 3 && client.routeType == ROUTE_BGP {
+			server.RedistDefaultSubscribe(client, true, 0, AFI_IP)
+		}
+	}
+
 	return nil
+}
+
+func NewInterfaceAddrUpdateBodyPb(ifIndex uint32, addr *pb.Address) *InterfaceAddressUpdateBody {
+	body := &InterfaceAddressUpdateBody{
+		Index:  ifIndex,
+		Prefix: addr.Addr.Addr,
+		Length: uint8(addr.Addr.Length),
+	}
+	return body
+}
+
+func (c *Client) InterfaceNotify(mes *pb.InterfaceUpdate) {
+	log.Info("zapi:SEND ", mes)
+	m := &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: c.version,
+			VrfId:   0,
+		},
+		Body: NewInterfaceUpdateBodyPb(mes),
+	}
+	switch mes.Op {
+	case pb.Op_InterfaceAdd, pb.Op_InterfaceNameChange, pb.Op_InterfaceMtuChange, pb.Op_InterfaceFlagChange:
+		m.Header.Command = INTERFACE_ADD
+		m.Send(c.conn)
+	case pb.Op_InterfaceDelete:
+		m.Header.Command = INTERFACE_DELETE
+		m.Send(c.conn)
+	case pb.Op_InterfaceUp:
+		m.Header.Command = INTERFACE_UP
+		m.Send(c.conn)
+	case pb.Op_InterfaceDown:
+		m.Header.Command = INTERFACE_DOWN
+		m.Send(c.conn)
+	}
+
+	for _, addr := range mes.AddrIpv4 {
+		m := &Message{
+			Header: Header{
+				Marker:  HEADER_MARKER,
+				Version: c.version,
+				VrfId:   0,
+			},
+			Body: NewInterfaceAddrUpdateBodyPb(mes.Index, addr),
+		}
+		switch mes.Op {
+		case pb.Op_InterfaceAdd, pb.Op_InterfaceAddrAdd:
+			m.Header.Command = INTERFACE_ADDRESS_ADD
+			m.Send(c.conn)
+		case pb.Op_InterfaceAddrDelete:
+			m.Header.Command = INTERFACE_ADDRESS_DELETE
+			m.Send(c.conn)
+		}
+	}
+	for _, addr := range mes.AddrIpv6 {
+		m := &Message{
+			Header: Header{
+				Marker:  HEADER_MARKER,
+				Version: c.version,
+				VrfId:   0,
+			},
+			Body: NewInterfaceAddrUpdateBodyPb(mes.Index, addr),
+		}
+		switch mes.Op {
+		case pb.Op_InterfaceAdd, pb.Op_InterfaceAddrAdd:
+			m.Header.Command = INTERFACE_ADDRESS_ADD
+			m.Send(c.conn)
+		case pb.Op_InterfaceAddrDelete:
+			m.Header.Command = INTERFACE_ADDRESS_DELETE
+			m.Send(c.conn)
+		}
+	}
 }
 
 type InterfaceAddressUpdateBody struct {
@@ -357,7 +453,10 @@ func NewInterfaceAddrUpdateBody(addr *IfAddr) *InterfaceAddressUpdateBody {
 	return body
 }
 
-func (b *InterfaceAddressUpdateBody) DecodeFromBytes(data []byte) error {
+func (b *InterfaceAddressUpdateBody) DecodeFromBytes(command CommandType, data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
 	b.Index = binary.BigEndian.Uint32(data[:4])
 	b.Flags = data[4]
 	family := data[5]
@@ -386,199 +485,23 @@ func (b *InterfaceAddressUpdateBody) Serialize() ([]byte, error) {
 	return buf, nil
 }
 
-func (b *InterfaceAddressUpdateBody) Process(net.Conn, *Header) error {
+func (b *InterfaceAddressUpdateBody) Process(client *Client, h *Header) error {
 	return nil
 }
 
-func interfaceAddressAdd(conn net.Conn, version byte, ifp *Interface, addr *IfAddr) {
-	body := NewInterfaceAddrUpdateBody(addr)
-	body.Index = uint32(ifp.Index)
-
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   0,
-			Command: INTERFACE_ADDRESS_ADD,
-		},
-		Body: body,
-	}
-	s, _ := m.Serialize()
-	conn.Write(s)
+type RouteUpdateBody struct {
+	Message  uint8
+	Type     RouteType
+	Flags    FLAG
+	Prefix   *netutil.Prefix
+	Nexthops []*Nexthop
+	Distance uint8
+	Metric   uint32
+	PathId   uint32
+	Aux      []byte
 }
 
-func interfaceAddressDelete(conn net.Conn, version byte, ifp *Interface, addr *IfAddr) {
-	body := NewInterfaceAddrUpdateBody(addr)
-	body.Index = uint32(ifp.Index)
-
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   0,
-			Command: INTERFACE_ADDRESS_DELETE,
-		},
-		Body: body,
-	}
-	s, _ := m.Serialize()
-	conn.Write(s)
-}
-
-func InterfaceAdd(conn net.Conn, h *Header, data []byte) {
-	//fmt.Println("INTERFACE_ADD handler")
-
-	v := VrfLookupByIndex(int(h.VrfId))
-	if v == nil {
-		return
-	}
-
-	for n := v.IfTable.Top(); n != nil; n = v.IfTable.Next(n) {
-		ifp := n.Item.(*Interface)
-		body := NewInterfaceUpdateBody(ifp)
-
-		m := &Message{
-			Header: Header{
-				Marker:  HEADER_MARKER,
-				Version: h.Version,
-				VrfId:   0,
-				Command: INTERFACE_ADD,
-			},
-			Body: body,
-		}
-		s, _ := m.Serialize()
-		//fmt.Println(s)
-		conn.Write(s)
-		//fmt.Println(written, err)
-
-		for _, addr := range ifp.Addrs[AFI_IP] {
-			interfaceAddressAdd(conn, h.Version, ifp, addr)
-		}
-	}
-
-	go func() {
-		time.Sleep(time.Second * 5)
-		RedistSync(int(h.VrfId), conn)
-	}()
-}
-
-func InterfaceUpdateSend(conn net.Conn, version uint8, ifp *Interface) {
-	body := NewInterfaceUpdateBody(ifp)
-
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   0,
-			Command: INTERFACE_ADD,
-		},
-		Body: body,
-	}
-	s, _ := m.Serialize()
-	conn.Write(s)
-}
-
-func InterfacePropagate(ifp *Interface) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if ifp.Vrf == nil {
-		return
-	}
-
-	for conn, client := range ClientMap {
-		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
-			fmt.Println("InterfaceUpdateSend", ifp.Name, ifp.Vrf.Index)
-			InterfaceUpdateSend(conn, client.Version, ifp)
-		}
-	}
-}
-
-func IfAddrAddPropagate(ifp *Interface, addr *IfAddr) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if ifp.Vrf == nil {
-		return
-	}
-
-	for conn, client := range ClientMap {
-		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
-			fmt.Println("InterfaceAddrAddSend", ifp.Name, addr.Prefix.String())
-			interfaceAddressAdd(conn, client.Version, ifp, addr)
-		}
-	}
-}
-
-func IfAddrDeletePropagate(ifp *Interface, addr *IfAddr) {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if ifp.Vrf == nil {
-		return
-	}
-
-	for conn, client := range ClientMap {
-		if client.Version == 2 && client.VrfId == ifp.Vrf.Index {
-			fmt.Println("InterfaceAddrDeleteSend", ifp.Name, addr.Prefix.String())
-			interfaceAddressDelete(conn, client.Version, ifp, addr)
-		}
-	}
-}
-
-type IPRouteBody struct {
-	Type      ROUTE_TYPE
-	Flags     FLAG
-	Message   uint8
-	SAFI      SAFI
-	Prefix    *netutil.Prefix
-	Nexthop   *Nexthop
-	Nexthops  []*Nexthop
-	Ifindexes []uint32
-	Distance  uint8
-	Metric    uint32
-	Api       COMMAND_TYPE
-	Version   uint8
-}
-
-func RedistSyncVrf(vrf *Vrf, vrfId int, conn net.Conn) {
-	ptree := vrf.ribTable[AFI_IP]
-	for n := ptree.Top(); n != nil; n = ptree.Next(n) {
-		if n.Item != nil {
-			ip := make([]byte, 4)
-			copy(ip, n.Key())
-			p := netutil.PrefixFromIPPrefixlen(ip, n.KeyLength())
-			ribs := n.Item.(RibSlice)
-			for _, rib := range ribs {
-				if rib.IsSelectedFib() {
-					RedistIPv4Add(vrfId, p, rib, conn)
-				}
-			}
-		}
-	}
-}
-
-func RedistSync(vrfId int, conn net.Conn) {
-	fmt.Println("[zapi]RedistSync", vrfId)
-
-	if vrfId == 0 {
-		// When VRF ID is zero (version 3).
-		for _, vrf := range VrfMap {
-			if vrf.Index != 0 {
-				RedistSyncVrf(vrf, vrf.Index, conn)
-			}
-		}
-	} else {
-		// When VRF ID is specified just walk through the RIB.
-		vrf := VrfLookupByIndex(vrfId)
-		if vrf == nil {
-			fmt.Println("[zapi]RedistSync can't find VRF", vrfId)
-			return
-		}
-		RedistSyncVrf(vrf, vrfId, conn)
-	}
-}
-
-var HubNodeMap = map[int]string{}
+var HubNodeMap = map[uint32]string{}
 
 func VrfHubNodeAdd(vrf string, hubNode string) {
 	vrfId := VrfExtractIndex(vrf)
@@ -596,80 +519,59 @@ func VrfHubNodeDelete(vrf string, hubNode string) {
 	delete(HubNodeMap, vrfId)
 }
 
-func RedistIPv4Route(command COMMAND_TYPE, conn net.Conn, version uint8, vrfId int, p *netutil.Prefix, rib *Rib) {
-	fmt.Println("Redist IPv4 route", p, vrfId, command.String())
+func NewNexthopFromPb(n *pb.Nexthop) *Nexthop {
+	return &Nexthop{
+		IP:    n.Addr,
+		Index: IfIndex(n.Ifindex),
+	}
+}
 
-	if version == 3 {
-		cmd := "add"
-		if command == IPV4_ROUTE_DELETE {
-			cmd = "del"
-		}
-		fmt.Println("Redist Executing /usr/bin/gobgp-vrf.sh", strconv.Itoa(vrfId), cmd, p.String(), rib.Metric)
-
-		if hubNode, ok := HubNodeMap[vrfId]; ok {
-			err := exec.Command("/usr/bin/gobgp-vrf.sh", strconv.Itoa(vrfId), cmd, p.String(), strconv.Itoa(int(rib.Metric)), hubNode).Run()
-			if err != nil {
-				fmt.Println("Redist IPv4 route script error:", err)
-			}
+func RouteTypeFromPb(afi int, typ pb.RouteType) RouteType {
+	switch typ {
+	case pb.RIB_UNKNOWN:
+		return ROUTE_SYSTEM
+	case pb.RIB_KERNEL:
+		return ROUTE_KERNEL
+	case pb.RIB_CONNECTED:
+		return ROUTE_CONNECT
+	case pb.RIB_STATIC:
+		return ROUTE_STATIC
+	case pb.RIB_RIP:
+		if afi == AFI_IP {
+			return ROUTE_RIP
 		} else {
-			err := exec.Command("/usr/bin/gobgp-vrf.sh", strconv.Itoa(vrfId), cmd, p.String(), strconv.Itoa(int(rib.Metric))).Run()
-			if err != nil {
-				fmt.Println("Redist IPv4 route script error:", err)
-			}
+			return ROUTE_RIPNG
 		}
-		return
+	case pb.RIB_OSPF:
+		if afi == AFI_IP {
+			return ROUTE_OSPF
+		} else {
+			return ROUTE_OSPF6
+		}
+	case pb.RIB_ISIS:
+		return ROUTE_ISIS
+	case pb.RIB_BGP:
+		return ROUTE_BGP
 	}
-
-	body := &IPRouteBody{
-		Type:    RibType2RouteType(rib.Type),
-		Flags:   0,
-		Message: MESSAGE_NEXTHOP,
-		SAFI:    SAFI_UNICAST,
-		Version: version,
-	}
-	body.Prefix = p
-	addr := netutil.ParseIPv4("0.0.0.0")
-	if rib.Type == RIB_BGP && rib.Nexthop != nil {
-		addr = rib.Nexthop.IP
-	}
-	body.Nexthops = append(body.Nexthops, NewNexthopAddr(addr))
-	body.Ifindexes = append(body.Ifindexes, 0)
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   uint16(vrfId),
-			Command: command,
-		},
-		Body: body,
-	}
-	s, _ := m.Serialize()
-	fmt.Println(s)
-	conn.Write(s)
+	return ROUTE_SYSTEM
 }
 
-func ClientVersion(conn net.Conn) uint8 {
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
+var LocalPolicy = false
 
-	if client, ok := ClientMap[conn]; ok {
-		return client.Version
+func PrefixFilter(p *netutil.Prefix, r *pb.Route) bool {
+	if r.Type != pb.RIB_CONNECTED {
+		return false
 	}
-	return 2
-}
-
-func EsiConnected(vrfId int, p *netutil.Prefix, rib *Rib) bool {
-	if len(p.IP) > 0 {
-		if p.IP[0] == 172 && p.Length == 12 {
-			return true
-		}
-		if p.IP[0] == 198 && p.Length == 15 {
+	plist := server.PrefixListOut()
+	if plist != nil {
+		ret := plist.Match(p)
+		if ret == policy.Deny {
 			return true
 		}
 	}
-	vrf := VrfLookupByIndex(vrfId)
-	if vrf != nil && rib.Nexthop != nil && rib.Nexthop.Index != 0 {
-		ifp := vrf.IfLookupByIndex(rib.Nexthop.Index)
+	vrf := VrfLookupByIndex(r.VrfId)
+	if vrf != nil && len(r.Nexthops) == 1 && r.Nexthops[0].Ifindex != 0 {
+		ifp := vrf.IfLookupByIndex(IfIndex(r.Nexthops[0].Ifindex))
 		if ifp != nil {
 			r := regexp.MustCompile(`^veth`)
 			if r.MatchString(ifp.Name) {
@@ -680,201 +582,145 @@ func EsiConnected(vrfId int, p *netutil.Prefix, rib *Rib) bool {
 	return false
 }
 
-func RedistIPv4Add(vrfId int, p *netutil.Prefix, rib *Rib, conn net.Conn) {
-	if rib.Type != RIB_CONNECTED && rib.Type != RIB_BGP && rib.Type != RIB_OSPF {
-		return
+func VrfFilter(c *Client, r *pb.Route) bool {
+	if r.VrfId == 0 {
+		return true
 	}
-	if vrfId == 0 {
-		//fmt.Println("RedistIPv4Add: do not perform redist for default Vrf")
-		return
+	return false
+}
+
+func (c *Client) RouteNotifyGobgp(p *netutil.Prefix, r *pb.Route) {
+	cmd := "add"
+	if r.Op == pb.Op_RouteDelete {
+		cmd = "del"
 	}
-	if len(p.IP) != 4 {
-		//fmt.Println("RedistIPv4Add: non IPv4 length", len(p.IP))
-		return
+	log.Infof("Executing /usr/bin/gobgp-vrf.sh vrf %d %s %s %d", r.VrfId, cmd, p.String(), r.Metric)
+
+	aspathStr := ""
+	if r.Op == pb.Op_RouteAdd && r.Aux != nil {
+		aspath := &policy.ASPath{}
+		aspath.DecodeFromBytes(r.Aux)
+		aspathStr = aspath.String()
 	}
 
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	if conn == nil {
-		fmt.Println("RedistIPv4Add: client len", len(ClientMap))
-		for conn, client := range ClientMap {
-			if client.Version == 0 {
-				fmt.Println("RedistIPv4Add: skip bogus client")
-				continue
-			}
-			if rib.Src == conn {
-				fmt.Println("RedistIPv4Add: same source RIB")
-				continue
-			}
-			if client.Version == 2 && client.VrfId != vrfId {
-				fmt.Println("RedistIPv4Add: version 2 and vrfId is different")
-				continue
-			}
-			if client.Version == 2 && rib.Type == RIB_CONNECTED && EsiConnected(vrfId, p, rib) {
-				fmt.Println("RedistIPv4Add: version 2 and backbone connected")
-				continue
-			}
-			if client.Version == 2 && rib.Metric != 0 {
-				fmt.Println("RedistIPv4Add: version 2 and metric is not 0")
-				continue
-			}
-			if client.Version == 3 && rib.Type == RIB_CONNECTED {
-				fmt.Println("RedistIPv4Add: version 3 do not redist connected")
-				continue
-			}
-			RedistIPv4Route(IPV4_ROUTE_ADD, conn, client.Version, vrfId, p, rib)
-		}
+	if hubNode, ok := HubNodeMap[r.VrfId]; ok {
+		exec.Command("/usr/bin/gobgp-vrf.sh", fmt.Sprint(r.VrfId), cmd, p.String(), strconv.Itoa(int(r.Metric)), aspathStr, hubNode).Run()
 	} else {
-		// Syncer part.
-		if rib.Src != conn {
-			var ver uint8
-			if client, ok := ClientMap[conn]; ok {
-				ver = client.Version
+		exec.Command("/usr/bin/gobgp-vrf.sh", fmt.Sprint(r.VrfId), cmd, p.String(), strconv.Itoa(int(r.Metric)), aspathStr).Run()
+	}
+}
+
+func (c *Client) RouteNotify(r *pb.Route) {
+	log.Info("zapi:SEND ", r)
+	p := NewPrefixFromPb(r.Prefix)
+
+	if LocalPolicy {
+		// XXX must be replaced by route-map.
+		if PrefixFilter(p, r) {
+			log.Info("zapi:Prefix is filtered by prefix policy")
+			return
+		}
+		// XXX must be replaced by route-map.
+		if VrfFilter(c, r) {
+			log.Info("zapi:Prefix is filtered by VRF policy")
+			return
+		}
+		if c.version == 3 {
+			c.RouteNotifyGobgp(p, r)
+			return
+		}
+	}
+
+	body := &RouteUpdateBody{
+		Type:   RouteTypeFromPb(p.AFI(), r.Type),
+		Prefix: p,
+	}
+
+	for _, n := range r.Nexthops {
+		body.Message = (MESSAGE_NEXTHOP | MESSAGE_IFINDEX)
+		body.Nexthops = append(body.Nexthops, NewNexthopFromPb(n))
+		break
+	}
+
+	if r.Op == pb.Op_RouteAdd {
+		body.Message |= (MESSAGE_DISTANCE | MESSAGE_METRIC)
+		body.Distance = uint8(r.Distance)
+		body.Metric = r.Metric
+
+		if r.Aux != nil {
+			body.Message |= MESSAGE_ASPATH
+			body.Aux = r.Aux
+		}
+	}
+
+	var command CommandType
+	switch r.Op {
+	case pb.Op_RouteAdd:
+		if p.AFI() == AFI_IP {
+			command = IPV4_ROUTE_ADD
+		} else {
+			command = IPV6_ROUTE_ADD
+		}
+	case pb.Op_RouteDelete:
+		if p.AFI() == AFI_IP {
+			command = IPV4_ROUTE_DELETE
+		} else {
+			command = IPV6_ROUTE_DELETE
+		}
+	}
+
+	m := &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: c.version,
+			VrfId:   uint16(c.vrfId),
+			Command: command,
+		},
+		Body: body,
+	}
+	s, _ := m.Serialize()
+	c.conn.Write(s)
+}
+
+func (b *RouteUpdateBody) Serialize() ([]byte, error) {
+	if len(b.Nexthops) == 0 {
+		log.Error("zapi:Serialize RouteUpdateBody does not have nexthop")
+		return nil, fmt.Errorf("zapi:Serialize RouteUpdateBody does not have nexthop")
+	}
+	buf := make([]byte, 3)
+	buf[0] = uint8(b.Type)
+	buf[1] = uint8(b.Flags)
+	buf[2] = b.Message
+
+	bitlen := byte(b.Prefix.Length)
+	bytelen := (int(b.Prefix.Length) + 7) / 8
+	bbuf := make([]byte, bytelen)
+
+	copy(bbuf, b.Prefix.IP)
+	buf = append(buf, bitlen)
+	buf = append(buf, bbuf...)
+
+	if b.Message&MESSAGE_NEXTHOP > 0 {
+		buf = append(buf, uint8(len(b.Nexthops)))
+		if b.Nexthops[0].IP == nil {
+			var len int
+			if b.Prefix.AFI() == AFI_IP6 {
+				len = net.IPv6len
 			} else {
-				ver = 2
+				len = net.IPv4len
 			}
-			if ver == 0 {
-				fmt.Println("RedistIPv4Add: skip bogus client")
-				return
-			}
-			// Already checked.
-			// if rib.Src == conn {
-			// 	fmt.Println("RedistIPv4Add: same source RIB")
-			// 	continue
-			// }
-			// Already checked at caller.
-			// if ver == 2 && client.VrfId != vrfId {
-			// 	fmt.Println("RedistIPv4Add: version 2 and vrfId is different")
-			// 	continue
-			// }
-			if ver == 2 && rib.Type == RIB_CONNECTED && EsiConnected(vrfId, p, rib) {
-				fmt.Println("RedistIPv4Add: version 2 and backbone connected")
-				return
-			}
-			if ver == 2 && rib.Metric != 0 {
-				fmt.Println("RedistIPv4Add: version 2 and metric is not 0")
-				return
-			}
-			if ver == 3 && rib.Type == RIB_CONNECTED {
-				fmt.Println("RedistIPv4Add: version 3 do not redist connected")
-				return
-			}
-			RedistIPv4Route(IPV4_ROUTE_ADD, conn, ver, vrfId, p, rib)
-		}
-	}
-}
-
-func RedistIPv4Delete(vrfId int, p *netutil.Prefix, rib *Rib) {
-	if rib.Type != RIB_CONNECTED && rib.Type != RIB_BGP && rib.Type != RIB_OSPF {
-		return
-	}
-	if vrfId == 0 {
-		//fmt.Println("RedistIPv4Delete: do not perform redist for default Vrf")
-		return
-	}
-	if len(p.IP) != 4 {
-		fmt.Println("RedistIPv4Delete: non IPv4 length", len(p.IP))
-		return
-	}
-
-	ClientMutex.Lock()
-	defer ClientMutex.Unlock()
-
-	fmt.Println("RedistIPv4Delete: client len", len(ClientMap))
-	for conn, client := range ClientMap {
-		if client.Version == 0 {
-			fmt.Println("RedistIPv4Delete: skip bogus client")
-			continue
-		}
-		if rib.Src == conn {
-			fmt.Println("RedistIPv4Delete: same source RIB")
-			continue
-		}
-		if client.Version == 2 && client.VrfId != vrfId {
-			fmt.Println("RedistIPv4Delete: version 2 and vrfId is different")
-			continue
-		}
-		if client.Version == 2 && rib.Metric != 0 {
-			fmt.Println("RedistIPv4Delete: version 2 and metric is not 0")
-			continue
-		}
-		if client.Version == 3 && rib.Type == RIB_CONNECTED {
-			fmt.Println("RedistIPv4Delete: version 3 do not redist connected")
-			continue
-		}
-		RedistIPv4Route(IPV4_ROUTE_DELETE, conn, client.Version, vrfId, p, rib)
-	}
-}
-
-func (b *IPRouteBody) SerializeV2() ([]byte, error) {
-	buf := make([]byte, 3)
-	buf[0] = uint8(b.Type)
-	buf[1] = uint8(b.Flags)
-	buf[2] = b.Message
-
-	bitlen := byte(b.Prefix.Length)
-	bytelen := (int(b.Prefix.Length) + 7) / 8
-	bbuf := make([]byte, bytelen)
-
-	copy(bbuf, b.Prefix.IP)
-	buf = append(buf, bitlen)
-	buf = append(buf, bbuf...)
-
-	if b.Message&MESSAGE_NEXTHOP > 0 {
-		if b.Flags&FLAG_BLACKHOLE > 0 {
-			buf = append(buf, []byte{1, uint8(NEXTHOP_BLACKHOLE)}...)
-		} else {
-			buf = append(buf, uint8(len(b.Nexthops)+len(b.Ifindexes)))
-		}
-		for _, v := range b.Nexthops {
-			buf = append(buf, v.IP...)
-		}
-	}
-
-	if b.Message&MESSAGE_DISTANCE > 0 {
-		buf = append(buf, b.Distance)
-	}
-
-	if b.Message&MESSAGE_METRIC > 0 {
-		bbuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(bbuf, b.Metric)
-		buf = append(buf, bbuf...)
-	}
-
-	return buf, nil
-}
-
-func (b *IPRouteBody) SerializeV3() ([]byte, error) {
-	buf := make([]byte, 3)
-	buf[0] = uint8(b.Type)
-	buf[1] = uint8(b.Flags)
-	buf[2] = b.Message
-
-	bitlen := byte(b.Prefix.Length)
-	bytelen := (int(b.Prefix.Length) + 7) / 8
-	bbuf := make([]byte, bytelen)
-
-	copy(bbuf, b.Prefix.IP)
-	buf = append(buf, bitlen)
-	buf = append(buf, bbuf...)
-
-	if b.Message&MESSAGE_NEXTHOP > 0 {
-		if b.Flags&FLAG_BLACKHOLE > 0 {
-			buf = append(buf, []byte{1, uint8(NEXTHOP_BLACKHOLE)}...)
-		} else {
-			buf = append(buf, uint8(len(b.Nexthops)))
-		}
-		for _, v := range b.Nexthops {
-			buf = append(buf, v.IP...)
-		}
-
-		for _, v := range b.Ifindexes {
-			buf = append(buf, uint8(NEXTHOP_IFINDEX))
-			bbuf := make([]byte, 4)
-			binary.BigEndian.PutUint32(bbuf, v)
+			bbuf := make([]byte, len)
 			buf = append(buf, bbuf...)
+		} else {
+			buf = append(buf, b.Nexthops[0].IP...)
 		}
+	}
+
+	if b.Message&MESSAGE_IFINDEX > 0 {
+		buf = append(buf, uint8(len(b.Nexthops)))
+		ifindex := make([]byte, 4)
+		binary.BigEndian.PutUint32(ifindex, uint32(b.Nexthops[0].Index))
+		buf = append(buf, ifindex...)
 	}
 
 	if b.Message&MESSAGE_DISTANCE > 0 {
@@ -882,41 +728,32 @@ func (b *IPRouteBody) SerializeV3() ([]byte, error) {
 	}
 
 	if b.Message&MESSAGE_METRIC > 0 {
+		metric := make([]byte, 4)
+		binary.BigEndian.PutUint32(metric, b.Metric)
+		buf = append(buf, metric...)
+	}
+
+	if b.Message&MESSAGE_ASPATH > 0 {
 		bbuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(bbuf, b.Metric)
+		binary.BigEndian.PutUint32(bbuf, uint32(len(b.Aux)))
 		buf = append(buf, bbuf...)
+		buf = append(buf, b.Aux...)
 	}
 
 	return buf, nil
 }
 
-func (b *IPRouteBody) Serialize() ([]byte, error) {
-	if b.Version == 3 {
-		return b.SerializeV3()
-	} else {
-		return b.SerializeV2()
+func (b *RouteUpdateBody) DecodeFromBytes(command CommandType, data []byte) error {
+	afi := AFI_IP
+	if command == IPV6_ROUTE_ADD || command == IPV6_ROUTE_DELETE {
+		afi = AFI_IP6
 	}
-}
-
-func (b *IPRouteBody) DecodeFromBytes(data []byte) error {
-	isV4 := false
-	//addrLen := int(net.IPv6len)
-
-	if b.Api == IPV4_ROUTE_ADD || b.Api == IPV4_ROUTE_DELETE {
-		isV4 = true
-	}
-
-	b.Type = ROUTE_TYPE(data[0])
+	b.Type = RouteType(data[0])
 	b.Flags = FLAG(data[1])
 	b.Message = data[2]
-	b.SAFI = SAFI(binary.BigEndian.Uint16(data[3:5]))
+	// binary.BigEndian.Uint16(data[3:5]) -- SAFI is not used.
 
-	// Decode Prefix
-	if isV4 {
-		b.Prefix = netutil.NewPrefixAFI(netutil.AFI_IP)
-	} else {
-		b.Prefix = netutil.NewPrefixAFI(netutil.AFI_IP6)
-	}
+	b.Prefix = netutil.NewPrefixAFI(afi)
 	b.Prefix.Length = int(data[5])
 	byteLen := int((b.Prefix.Length + 7) / 8)
 	pos := 6
@@ -951,11 +788,7 @@ func (b *IPRouteBody) DecodeFromBytes(data []byte) error {
 				pos += 4
 				nexthop = NewNexthopAddrIf(net.IP(addr).To4(), IfIndex(ifindex))
 			}
-			if numNexthop == 1 {
-				b.Nexthop = nexthop
-			} else {
-				b.Nexthops = append(b.Nexthops, nexthop)
-			}
+			b.Nexthops = append(b.Nexthops, nexthop)
 		}
 	}
 
@@ -967,79 +800,88 @@ func (b *IPRouteBody) DecodeFromBytes(data []byte) error {
 	if b.Message&MESSAGE_METRIC > 0 {
 		b.Metric = binary.BigEndian.Uint32(data[pos : pos+4])
 		pos += 4
-		if OspfMetricFilter && b.Type == ROUTE_OSPF {
-			b.Metric = 0
+	}
+
+	if b.Message&MESSAGE_PATH_ID > 0 {
+		b.PathId = binary.BigEndian.Uint32(data[pos : pos+4])
+		pos += 4
+	}
+
+	if b.Message&MESSAGE_ASPATH > 0 {
+		data = data[pos:]
+		aspathLen := binary.BigEndian.Uint32(data[:4])
+		data = data[4:]
+		if int(aspathLen) == len(data) {
+			b.Aux = make([]byte, len(data))
+			copy(b.Aux, data)
+		} else {
+			log.Warnf("zapi:ASPath len %d is different with data len %d", aspathLen, len(data))
 		}
 	}
 
 	return nil
 }
 
-func (b *IPRouteBody) Process(net.Conn, *Header) error {
-	return nil
+func OspfRouteMap(ri *Rib) {
+	if ri.Type == RIB_OSPF && ri.Metric <= 20 {
+		ri.SetFlag(RIB_FLAG_DISTANCE)
+		ri.Distance = 180
+	}
 }
 
-func IPv4Route(command COMMAND_TYPE, version uint8, conn net.Conn, data []byte, vrfId uint16) {
-	// Parse IPv4Route.
-	body := &IPRouteBody{Api: command}
-	body.DecodeFromBytes(data)
-
-	if DefaultVrfProtect && version == 3 && vrfId == 0 {
-		return
+func (b *RouteUpdateBody) Process(client *Client, h *Header) error {
+	if DefaultVrfProtect && h.Version == 3 && h.VrfId == 0 {
+		return nil
 	}
 
-	if body.Nexthop != nil && body.Nexthop.IP.Equal(net.IPv4zero.To4()) {
-		return
+	if len(b.Nexthops) == 1 && b.Nexthops[0].IP.Equal(net.IPv4zero.To4()) {
+		return nil
 	}
 
 	// Prepare RibInfo
-	vrf := VrfLookupByIndex(int(vrfId))
+	vrf := VrfLookupByIndex(uint32(h.VrfId))
 	if vrf == nil {
-		fmt.Println("Can't find VRF id:", vrfId)
+		fmt.Println("Can't find VRF id:", h.VrfId)
 
 		// Try to create VRF.
-		server.VrfAdd(fmt.Sprintf("vrf%d", vrfId))
-		vrf = VrfLookupByIndex(int(vrfId))
+		server.VrfAdd(fmt.Sprintf("vrf%d", h.VrfId))
+		vrf = VrfLookupByIndex(uint32(h.VrfId))
 		if vrf == nil {
-			fmt.Println("Couldn't create VRF id:", vrfId)
-			return
+			fmt.Println("Couldn't create VRF id:", h.VrfId)
+			return nil
 		}
 	}
 
 	ri := &Rib{
-		Type:     RouteType2RibType(body.Type),
-		Nexthop:  body.Nexthop,
-		Nexthops: body.Nexthops,
-		Src:      conn,
-		Metric:   body.Metric,
-		Distance: body.Distance,
+		Type:     RouteType2RibType(b.Type),
+		Nexthops: b.Nexthops,
+		Src:      client,
+		Metric:   b.Metric,
+		Distance: b.Distance,
+		Aux:      b.Aux,
+		PathId:   b.PathId,
 	}
 	if ri.Distance != 0 {
-		ri.SetFlag(flagDistance)
+		ri.SetFlag(RIB_FLAG_DISTANCE)
+	}
+
+	// OSPF route-map.
+	if LocalPolicy {
+		OspfRouteMap(ri)
 	}
 
 	// Call RIB API.
-	if command == IPV4_ROUTE_ADD {
-		fmt.Println("Route add", body.Prefix)
-		vrf.RibAdd(body.Prefix, ri)
+	if h.Command == IPV4_ROUTE_ADD {
+		fmt.Println("Route add", b.Prefix, b.Nexthops)
+		vrf.RibAdd(b.Prefix, ri)
 	} else {
-		fmt.Println("Route delete", body.Prefix)
-		vrf.RibDelete(body.Prefix, ri)
+		fmt.Println("Route delete", b.Prefix)
+		vrf.RibDelete(b.Prefix, ri)
 	}
+	return nil
 }
 
-type Client struct {
-	Version   uint8
-	VrfId     int
-	RouterId  bool
-	Interface bool
-}
-
-// Redistribute message for:
-//
-// ZEBRA_REDISTRIBUTE_ADD            11
-// ZEBRA_REDISTRIBUTE_DELETE         12
-//
+// Redistribute routes.
 type RedistributeBody struct {
 	Type uint8
 }
@@ -1050,23 +892,104 @@ func (b *RedistributeBody) Serialize() ([]byte, error) {
 	return buf, nil
 }
 
-func (b *RedistributeBody) DecodeFromBytes(data []byte) error {
+func (b *RedistributeBody) DecodeFromBytes(command CommandType, data []byte) error {
 	b.Type = data[0]
 	return nil
 }
 
-func (b *RedistributeBody) Process(conn net.Conn, h *Header) error {
-	fmt.Println("Processing", h.Command.String(), RouteTypeStringMap[ROUTE_TYPE(b.Type)])
+func RibTypeFromRouteType(typ uint8) (uint8, int) {
+	switch RouteType(typ) {
+	case ROUTE_KERNEL:
+		return RIB_KERNEL, AFI_IP
+	case ROUTE_CONNECT:
+		return RIB_CONNECTED, AFI_IP
+	case ROUTE_STATIC:
+		return RIB_STATIC, AFI_IP
+	case ROUTE_RIP:
+		return RIB_RIP, AFI_IP
+	case ROUTE_RIPNG:
+		return RIB_RIP, AFI_IP6
+	case ROUTE_OSPF:
+		return RIB_OSPF, AFI_IP
+	case ROUTE_OSPF6:
+		return RIB_OSPF, AFI_IP6
+	case ROUTE_ISIS:
+		return RIB_ISIS, AFI_IP
+	case ROUTE_BGP:
+		return RIB_BGP, AFI_IP
+	default:
+		return RIB_UNKNOWN, AFI_IP
+	}
+	return RIB_UNKNOWN, AFI_IP
+}
+
+func (b *RedistributeBody) Process(client *Client, h *Header) error {
+	log.Info("zapi:", h.Command.String(), " ", RouteTypeStringMap[RouteType(b.Type)])
+
+	typ, afi := RibTypeFromRouteType(b.Type)
+	if typ == RIB_UNKNOWN {
+		return fmt.Errorf("zapi:Unknown redistribute route type")
+	}
+	// When client version is 3, assumes allVrf true.
+	allVrf := false
+	if client.version == 3 {
+		allVrf = true
+	}
+
+	// AFI is determined.
+	if typ == RIB_RIP || typ == RIB_OSPF {
+		server.RedistSubscribe(client, allVrf, uint32(h.VrfId), afi, typ)
+		return nil
+	}
+	// Guess client's address family from route type in Hello message.
+	switch client.routeType {
+	case ROUTE_RIP, ROUTE_OSPF:
+		server.RedistSubscribe(client, allVrf, uint32(h.VrfId), AFI_IP, typ)
+	case ROUTE_RIPNG, ROUTE_OSPF6:
+		server.RedistSubscribe(client, allVrf, uint32(h.VrfId), AFI_IP6, typ)
+	case ROUTE_BGP, ROUTE_ISIS:
+		server.RedistSubscribe(client, allVrf, uint32(h.VrfId), AFI_IP, typ)
+		server.RedistSubscribe(client, allVrf, uint32(h.VrfId), AFI_IP6, typ)
+	default:
+		// Do nothing for unknown client.
+	}
 	return nil
 }
 
-// Redistribute default message:
-//
-// ZEBRA_REDISTRIBUTE_DEFAULT_ADD    13
-// ZEBRA_REDISTRIBUTE_DEFAULT_DELETE 14
+// Redistribute default message. Message body is empty. When redistribute
+// default is on, it effective to both IPv4 and IPv6.
 type RedistributeDefaultBody struct {
 }
 
+func (b *RedistributeDefaultBody) Serialize() ([]byte, error) {
+	return nil, nil
+}
+
+func (b *RedistributeDefaultBody) DecodeFromBytes(command CommandType, data []byte) error {
+	return nil
+}
+
+func (b *RedistributeDefaultBody) Process(client *Client, h *Header) error {
+	switch h.Command {
+	case REDISTRIBUTE_DEFAULT_ADD:
+		if client.routeType == ROUTE_RIP || client.routeType == ROUTE_OSPF || client.routeType == ROUTE_BGP {
+			server.RedistDefaultSubscribe(client, client.allVrf, client.vrfId, AFI_IP)
+		}
+		if client.routeType == ROUTE_RIPNG || client.routeType == ROUTE_OSPF6 || client.routeType == ROUTE_BGP {
+			server.RedistDefaultSubscribe(client, client.allVrf, client.vrfId, AFI_IP6)
+		}
+	case REDISTRIBUTE_DEFAULT_DELETE:
+		if client.routeType == ROUTE_RIP || client.routeType == ROUTE_OSPF || client.routeType == ROUTE_BGP {
+			server.RedistDefaultUnsubscribe(client, client.allVrf, client.vrfId, AFI_IP)
+		}
+		if client.routeType == ROUTE_RIPNG || client.routeType == ROUTE_OSPF6 || client.routeType == ROUTE_BGP {
+			server.RedistDefaultUnsubscribe(client, client.allVrf, client.vrfId, AFI_IP6)
+		}
+	}
+	return nil
+}
+
+// Nexthop lookup for IPv4 routes.
 type IPv4NexthopLookupBody struct {
 	Addr net.IP
 }
@@ -1077,13 +1000,46 @@ func (b *IPv4NexthopLookupBody) Serialize() ([]byte, error) {
 	return buf, nil
 }
 
-func (b *IPv4NexthopLookupBody) DecodeFromBytes(data []byte) error {
+func (b *IPv4NexthopLookupBody) DecodeFromBytes(command CommandType, data []byte) error {
 	b.Addr = make([]byte, 4)
 	copy(b.Addr, data[:4])
 	return nil
 }
 
-func (b *IPv4NexthopLookupBody) Process(net.Conn, *Header) error {
+func (b *IPv4NexthopLookupBody) Process(client *Client, h *Header) error {
+	vrf := VrfLookupByIndex(uint32(h.VrfId))
+	if vrf == nil {
+		fmt.Println("[zapi]IPv4NexthopLookup: Can't find VRF with id", h.VrfId)
+		return nil
+	}
+
+	reply := &IPv4NexthopReplyBody{
+		Addr: b.Addr,
+	}
+
+	found := true
+	if NexthopLookupHook != nil {
+		found = NexthopLookupHook(vrf, b.Addr)
+	}
+
+	if found {
+		nexthop := NewNexthopAddr(b.Addr)
+		reply.Nexthops = append(reply.Nexthops, nexthop)
+		reply.NexthopNum = uint8(len(reply.Nexthops))
+	}
+
+	m := &Message{
+		Header: Header{
+			Marker:  HEADER_MARKER,
+			Version: h.Version,
+			VrfId:   uint16(h.VrfId),
+			Command: IPV4_NEXTHOP_LOOKUP,
+		},
+		Body: reply,
+	}
+	s, _ := m.Serialize()
+
+	client.conn.Write(s)
 	return nil
 }
 
@@ -1105,20 +1061,14 @@ func (b *IPv4NexthopReplyBody) Serialize() ([]byte, error) {
 		copy(nbuf[1:], nexthop.IP)
 		buf = append(buf, nbuf...)
 	}
-	// fmt.Println("buf len", len(buf))
-	// for i := 0; i < len(buf); i++ {
-	// 	fmt.Printf("%d ", buf[i])
-	// }
-	// fmt.Printf("\n")
-
 	return buf, nil
 }
 
-func (b *IPv4NexthopReplyBody) DecodeFromBytes([]byte) error {
+func (b *IPv4NexthopReplyBody) DecodeFromBytes(CommandType, []byte) error {
 	return nil
 }
 
-func (b *IPv4NexthopReplyBody) Process(net.Conn, *Header) error {
+func (b *IPv4NexthopReplyBody) Process(*Client, *Header) error {
 	return nil
 }
 
@@ -1130,21 +1080,20 @@ func EsiNexthopLookup(vrf *Vrf, nexthop net.IP) bool {
 	n := ptree.Match(nexthop, 32)
 	if n != nil {
 		if n.Item != nil {
-			fmt.Println("EsiNexthopLookup: n.Item is not nil")
 			for _, rib := range n.Item.(RibSlice) {
 				if rib.IsFib() && rib.Type == RIB_CONNECTED {
-					if rib.Nexthop != nil && rib.Nexthop.IsIfOnly() {
-						fmt.Println("EsiNexthopLookup: Interface only nexthop", rib.Nexthop.Index)
-						ifp := IfLookupByIndex(rib.Nexthop.Index)
+					if len(rib.Nexthops) == 1 && rib.Nexthops[0].IsIfOnly() {
+						nhop := rib.Nexthops[0]
+						ifp := IfLookupByIndex(nhop.Index)
 						fmt.Println("EsiNexthopLookup: ifp", ifp.Name)
 						r := regexp.MustCompile(`sproute\d+`)
 						if r.MatchString(ifp.Name) {
-							fmt.Println("EsiNexthopLookup: sproute interface, perform tunnel check")
-							result := DtlsNexthop(vrf.Index, nexthop)
+							result := DtlsNexthop(vrf.Id, nexthop)
 							fmt.Println("EsiNexthopLookup: return", result)
 							return result
 						}
 					}
+
 				}
 			}
 		}
@@ -1152,58 +1101,17 @@ func EsiNexthopLookup(vrf *Vrf, nexthop net.IP) bool {
 	return true
 }
 
-func IPv4NexthopLookup(conn net.Conn, version byte, data []byte, vrfId uint16) {
-	vrf := VrfLookupByIndex(int(vrfId))
-	if vrf == nil {
-		fmt.Println("[zapi]IPv4NexthopLookup: Can't find VRF with id", vrfId)
-		return
-	}
-
-	body := &IPv4NexthopLookupBody{}
-	body.DecodeFromBytes(data)
-	fmt.Println("[zapi]Lookup nexthop:", body.Addr)
-
-	reply := &IPv4NexthopReplyBody{
-		Addr: body.Addr,
-	}
-
-	found := true
-	if NexthopLookupHook != nil {
-		found = NexthopLookupHook(vrf, body.Addr)
-	}
-
-	if found {
-		nexthop := NewNexthopAddr(body.Addr)
-		reply.Nexthops = append(reply.Nexthops, nexthop)
-		reply.NexthopNum = uint8(len(reply.Nexthops))
-	}
-
-	m := &Message{
-		Header: Header{
-			Marker:  HEADER_MARKER,
-			Version: version,
-			VrfId:   vrfId,
-			Command: IPV4_NEXTHOP_LOOKUP,
-		},
-		Body: reply,
-	}
-	s, _ := m.Serialize()
-
-	conn.Write(s)
-}
-
-func HandleRequest(conn net.Conn, vrfId int) {
+func (c *Client) HandleRequest(conn net.Conn, vrfId uint32) {
 	defer conn.Close()
 
 	var version byte
 	for {
-		// We don't know client version yet.
 		data := make([]byte, HeaderSize(version))
 		_, err := conn.Read(data)
 		if err != nil {
 			break
 		}
-		// Peek version information.
+
 		if version == 0 {
 			version = data[3]
 			if version == 3 {
@@ -1217,76 +1125,63 @@ func HandleRequest(conn net.Conn, vrfId int) {
 		}
 		h := Header{}
 		h.DecodeFromBytes(data)
-
-		payloadLen := int(h.Length) - HeaderSize(version)
-
-		fmt.Printf("[zapi]%s(%d) payloadLen %d ver %d vrf %d (override %d)\n",
-			h.Command.String(), h.Command, payloadLen, h.Version, h.VrfId, vrfId)
+		len := int(h.Length) - HeaderSize(version)
 
 		if vrfId != 0 {
 			h.VrfId = uint16(vrfId)
 		}
-		err = HandleMessage(conn, &h, payloadLen)
+
+		err = HandleBody(c, &h, len)
 		if err != nil {
 			fmt.Println("Error reading:", err.Error())
 			break
 		}
 	}
 	fmt.Println("[zapi] disconnected", "vrf", vrfId, "version", version)
-	RibClearSrc(conn)
-
+	server.WatcherUnsubscribe(c)
 	ClientUnregister(conn)
 }
 
-func HandleMessage(conn net.Conn, h *Header, payloadLen int) error {
+func HandleBody(client *Client, h *Header, len int) error {
+	log.Infof("zapi:%s version %d vrf %d len %d", h.Command.String(), h.Version, h.VrfId, len)
+
 	var data []byte
-
-	if payloadLen > 0 {
-		data = make([]byte, payloadLen)
-
-		_, err := conn.Read(data)
+	if len > 0 {
+		data = make([]byte, len)
+		_, err := client.conn.Read(data)
 		if err != nil {
 			return err
 		}
 	}
 
+	var body Body
 	switch h.Command {
 	case HELLO:
-		err := Hello(conn, h, data)
-		if err != nil {
-			return err
-		}
+		body = &HelloBody{}
 	case ROUTER_ID_ADD:
-		RouterIdAdd(conn, h.Version, data)
+		body = &RouterIdUpdateBody{}
 	case INTERFACE_ADD:
-		InterfaceAdd(conn, h, data)
+		body = &InterfaceUpdateBody{}
 	case IPV4_ROUTE_ADD, IPV4_ROUTE_DELETE:
-		fmt.Println("IPv4 route add/delete", h.Command)
-		IPv4Route(h.Command, h.Version, conn, data, h.VrfId)
+		body = &RouteUpdateBody{}
 	case IPV4_NEXTHOP_LOOKUP:
-		IPv4NexthopLookup(conn, h.Version, data, h.VrfId)
-	case REDISTRIBUTE_ADD:
-		body := RedistributeBody{}
-		err := body.DecodeFromBytes(data)
-		if err != nil {
-			return err
-		}
-		err = body.Process(conn, h)
-		if err != nil {
-			return err
-		}
-	case REDISTRIBUTE_DELETE:
-		body := RedistributeBody{}
-		err := body.DecodeFromBytes(data)
-		if err != nil {
-			return err
-		}
-		err = body.Process(conn, h)
-		if err != nil {
-			return err
-		}
-	case REDISTRIBUTE_DEFAULT_ADD:
-	case REDISTRIBUTE_DEFAULT_DELETE:
+		body = &IPv4NexthopLookupBody{}
+	case REDISTRIBUTE_ADD, REDISTRIBUTE_DELETE:
+		body = &RedistributeBody{}
+	case REDISTRIBUTE_DEFAULT_ADD, REDISTRIBUTE_DEFAULT_DELETE:
+		body = &RedistributeDefaultBody{}
+	default:
+		log.Infof("zapi:Unhandled command %s, skipping", h.Command.String())
+		return nil
+	}
+
+	err := body.DecodeFromBytes(h.Command, data)
+	if err != nil {
+		return err
+	}
+	err = body.Process(client, h)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -1294,10 +1189,10 @@ func HandleMessage(conn net.Conn, h *Header, payloadLen int) error {
 type ZServer struct {
 	Path   string
 	Listen net.Listener
-	VrfId  int
+	VrfId  uint32
 }
 
-func ZServerStart(typ string, path string, vrfId int) *ZServer {
+func ZServerStart(typ string, path string, vrfId uint32) *ZServer {
 	var lis net.Listener
 	var err error
 
@@ -1340,7 +1235,7 @@ func ZServerStart(typ string, path string, vrfId int) *ZServer {
 	}
 
 	go func() {
-		fmt.Println("ZAPI Server started at", path)
+		log.Infof("zapi:Server started at %s", path)
 		for {
 			// Listen for an incoming connection.
 			conn, err := lis.Accept()
@@ -1350,10 +1245,10 @@ func ZServerStart(typ string, path string, vrfId int) *ZServer {
 			}
 
 			// Register client.
-			ClientRegister(conn)
+			client := ClientRegister(conn)
 
 			// Handle connections in a new go routine.
-			go HandleRequest(conn, vrfId)
+			go client.HandleRequest(conn, vrfId)
 		}
 	}()
 

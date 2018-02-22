@@ -26,13 +26,12 @@ const (
 
 var (
 	DefaultVrfProtect = false
-	OspfMetricFilter  = false
 )
 
-type COMMAND_TYPE uint16
+type CommandType uint16
 
 const (
-	_ COMMAND_TYPE = iota
+	_ CommandType = iota
 	INTERFACE_ADD
 	INTERFACE_DELETE
 	INTERFACE_ADDRESS_ADD
@@ -65,7 +64,7 @@ const (
 	MESSAGE_MAX
 )
 
-var CommandTypeMap = map[COMMAND_TYPE]string{
+var CommandTypeMap = map[CommandType]string{
 	INTERFACE_ADD:               "INTERFACE_ADD",
 	INTERFACE_DELETE:            "INTERFACE_DELETE",
 	INTERFACE_ADDRESS_ADD:       "INTERFACE_ADDRESS_ADD",
@@ -95,7 +94,7 @@ var CommandTypeMap = map[COMMAND_TYPE]string{
 	NEXTHOP_UPDATE:        "NEXTHOP_UPDATE",
 }
 
-func (c COMMAND_TYPE) String() string {
+func (c CommandType) String() string {
 	if str, ok := CommandTypeMap[c]; ok {
 		return str
 	} else {
@@ -103,10 +102,10 @@ func (c COMMAND_TYPE) String() string {
 	}
 }
 
-type ROUTE_TYPE uint8
+type RouteType uint8
 
 const (
-	ROUTE_SYSTEM ROUTE_TYPE = iota
+	ROUTE_SYSTEM RouteType = iota
 	ROUTE_KERNEL
 	ROUTE_CONNECT
 	ROUTE_STATIC
@@ -122,7 +121,7 @@ const (
 	ROUTE_MAX
 )
 
-var RouteTypeStringMap = map[ROUTE_TYPE]string{
+var RouteTypeStringMap = map[RouteType]string{
 	ROUTE_SYSTEM:  "system",
 	ROUTE_KERNEL:  "kernel",
 	ROUTE_CONNECT: "connect",
@@ -136,6 +135,14 @@ var RouteTypeStringMap = map[ROUTE_TYPE]string{
 	ROUTE_HSLS:    "hsls",
 	ROUTE_OLSR:    "olsr",
 	ROUTE_BABEL:   "babel",
+}
+
+func (r RouteType) String() string {
+	if str, ok := RouteTypeStringMap[r]; ok {
+		return str
+	} else {
+		return "UNKNOWN_ROUTE"
+	}
 }
 
 type NEXTHOP_FLAG uint8
@@ -233,6 +240,10 @@ const (
 	MESSAGE_IFINDEX  = 0x02
 	MESSAGE_DISTANCE = 0x04
 	MESSAGE_METRIC   = 0x08
+	MESSAGE_MTU      = 0x10
+	MESSAGE_TAG      = 0x20
+	MESSAGE_PATH_ID  = 0x40
+	MESSAGE_ASPATH   = 0x80
 )
 
 func MessageString(m uint8) string {
@@ -252,7 +263,7 @@ func MessageString(m uint8) string {
 	return strings.Join(ss, "|")
 }
 
-func RouteType2RibType(t ROUTE_TYPE) uint8 {
+func RouteType2RibType(t RouteType) uint8 {
 	switch t {
 	case ROUTE_KERNEL:
 		return RIB_KERNEL
@@ -263,11 +274,11 @@ func RouteType2RibType(t ROUTE_TYPE) uint8 {
 	case ROUTE_RIP:
 		return RIB_RIP
 	case ROUTE_RIPNG:
-		return RIB_RIPNG
+		return RIB_RIP
 	case ROUTE_OSPF:
 		return RIB_OSPF
 	case ROUTE_OSPF6:
-		return RIB_OSPF6
+		return RIB_OSPF
 	case ROUTE_ISIS:
 		return RIB_ISIS
 	case ROUTE_BGP:
@@ -283,7 +294,7 @@ func RouteType2RibType(t ROUTE_TYPE) uint8 {
 	}
 }
 
-func RibType2RouteType(t uint8) ROUTE_TYPE {
+func RibType2RouteType(t uint8) RouteType {
 	switch t {
 	case RIB_KERNEL:
 		return ROUTE_KERNEL
@@ -293,12 +304,8 @@ func RibType2RouteType(t uint8) ROUTE_TYPE {
 		return ROUTE_STATIC
 	case RIB_RIP:
 		return ROUTE_RIP
-	case RIB_RIPNG:
-		return ROUTE_RIPNG
 	case RIB_OSPF:
 		return ROUTE_OSPF
-	case RIB_OSPF6:
-		return ROUTE_OSPF6
 	case RIB_ISIS:
 		return ROUTE_ISIS
 	case RIB_BGP:
