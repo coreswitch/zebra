@@ -29,10 +29,16 @@ var (
 )
 
 type EtcdIfStatus struct {
-	Status         string `json:"status"`
-	ProtocolStatus string `json:"protocol_status"`
-	Address        string `json:"address,omitempty"`
-	Prefix         string `json:"prefix,omitempty"`
+	Status         string             `json:"status"`
+	ProtocolStatus string             `json:"protocol_status"`
+	Address        string             `json:"address,omitempty"`
+	Prefix         string             `json:"prefix,omitempty"`
+	IPv6           []EtcdIfStatusIPv6 `json:"ipv6,omitempty"`
+}
+
+type EtcdIfStatusIPv6 struct {
+	Address string `json:"address,omitempty"`
+	Prefix  string `json:"prefix,omitempty"`
 }
 
 func EtcdIf(ifName string, ifp *Interface) string {
@@ -54,6 +60,16 @@ func EtcdIf(ifName string, ifp *Interface) string {
 		prefix := addr.Prefix.Copy()
 		prefix.ApplyMask()
 		eif.Prefix = prefix.String()
+	}
+	for _, addr := range ifp.Addrs[AFI_IP6] {
+		if addr.Prefix.IP.IsGlobalUnicast() {
+			var ipv6 EtcdIfStatusIPv6
+			ipv6.Address = addr.Prefix.IP.String()
+			prefix := addr.Prefix.Copy()
+			prefix.ApplyMask()
+			ipv6.Prefix = prefix.String()
+			eif.IPv6 = append(eif.IPv6, ipv6)
+		}
 	}
 	json, _ := json.Marshal(eif)
 
