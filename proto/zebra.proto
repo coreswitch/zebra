@@ -16,97 +16,132 @@ syntax = "proto3";
 
 package zebra;
 
+enum AFI {
+	AFI_IP                   = 0;
+	AFI_IP6                  = 1;
+	AFI_MAX                  = 2;
+}
+
 enum RouteType {
-	RIB_UNKNOWN   = 0;
-	RIB_KERNEL    = 1;
-	RIB_CONNECTED = 2;
-	RIB_STATIC    = 3;
-	RIB_RIP       = 4;
-	RIB_RIPNG     = 5;
-	RIB_OSPF      = 6;
-	RIB_OSPF6     = 7;
-	RIB_BGP       = 8;
-	RIB_ISIS      = 9;
+	RIB_UNKNOWN              = 0;
+	RIB_KERNEL               = 1;
+	RIB_CONNECTED            = 2;
+	RIB_STATIC               = 3;
+	RIB_RIP                  = 4;
+	RIB_OSPF                 = 5;
+	RIB_ISIS                 = 6;
+	RIB_BGP                  = 7;
 }
 
 enum RouteSubType {
-	RIB_SUB_OSPF_IA         = 0;
-	RIB_SUB_OSPF_NSSA_1     = 1;
-	RIB_SUB_OSPF_NSSA_2     = 2;
-	RIB_SUB_OSPF_EXTERNAL_1 = 3;
-	RIB_SUB_OSPF_EXTERNAL_2 = 4;
-	RIB_SUB_BGP_IBGP        = 5;
-	RIB_SUB_BGP_EBGP        = 6;
-	RIB_SUB_BGP_CONFED      = 7;
-	RIB_SUB_ISIS_L1         = 8;
-	RIB_SUB_ISIS_L2         = 9;
-	RIB_SUB_ISIS_IA         = 10;
+	RIB_SUB_OSPF_IA          = 0;
+	RIB_SUB_OSPF_NSSA_1      = 1;
+	RIB_SUB_OSPF_NSSA_2      = 2;
+	RIB_SUB_OSPF_EXTERNAL_1  = 3;
+	RIB_SUB_OSPF_EXTERNAL_2  = 4;
+	RIB_SUB_BGP_IBGP         = 5;
+	RIB_SUB_BGP_EBGP         = 6;
+	RIB_SUB_BGP_CONFED       = 7;
+	RIB_SUB_ISIS_L1          = 8;
+	RIB_SUB_ISIS_L2          = 9;
+	RIB_SUB_ISIS_IA          = 10;
 }
 
-message IPv4 {
-	uint32 s_addr = 1;
+enum Op {
+	NoOperation              = 0;
+	InterfaceSubscribe       = 1;
+	InterfaceUnsubscribe     = 2;
+	RouterIdSubscribe        = 3;
+	RouterIdUnsubscribe      = 4;
+	RedistSubscribe          = 5;
+	RedistUnsubscribe        = 6;
+	RedistDefaultSubscribe   = 7;  
+	RedistDefaultUnsubscribe = 8;
+	RouteAdd                 = 9;
+	RouteDelete              = 10;
+	InterfaceAdd             = 11;
+	InterfaceDelete          = 12;
+	InterfaceAddrAdd         = 13;
+	InterfaceAddrDelete      = 14;
+	InterfaceUp              = 15;
+	InterfaceDown            = 16;
+	InterfaceFlagChange      = 17;
+	InterfaceNameChange      = 18;
+	InterfaceMtuChange       = 19;
 }
 
-message PrefixIPv4 {
-	IPv4 addr = 1;
+message InterfaceRequest {
+	Op op = 1;
+	uint32 vrf_id = 2;
+}
+
+message InterfaceUpdate {
+	Op op = 1;
+	uint32 vrf_id = 2;
+	string name = 3;
+	uint32 index = 4;
+	uint32 flags = 5;
+	uint32 mtu = 6;
+	uint32 metric = 7;
+	HwAddr  hw_addr = 8;
+	repeated Address addr_ipv4 = 9;
+	repeated Address addr_ipv6 = 10;
+}
+
+message RouterIdRequest {
+	Op op = 1;
+	uint32 vrf_id = 2;
+}
+
+message RouterIdUpdate {
+	uint32 vrf_id = 1;
+	bytes router_id = 2;
+}
+
+message RedistRequest {
+	Op op = 1;
+	AFI afi = 2;
+	bool all_vrf = 3;
+	uint32 vrf_id = 4;
+    RouteType type = 5;
+}
+
+message HwAddr {
+	bytes addr = 1;
+}
+
+message Prefix {
+	bytes addr = 1;
 	uint32 length = 2;
 }
 
-message NexthopIPv4 {
-	IPv4 addr = 1;
+message Nexthop {
+	bytes addr = 1;
 	uint32 ifindex = 2;
 }
 
-message IPv6 {
-    uint32 s6_addr1 = 1;
-    uint32 s6_addr2 = 2;
-    uint32 s6_addr3 = 3;
-    uint32 s6_addr4 = 4;
+message Address {
+	Prefix addr = 1;
+	uint32 flags = 2;
 }
 
-message PrefixIPv6 {
-	IPv6 addr = 1;
-	uint32 length = 2;
+message Route {
+	Op op = 1;
+	uint32 vrf_id = 2;
+	Prefix prefix = 3;
+	RouteType type = 4;
+	RouteSubType sub_type = 5;
+	uint32 distance = 6;
+	uint32 metric = 7;
+	uint32 tag = 8;
+	repeated string color = 9;
+	repeated Nexthop nexthops = 10;
+	bytes aux = 11;
 }
 
-message NexthopIPv6 {
-	IPv6 addr = 1;
-	uint32 ifindex = 2;
+service Zebra {
+	rpc InterfaceService(stream InterfaceRequest) returns (stream InterfaceUpdate) {}
+	rpc RouterIdService(stream RouterIdRequest) returns (stream RouterIdUpdate) {}
+	rpc RedistService(stream RedistRequest) returns (stream Route) {}
+	rpc RouteService(stream Route) returns (stream Route) {}
 }
-
-message RouteIPv4 {
-	RouteType type        = 1;
-	RouteSubType sub_type = 2;
-	PrefixIPv4 prefix = 3;
-	uint32 distance = 4;
-	uint32 metric = 5;
-	repeated NexthopIPv4 nexthops = 6;
-}
-
-message RouteIPv4Response {
-}
-
-message RouteIPv6 {
-	RouteType type        = 1;
-	RouteSubType sub_type = 2;
-	PrefixIPv6 prefix = 3;
-	uint32 distance = 4;
-	uint32 metric = 5;
-	repeated NexthopIPv6 nexthops = 6;
-}
-
-message RouteIPv6Response {
-}
-
-service ZebraApi {
-	rpc RouteIPv4Add(RouteIPv4) returns (RouteIPv4Response) {}
-	rpc RouteIPv4Delete(RouteIPv4) returns (RouteIPv4Response) {}
-	rpc RouteIPv6Add(RouteIPv6) returns (RouteIPv6Response) {}
-	rpc RouteIPv6Delete(RouteIPv6) returns (RouteIPv6Response) {}
-	// rpc VrfAdd() returns () {}
-	// rpc VrfDelete() returns ()  {}
-	// rpc VrfBindInterface() returns () {}
-	// rpc VrfUnbindInterface() returns () {}
-	// rpc RedistributeAdd() returns () {}
-	// rpc RedistributeDelete() returns () {}
- }
