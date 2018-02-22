@@ -20,7 +20,7 @@ import (
 	"github.com/coreswitch/zebra/fea"
 )
 
-func VrfAdd(vrfName string, index int) error {
+func VrfAdd(vrfName string, index uint32) error {
 	fmt.Println("Linux VrfAdd")
 	return nil
 }
