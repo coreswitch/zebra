@@ -17,9 +17,9 @@ package rib
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"github.com/coreswitch/netutil"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 const (
@@ -34,11 +34,10 @@ const (
 	RIB_CONNECTED
 	RIB_STATIC
 	RIB_RIP
-	RIB_RIPNG
 	RIB_OSPF
-	RIB_OSPF6
-	RIB_BGP
 	RIB_ISIS
+	RIB_BGP
+	RIB_MAX
 )
 
 var ribTypeString = map[uint8]string{
@@ -47,11 +46,9 @@ var ribTypeString = map[uint8]string{
 	RIB_CONNECTED: "connected",
 	RIB_STATIC:    "static",
 	RIB_RIP:       "rip",
-	RIB_RIPNG:     "ripng",
 	RIB_OSPF:      "ospf",
-	RIB_OSPF6:     "ospf6",
-	RIB_BGP:       "bgp",
 	RIB_ISIS:      "isis",
+	RIB_BGP:       "bgp",
 }
 
 var ribStringType = map[string]uint8{
@@ -60,11 +57,9 @@ var ribStringType = map[string]uint8{
 	"connected": RIB_CONNECTED,
 	"static":    RIB_STATIC,
 	"rip":       RIB_RIP,
-	"ripng":     RIB_RIPNG,
 	"ospf":      RIB_OSPF,
-	"ospf6":     RIB_OSPF6,
-	"bgp":       RIB_BGP,
 	"isis":      RIB_ISIS,
+	"bgp":       RIB_BGP,
 }
 
 const (
@@ -86,12 +81,10 @@ const (
 	DISTANCE_CONNECTED = 0
 	DISTANCE_STATIC    = 1
 	DISTANCE_RIP       = 120
-	DISTANCE_RIPNG     = 120
 	DISTANCE_OSPF      = 110
-	DISTANCE_OSPF6     = 110
+	DISTANCE_ISIS      = 115
 	DISTANCE_EBGP      = 20
 	DISTANCE_IBGP      = 200
-	DISTANCE_ISIS      = 115
 	DISTNACE_INFINITY  = 255
 )
 
@@ -100,36 +93,36 @@ var distanceMap = map[uint8]uint8{
 	RIB_CONNECTED: DISTANCE_CONNECTED,
 	RIB_STATIC:    DISTANCE_STATIC,
 	RIB_RIP:       DISTANCE_RIP,
-	RIB_RIPNG:     DISTANCE_RIPNG,
 	RIB_OSPF:      DISTANCE_OSPF,
-	RIB_OSPF6:     DISTANCE_OSPF6,
-	RIB_BGP:       DISTANCE_IBGP, // EBGP default distance is 20.
 	RIB_ISIS:      DISTANCE_ISIS,
+	RIB_BGP:       DISTANCE_IBGP, // EBGP default distance is 20.
 }
 
 type RibFlag uint
 
 const (
-	flagSelected RibFlag = 1 << iota
-	flagFib
-	flagDistance
-	flagMetric
+	RIB_FLAG_SELECTED RibFlag = 1 << iota
+	RIB_FLAG_FIB
+	RIB_FLAG_DISTANCE
+	RIB_FLAG_METRIC
 	RIB_FLAG_RESOLVED  // Static route and iBGP (multipath eBGP) next hop will be resolved.
 	RIB_FLAG_BLACKHOLE // This is black hole route.
+	RIB_FLAG_DELETE
 )
 
 type Rib struct {
+	pb.Rib
 	Flags    RibFlag
 	Prefix   *netutil.Prefix
 	Type     uint8
-	Subtype  uint8
+	SubType  uint8
 	Distance uint8
 	Metric   uint32
-	IfAddr   *IfAddr
-	Nexthop  *Nexthop
+	PathId   uint32
 	Nexthops []*Nexthop
+	Color    []string
+	Aux      []byte
 	Src      interface{}
-	Redist   bool
 }
 
 type RibSlice []*Rib
@@ -148,10 +141,14 @@ func (r *Rib) MarshalJSON() ([]byte, error) {
 	}
 	ribJSON.Type = RibTypeString(r.Type)
 	ribJSON.Nexthops = r.Nexthops
-	if r.Nexthop != nil {
-		ribJSON.Nexthops = append(ribJSON.Nexthops, r.Nexthop)
+	for _, nhop := range r.Nexthops {
+		ribJSON.Nexthops = append(ribJSON.Nexthops, nhop)
 	}
 	return json.Marshal(ribJSON)
+}
+
+func (r *Rib) String() string {
+	return fmt.Sprintf("%s [%d/%d]", r.Prefix, r.Distance, r.Metric)
 }
 
 func RibTypeString(typ uint8) string {
@@ -183,27 +180,27 @@ func (r *Rib) CheckFlag(flag RibFlag) bool {
 }
 
 func (r *Rib) IsFib() bool {
-	return r.CheckFlag(flagFib)
+	return r.CheckFlag(RIB_FLAG_FIB)
 }
 
 func (r *Rib) SetFib() {
-	r.SetFlag(flagFib)
+	r.SetFlag(RIB_FLAG_FIB)
 }
 
 func (r *Rib) UnsetFib() {
-	r.UnsetFlag(flagFib)
+	r.UnsetFlag(RIB_FLAG_FIB)
 }
 
 func (r *Rib) IsSelected() bool {
-	return r.CheckFlag(flagSelected)
+	return r.CheckFlag(RIB_FLAG_SELECTED)
 }
 
 func (r *Rib) SetSelected() {
-	r.SetFlag(flagSelected)
+	r.SetFlag(RIB_FLAG_SELECTED)
 }
 
 func (r *Rib) UnsetSelected() {
-	r.UnsetFlag(flagSelected)
+	r.UnsetFlag(RIB_FLAG_SELECTED)
 }
 
 func (r *Rib) IsSelectedFib() bool {
@@ -215,11 +212,11 @@ func (r *Rib) IsSystem() bool {
 }
 
 func (r *Rib) HasDistance() bool {
-	return r.CheckFlag(flagDistance)
+	return r.CheckFlag(RIB_FLAG_DISTANCE)
 }
 
 func (r *Rib) HasMetric() bool {
-	return r.CheckFlag(flagMetric)
+	return r.CheckFlag(RIB_FLAG_METRIC)
 }
 
 func (r *Rib) SetResolved() {
@@ -234,6 +231,18 @@ func (r *Rib) IsResolved() bool {
 	return r.CheckFlag(RIB_FLAG_RESOLVED)
 }
 
+func (r *Rib) IsDelete() bool {
+	return r.CheckFlag(RIB_FLAG_DELETE)
+}
+
+func (r *Rib) SetDelete() {
+	r.SetFlag(RIB_FLAG_DELETE)
+}
+
+func (r *Rib) UnsetDelete() {
+	r.UnsetFlag(RIB_FLAG_DELETE)
+}
+
 func (v *Vrf) AfiPtree(p *netutil.Prefix) *netutil.Ptree {
 	afi := p.AFI()
 	if afi == AFI_MAX {
@@ -242,26 +251,31 @@ func (v *Vrf) AfiPtree(p *netutil.Prefix) *netutil.Ptree {
 	return v.ribTable[afi]
 }
 
+func DistanceCalc(typ uint8, subType uint8) uint8 {
+	distance := distanceMap[typ]
+	if typ == RIB_BGP && subType == RIB_SUB_BGP_EBGP {
+		distance = DISTANCE_EBGP
+	}
+	return distance
+}
+
 func NewRib(p *netutil.Prefix, ri *Rib) *Rib {
 	rib := &Rib{
 		Flags:    ri.Flags,
 		Type:     ri.Type,
-		Subtype:  ri.Subtype,
+		SubType:  ri.SubType,
 		Prefix:   p,
-		IfAddr:   ri.IfAddr,
-		Nexthop:  ri.Nexthop,
 		Nexthops: ri.Nexthops,
 		Metric:   ri.Metric,
+		PathId:   ri.PathId,
 		Src:      ri.Src,
+		Aux:      ri.Aux,
 	}
 
 	if ri.HasDistance() {
 		rib.Distance = ri.Distance
 	} else {
-		rib.Distance = distanceMap[ri.Type]
-		if ri.Type == RIB_BGP && ri.Subtype == RIB_SUB_BGP_EBGP {
-			rib.Distance = DISTANCE_EBGP
-		}
+		rib.Distance = DistanceCalc(ri.Type, ri.SubType)
 	}
 	return rib
 }
@@ -272,24 +286,25 @@ func (rib *Rib) Equal(ri *Rib) bool {
 	}
 	switch rib.Type {
 	case RIB_CONNECTED:
-		if rib.Nexthop.Equal(ri.Nexthop) && rib.IfAddr == ri.IfAddr {
-			return true
+		if rib.Src == ri.Src && len(rib.Nexthops) == 1 && len(ri.Nexthops) == 1 {
+			nhops := rib.Nexthops[0]
+			nhopi := ri.Nexthops[0]
+			if nhops.Equal(nhopi) {
+				return true
+			} else {
+				return false
+			}
 		} else {
 			return false
 		}
 	case RIB_STATIC:
 		return true
-	// 	if rib.Nexthop.Equal(ri.Nexthop) {
-	// 		return true
-	// 	} else {
-	// 		return false
-	// 	}
-	// case RIB_BGP:
-	// 	if rib.Src == ri.Src {
-	// 		return true
-	// 	} else {
-	// 		return false
-	// 	}
+	case RIB_BGP:
+		if rib.Src == ri.Src && rib.PathId == ri.PathId {
+			return true
+		} else {
+			return false
+		}
 	default:
 		// Other type of routes are considered as implicit withdraw.
 		return true
@@ -298,101 +313,223 @@ func (rib *Rib) Equal(ri *Rib) bool {
 
 var AddPathDefault bool
 
-func (v *Vrf) RibProcess(p *netutil.Prefix, ribs RibSlice, del *Rib, resolve bool) {
-	var fib *Rib
-	var selected *Rib
-	var preSelected *Rib
-	var def bool
+// Current Selected (only one)
+// Current FIB
 
-	// Default route.
-	if p.Length == 0 && AddPathDefault {
-		def = true
+// New Selected
+// New FIB
+
+func (v *Vrf) FibDelete(p *netutil.Prefix, rib *Rib) {
+	if !rib.IsSystem() {
+		NetlinkRouteDelete(p, rib, v.Id)
 	}
+	rib.UnsetFib()
+}
 
-	// Traverse RIBs to find FIB and selected one.
+func (v *Vrf) FibAdd(p *netutil.Prefix, rib *Rib) {
+	if !rib.IsSystem() {
+		NetlinkRouteAdd(p, rib, v.Id)
+	}
+	rib.SetFib()
+}
+
+func (v *Vrf) RibProcess(p *netutil.Prefix, ribs RibSlice, dels []*Rib, resolve bool) {
+	// Find existing FIBs.
+	var oFibs []*Rib
+	var nFibs []*Rib
+	var oSelected *Rib
+	var nSelected *Rib
+
+	var def *Rib
 	for _, rib := range ribs {
-		if def && rib.Type == RIB_KERNEL {
-			rib.SetFib()
-			rib.SetSelected()
-			continue
-		}
-
 		if rib.IsFib() {
-			fib = rib
+			oFibs = append(oFibs, rib)
 		}
 		if rib.IsSelected() {
-			preSelected = rib
+			oSelected = rib
 		}
+	}
+	for _, del := range dels {
+		if del.IsFib() {
+			oFibs = append(oFibs, del)
+		}
+		if del.IsSelected() {
+			oSelected = del
+		}
+	}
+
+	// New FIBs and new selected.
+	for _, rib := range ribs {
 		if resolve {
 			v.Resolve(rib)
 		}
 		if !rib.IsResolved() {
 			continue
 		}
-		if selected == nil {
-			selected = rib
+		if AddPathDefault && p.IsDefault() && rib.Type == RIB_KERNEL {
+			def = rib
+			continue
+		}
+
+		if nSelected == nil {
+			nSelected = rib
+			nFibs = []*Rib{rib}
 		} else {
 			switch {
-			case rib.Distance < selected.Distance:
-				// Distance is smaller, take it.
-				selected = rib
-			case rib.Distance == selected.Distance:
-				// Same distance and smaller metric, take it.
-				if rib.Metric < selected.Metric {
-					selected = rib
+			case rib.Distance < nSelected.Distance:
+				nSelected = rib
+				nFibs = []*Rib{rib}
+			case rib.Distance == nSelected.Distance:
+				if rib.Metric < nSelected.Metric {
+					nSelected = rib
 				}
-			case rib.Distance > selected.Distance:
-				// Do nothing
+				nFibs = append(nFibs, rib)
+			case rib.Distance > nSelected.Distance:
+			}
+		}
+	}
+	// Special default route add path treatment.
+	if def != nil {
+		nSelected = def
+		nFibs = append(nFibs, def)
+	}
+
+	// Old FIB to be removed.
+	for _, ofib := range oFibs {
+		keep := false
+		for _, nfib := range nFibs {
+			if ofib == nfib {
+				keep = true
+			}
+		}
+		if !keep {
+			v.FibDelete(p, ofib)
+		}
+	}
+
+	// New FIB to be added.
+	for _, nfib := range nFibs {
+		if !nfib.IsFib() {
+			v.FibAdd(p, nfib)
+		} else {
+			// Redundant?
+			if nfib.Type == RIB_STATIC || nfib.Type == RIB_BGP {
+				v.FibAdd(p, nfib)
 			}
 		}
 	}
 
-	// When deleted RIB is FIB.
-	if del != nil && del.IsFib() {
-		fib = del
-	}
-
-	// Update selected flag.
-	if preSelected != selected {
-		if preSelected != nil {
-			preSelected.UnsetSelected()
-		}
-		if selected != nil {
-			selected.SetSelected()
-		}
-	}
-
-	// FIB and selected is same.
-	if fib == selected && fib != nil {
-		if fib.Type == RIB_STATIC || fib.Type == RIB_BGP {
-			NetlinkRouteAdd(p, fib, v.Index)
-		}
+	// Sync Selected for redistribute.
+	if oSelected == nSelected {
 		return
 	}
-
-	// Withdraw old FIB
-	if fib != nil {
-		if !fib.IsSystem() {
-			NetlinkRouteDelete(p, fib, v.Index)
+	if oSelected != nil && nSelected != nil {
+		if oSelected.Type == nSelected.Type {
+			oSelected.UnsetSelected()
+			nSelected.SetSelected()
+			v.RedistAdd(p, nSelected)
+			return
 		}
-		if !fib.Redist {
-			RedistIPv4Delete(v.Index, p, fib)
-		}
-		fib.UnsetFib()
 	}
+	if oSelected != nil {
+		oSelected.UnsetSelected()
+		v.RedistDelete(p, oSelected)
+	}
+	if nSelected != nil {
+		nSelected.SetSelected()
+		v.RedistAdd(p, nSelected)
+	}
+	return
+}
 
-	if selected != nil {
-		if !selected.IsSystem() {
-			err := NetlinkRouteAdd(p, selected, v.Index)
-			if err == nil {
-				selected.SetFib()
+func NexthopEncode(rib *Rib) []*pb.Nexthop {
+	nhops := []*pb.Nexthop{}
+	for _, nhop := range rib.Nexthops {
+		nhops = append(nhops, &pb.Nexthop{
+			Addr:    nhop.IP,
+			Ifindex: uint32(nhop.Index),
+		})
+	}
+	return nhops
+}
+
+func (vrf *Vrf) RedistSync(w Watcher, afi int, typ uint8) {
+	ptree := vrf.ribTable[afi]
+	for n := ptree.Top(); n != nil; n = ptree.Next(n) {
+		if n.Item != nil {
+			ribs := n.Item.(RibSlice)
+			for _, rib := range ribs {
+				if rib.IsSelectedFib() && rib.Type == typ {
+					ip := make([]byte, 4)
+					copy(ip, n.Key())
+					p := netutil.PrefixFromIPPrefixlen(ip, n.KeyLength())
+					if !p.IsDefault() {
+						w.Notify(vrf.Rib2Route(pb.Op_RouteAdd, p, rib))
+					}
+				}
 			}
 		}
-		if !selected.Redist {
-			RedistIPv4Add(v.Index, p, selected, nil)
-		}
-		selected.SetFib()
 	}
+}
+
+func (vrf *Vrf) RedistDefaultSync(w Watcher, afi int) {
+	ptree := vrf.ribTable[afi]
+	p := netutil.NewPrefixAFI(afi)
+	n := ptree.Lookup(p.IP, p.Length)
+	if n == nil || n.Item == nil {
+		return
+	}
+	for _, rib := range n.Item.(RibSlice) {
+		if rib.IsSelectedFib() {
+			w.Notify(vrf.Rib2Route(pb.Op_RouteAdd, p, rib))
+		}
+	}
+}
+
+func (vrf *Vrf) Rib2Route(op pb.Op, p *netutil.Prefix, rib *Rib) *pb.Route {
+	nhops := NexthopEncode(rib)
+	return &pb.Route{
+		Op:    op,
+		VrfId: uint32(vrf.Id),
+		Prefix: &pb.Prefix{
+			Addr:   p.IP,
+			Length: uint32(p.Length),
+		},
+		Type:     pb.RouteType(rib.Type),
+		SubType:  pb.RouteSubType(rib.SubType),
+		Distance: uint32(rib.Distance),
+		Metric:   rib.Metric,
+		Tag:      rib.Tag,
+		Nexthops: nhops,
+		Color:    rib.Color,
+		Aux:      rib.Aux,
+	}
+}
+
+func (v *Vrf) Redistribute(op pb.Op, p *netutil.Prefix, rib *Rib) {
+	notifyFunc := func(wr WatcherRedist) {
+		var watchers Watchers
+		if p.IsDefault() {
+			watchers = wr.def
+		} else {
+			watchers = wr.typ[rib.Type]
+		}
+		for _, w := range watchers {
+			if rib.Src != w {
+				w.Notify(v.Rib2Route(op, p, rib))
+			}
+		}
+	}
+	notifyFunc(Redist[p.AFI()])
+	notifyFunc(v.redist[p.AFI()])
+}
+
+func (v *Vrf) RedistAdd(p *netutil.Prefix, rib *Rib) {
+	v.Redistribute(pb.Op_RouteAdd, p, rib)
+}
+
+func (v *Vrf) RedistDelete(p *netutil.Prefix, rib *Rib) {
+	v.Redistribute(pb.Op_RouteDelete, p, rib)
 }
 
 func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
@@ -402,31 +539,22 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	ptree := v.AfiPtree(p)
 	n := ptree.Acquire(p.IP, p.Length)
 
-	// System route is already in FIB.
-	// if ri.IsSystem() {
-	// 	ri.SetFib()
-	// }
-
 	// Resolve nexthop.
 	v.Resolve(ri)
 
 	// Updated ribs.
-	var found *Rib
+	var dels []*Rib
 	var ribs RibSlice
 
-	if n.Item != nil && ri.Type == RIB_BGP {
+	// Check is this rib same source and same nexthop route.
+	if n.Item != nil {
 		for _, rib := range n.Item.(RibSlice) {
-			if rib.Type == RIB_BGP {
-				src := ri.Src.(net.Conn)
-				dst := rib.Src.(net.Conn)
-				if ClientVersion(src) == 3 && ClientVersion(dst) == 2 {
-					ptree.Release(n)
-					return
-				}
-
-				if src == dst {
-					if rib.Nexthop != nil && ri.Nexthop != nil {
-						if rib.Nexthop.Equal(ri.Nexthop) {
+			if ri.Type == rib.Type {
+				if ri.Src == rib.Src {
+					if len(rib.Nexthops) == 1 && len(ri.Nexthops) == 1 {
+						nhops := rib.Nexthops[0]
+						nhopi := ri.Nexthops[0]
+						if nhops.Equal(nhopi) {
 							fmt.Println("Same source and same nexthop, do nothing")
 							ptree.Release(n)
 							return
@@ -441,7 +569,7 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	if n.Item != nil {
 		for _, rib := range n.Item.(RibSlice) {
 			if rib.Equal(ri) {
-				found = rib
+				dels = append(dels, rib)
 			} else {
 				ribs = append(ribs, rib)
 			}
@@ -449,7 +577,7 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	}
 
 	// Replace of the RIB.
-	if found != nil {
+	if len(dels) != 0 {
 		ptree.Release(n)
 	}
 
@@ -458,18 +586,10 @@ func (v *Vrf) RibAdd(p *netutil.Prefix, ri *Rib) {
 	ribs = append(ribs, rib)
 	n.Item = ribs
 
-	// Redistribute check.
-	if ri.Type == RIB_BGP {
-		if conn := ri.Src.(net.Conn); conn != nil && ClientVersion(conn) == 2 {
-			RedistIPv4Add(v.Index, p, rib, nil)
-			rib.Redist = true
-		}
-	}
-
 	// Process the rib.
-	v.RibProcess(p, ribs, found, false)
+	v.RibProcess(p, ribs, dels, false)
 
-	// Invoke wakler.
+	// Invoke walker.
 	v.RibWalker(p.AFI())
 }
 
@@ -507,36 +627,30 @@ func (v *Vrf) RibDelete(p *netutil.Prefix, ri *Rib) {
 	}
 	ptree.Release(n)
 
-	// Redistribute check.
-	if found.Type == RIB_BGP {
-		if conn := found.Src.(net.Conn); conn != nil && ClientVersion(conn) == 2 {
-			RedistIPv4Delete(v.Index, p, found)
-			found.Redist = true
-		}
-	}
+	// Process RIB.
+	v.RibProcess(p, ribs, []*Rib{found}, false)
 
-	v.RibProcess(p, ribs, found, false)
-
-	// Invoke wakler.
+	// Invoke walker.
 	v.RibWalker(p.AFI())
 }
 
 func (v *Vrf) RibClean(src interface{}) {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
-	for _, ptree := range []*netutil.Ptree{v.ribTable[AFI_IP], v.ribTable[AFI_IP6]} {
+	for afi := AFI_IP; afi < AFI_MAX; afi++ {
+		ptree := v.ribTable[afi]
 		for n := ptree.Top(); n != nil; n = ptree.Next(n) {
-			var found *Rib
+			var dels []*Rib
 			var ribs RibSlice
 
 			for _, rib := range n.Item.(RibSlice) {
 				if rib.Src == src {
-					found = rib
+					dels = append(dels, rib)
 				} else {
 					ribs = append(ribs, rib)
 				}
 			}
-			if found == nil {
+			if len(dels) == 0 {
 				continue
 			}
 			if len(ribs) == 0 {
@@ -544,23 +658,30 @@ func (v *Vrf) RibClean(src interface{}) {
 			} else {
 				n.Item = ribs
 			}
-			ptree.Release(n)
-
-			p := netutil.PrefixFromIPPrefixlen(n.Key(), n.KeyLength())
-
-			if conn := src.(net.Conn); conn != nil && ClientVersion(conn) == 2 && found.IsFib() {
-				RedistIPv4Delete(v.Index, p, found)
-				found.Redist = true
+			for num, _ := range dels {
+				fmt.Println("RibClean ptree release", num)
+				ptree.Release(n)
 			}
+			var ip []byte
+			if afi == AFI_IP {
+				ip = make([]byte, 4)
+			} else if afi == AFI_IP6 {
+				ip = make([]byte, 16)
+			}
+			copy(ip, n.Key())
+			p := netutil.PrefixFromIPPrefixlen(ip, n.KeyLength())
 
-			v.RibProcess(p, ribs, found, false)
+			v.RibProcess(p, ribs, dels, false)
 		}
 	}
 }
 
 func (v *Vrf) IsValid(rib *Rib) bool {
 	if rib.Type == RIB_KERNEL {
-		ifp := v.IfLookupByIndex(rib.Nexthop.Index)
+		if len(rib.Nexthops) != 1 {
+			return false
+		}
+		ifp := v.IfLookupByIndex(rib.Nexthops[0].Index)
 		if ifp != nil && ifp.IsUp() {
 			return true
 		} else {
@@ -593,14 +714,14 @@ func (v *Vrf) RibSync(afi int) {
 	}
 }
 
-func RibAdd(index int, p *netutil.Prefix, ri *Rib) {
-	if vrf := VrfLookupByIndex(index); vrf != nil {
+func RibAdd(vrfId uint32, p *netutil.Prefix, ri *Rib) {
+	if vrf := VrfLookupByIndex(vrfId); vrf != nil {
 		vrf.RibAdd(p, ri)
 	}
 }
 
-func RibDelete(index int, p *netutil.Prefix, ri *Rib) {
-	if vrf := VrfLookupByIndex(index); vrf != nil {
+func RibDelete(vrfId uint32, p *netutil.Prefix, ri *Rib) {
+	if vrf := VrfLookupByIndex(vrfId); vrf != nil {
 		vrf.RibDelete(p, ri)
 	}
 }
@@ -615,20 +736,21 @@ func (v *Vrf) Resolve(ri *Rib) {
 	if ri.Type == RIB_STATIC || ri.Type == RIB_BGP {
 		ri.UnsetResolved()
 		//fmt.Println("resovling nexthop for static/bgp")
-		if ri.Nexthop != nil {
+		if len(ri.Nexthops) == 1 {
+			nhop := ri.Nexthops[0]
 			//fmt.Println("resolving nexthop", ri.Nexthop)
-			if ri.Nexthop.IP == nil {
+			if nhop.IP == nil {
 				// TODO: case of interface nexthop
 			} else {
 				var ptree *netutil.Ptree
-				len_ := len(ri.Nexthop.IP)
+				len_ := len(nhop.IP)
 				if len_ == 4 {
 					ptree = v.ribTable[AFI_IP]
 				} else if len_ == 16 {
 					ptree = v.ribTable[AFI_IP6]
 				}
 				if ptree != nil {
-					n := ptree.Match(ri.Nexthop.IP, len_*8)
+					n := ptree.Match(nhop.IP, len_*8)
 					if n != nil {
 						// XXX self reference.
 						ri.SetResolved()
@@ -642,9 +764,6 @@ func (v *Vrf) Resolve(ri *Rib) {
 }
 
 func (v *Vrf) RibWalker(af int) {
-	//fmt.Println("Vrf RibWalker:", v.Name)
-	//v.Walker = time.Timer()
-	//GetInstance().eventChan <- Event{}
 	if af == AFI_IP || af == AFI_IP6 {
 		ptree := v.ribTable[af]
 		for n := ptree.Top(); n != nil; n = ptree.Next(n) {
