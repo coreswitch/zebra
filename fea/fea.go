@@ -6,7 +6,7 @@ import (
 
 var (
 	Inits  []func() error
-	VrfAdd func(vrfName string, index int) error
+	VrfAdd func(vrfName string, index uint32) error
 )
 
 type FeaParam map[string]string
