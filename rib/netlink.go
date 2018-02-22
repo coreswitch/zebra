@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/coreswitch/netutil"
@@ -29,6 +30,8 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"github.com/vishvananda/netns"
 )
+
+var NetlinkIPv4AddressEnsure = false
 
 var native = nl.NativeEndian()
 
@@ -95,7 +98,7 @@ func ifInfoDeserialize(m syscall.NetlinkMessage) (*IfInfo, error) {
 						for _, datum := range data {
 							switch datum.Attr.Type {
 							case nl.IFLA_VRF_TABLE:
-								ifi.Table = int(native.Uint32(datum.Value[0:4]))
+								ifi.Table = native.Uint32(datum.Value[0:4])
 								//fmt.Println("Vrf binding", ifi.Table)
 							default:
 							}
@@ -162,10 +165,10 @@ type RouteInfo struct {
 func (route RouteInfo) String() string {
 	strs := []string{}
 	strs = append(strs, fmt.Sprintf("%s", route.Rib.Prefix))
-	if route.Nexthop != nil {
-		switch route.Nexthop.EncapType {
+	for _, nhop := range route.Nexthops {
+		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
-			strs = append(strs, fmt.Sprintf("encap seg6 %s", route.Nexthop.EncapSeg6.String()))
+			strs = append(strs, fmt.Sprintf("encap seg6 %s", nhop.EncapSeg6.String()))
 		}
 	}
 	return fmt.Sprintf("%s", strings.Join(strs, " "))
@@ -333,7 +336,7 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 
 	// Make nexthop information.
 	if route.MultiPath == nil {
-		route.Nexthop = nexthop
+		route.Nexthops = []*Nexthop{nexthop}
 	}
 
 	return &route, nil
@@ -407,10 +410,10 @@ func routeMsgParse(m syscall.NetlinkMessage) error {
 	}
 	if route.MsgType == syscall.RTM_NEWROUTE {
 		fmt.Println("Route add (boot):", route, route.Table)
-		RibAdd(route.Table, route.Prefix, &route.Rib)
+		RibAdd(uint32(route.Table), route.Prefix, &route.Rib)
 	} else {
 		fmt.Println("Route del (boot):", route, route.Table)
-		RibDelete(route.Table, route.Prefix, &route.Rib)
+		RibDelete(uint32(route.Table), route.Prefix, &route.Rib)
 	}
 	return nil
 }
@@ -865,6 +868,11 @@ func NetlinkDumpAndSubscribe(inst *Server) error {
 			fmt.Println(err)
 		}
 	}
+	for _, ifp := range IfMap {
+		if !ifp.IsUp() {
+			LinkSetUp(ifp)
+		}
+	}
 
 	fmt.Println("Netlink boot dump finished")
 
@@ -874,10 +882,25 @@ func NetlinkDumpAndSubscribe(inst *Server) error {
 
 	VrfDefaultZservStart()
 
+	if NetlinkIPv4AddressEnsure {
+		time.AfterFunc(time.Second*3, func() {
+			fmt.Println("Dump IPv4 address of interfaces for ensure")
+			for _, l := range []dumpList{
+				{syscall.RTM_GETLINK, syscall.AF_UNSPEC, ifMsgParse},
+				{syscall.RTM_GETADDR, syscall.AF_INET, ifAddrMsgParse},
+			} {
+				err = netlinkDump(nl, l.protocol, l.family, l.callback)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		})
+	}
+
 	return nil
 }
 
-func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
+func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId uint32) error {
 	fmt.Printf("NetlinkRouteAdd(): %s/%d\n", p.IP, p.Length)
 	len_ := len(p.IP) * 8
 	route := &netlink.Route{
@@ -885,19 +908,21 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
 			IP:   p.IP,
 			Mask: net.CIDRMask(p.Length, len_),
 		},
+		Priority: int(rib.Metric),
 		Protocol: syscall.RTPROT_ZEBRA,
 	}
 	if vrfId != 0 {
-		route.Table = vrfId
+		route.Table = int(vrfId)
 	}
-	if rib.Nexthop != nil {
-		route.Gw = rib.Nexthop.IP
-		route.LinkIndex = int(rib.Nexthop.Index)
-		switch rib.Nexthop.EncapType {
+	if len(rib.Nexthops) == 1 {
+		nhop := rib.Nexthops[0]
+		route.Gw = nhop.IP
+		route.LinkIndex = int(nhop.Index)
+		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
 			seg6 := &netlink.SEG6Encap{}
-			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
-			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			seg6.Mode = nhop.EncapSeg6.Mode
+			seg6.Segments = nhop.EncapSeg6.Segments
 			route.Encap = seg6
 		}
 	} else {
@@ -914,7 +939,7 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId int) error {
 	return nil
 }
 
-func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId int) error {
+func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId uint32) error {
 	fmt.Printf("NetlinkRouteDelete(): %s/%d\n", p.IP, p.Length)
 	len_ := len(p.IP) * 8
 	route := &netlink.Route{
@@ -922,19 +947,21 @@ func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId int) error {
 			IP:   p.IP,
 			Mask: net.CIDRMask(p.Length, len_),
 		},
+		Priority: int(rib.Metric),
 		Protocol: syscall.RTPROT_ZEBRA,
 	}
 	if vrfId != 0 {
-		route.Table = vrfId
+		route.Table = int(vrfId)
 	}
-	if rib.Nexthop != nil {
-		route.Gw = rib.Nexthop.IP
-		route.LinkIndex = int(rib.Nexthop.Index)
-		switch rib.Nexthop.EncapType {
+	if len(rib.Nexthops) == 1 {
+		nhop := rib.Nexthops[0]
+		route.Gw = nhop.IP
+		route.LinkIndex = int(nhop.Index)
+		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
 			seg6 := &netlink.SEG6Encap{}
-			seg6.Mode = rib.Nexthop.EncapSeg6.Mode
-			seg6.Segments = rib.Nexthop.EncapSeg6.Segments
+			seg6.Mode = nhop.EncapSeg6.Mode
+			seg6.Segments = nhop.EncapSeg6.Segments
 			route.Encap = seg6
 		}
 	} else {
@@ -1067,21 +1094,21 @@ func linkVrfDelete(name string) error {
 	return err
 }
 
-func NetlinkVrfAdd(name string, table int) {
-	linkVrfAdd(name, table)
+func NetlinkVrfAdd(name string, table uint32) {
+	linkVrfAdd(name, int(table))
 	// Below is not necessary Linux 4.8 and later.
-	ruleAdd(name, table, syscall.AF_INET, RULE_SELECTOR_IIF)
-	ruleAdd(name, table, syscall.AF_INET, RULE_SELECTOR_OIF)
-	ruleAdd(name, table, syscall.AF_INET6, RULE_SELECTOR_IIF)
-	ruleAdd(name, table, syscall.AF_INET6, RULE_SELECTOR_OIF)
+	ruleAdd(name, int(table), syscall.AF_INET, RULE_SELECTOR_IIF)
+	ruleAdd(name, int(table), syscall.AF_INET, RULE_SELECTOR_OIF)
+	ruleAdd(name, int(table), syscall.AF_INET6, RULE_SELECTOR_IIF)
+	ruleAdd(name, int(table), syscall.AF_INET6, RULE_SELECTOR_OIF)
 }
 
-func NetlinkVrfDelete(name string, table int) {
+func NetlinkVrfDelete(name string, table uint32) {
 	// Below is not necessary Linux 4.8 and later.
-	ruleDelete(name, table, syscall.AF_INET, RULE_SELECTOR_OIF)
-	ruleDelete(name, table, syscall.AF_INET, RULE_SELECTOR_IIF)
-	ruleDelete(name, table, syscall.AF_INET6, RULE_SELECTOR_OIF)
-	ruleDelete(name, table, syscall.AF_INET6, RULE_SELECTOR_IIF)
+	ruleDelete(name, int(table), syscall.AF_INET, RULE_SELECTOR_OIF)
+	ruleDelete(name, int(table), syscall.AF_INET, RULE_SELECTOR_IIF)
+	ruleDelete(name, int(table), syscall.AF_INET6, RULE_SELECTOR_OIF)
+	ruleDelete(name, int(table), syscall.AF_INET6, RULE_SELECTOR_IIF)
 	linkVrfDelete(name)
 }
 
@@ -1103,14 +1130,14 @@ func NetlinkVlanDelete(name string, vlanId int) {
 	}
 }
 
-func NetlinkVrfBindInterface(ifname string, ifindex IfIndex, master IfIndex) {
+func NetlinkVrfBindInterface(ifname string, ifindex IfIndex, master IfIndex) error {
 	link := &netlink.Dummy{
 		netlink.LinkAttrs{
 			Name:  ifname,
 			Index: int(ifindex),
 		},
 	}
-	netlink.LinkSetMasterByIndex(link, int(master))
+	return netlink.LinkSetMasterByIndex(link, int(master))
 }
 
 func NetlinkVrfUnbindInterface(ifname string, ifindex IfIndex) {
