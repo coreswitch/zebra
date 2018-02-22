@@ -1,4 +1,4 @@
-// Copyright 2016 Zebra Project
+// Copyright 2016, 2018 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -119,10 +119,10 @@ func (v *Vrf) RouterIdUpdate() {
 	// Compare curent and update
 	if !current.Equal(update) {
 		copy(v.routerId.Id, update)
+		// XXX current == update and Type != typ case handling is needed.
 		v.routerId.Type = typ
 
-		// Advertise update.
-		v.RouterIdUpdateNotification()
+		v.NotifyRouterId()
 	}
 }
 
@@ -139,8 +139,4 @@ func (v *Vrf) RouterIdSet(id net.IP) {
 func (v *Vrf) RouterIdUnset() {
 	v.routerId.Configured = false
 	v.RouterIdUpdate()
-}
-
-func (v *Vrf) RouterIdUpdateNotification() {
-	RouterIdUpdate(v.Index, v.routerId.Id)
 }
