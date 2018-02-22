@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	pb "github.com/hash-set/zebra/proto"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 func TestRouteMapTag(t *testing.T) {

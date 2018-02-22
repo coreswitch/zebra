@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strconv"
 
-	pb "github.com/hash-set/zebra/proto"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 type RouteMapMaster struct {
