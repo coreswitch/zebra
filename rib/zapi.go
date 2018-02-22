@@ -29,8 +29,8 @@ import (
 
 	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
-	"github.com/hash-set/zebra/policy"
-	pb "github.com/hash-set/zebra/proto"
+	"github.com/coreswitch/zebra/policy"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 type Client struct {
