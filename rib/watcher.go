@@ -15,7 +15,7 @@
 package rib
 
 import (
-	pb "github.com/hash-set/zebra/proto"
+	pb "github.com/coreswitch/zebra/proto"
 )
 
 const (

@@ -16,7 +16,6 @@ package rib
 
 import (
 	"strings"
-	//"github.com/hash-set/zebra/rib"
 )
 
 const (
