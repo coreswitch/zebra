@@ -35,7 +35,6 @@ func (s *Static) Rib() *Rib {
 	}
 	for _, nhop := range s.Nexthops {
 		rib.Nexthops = append(rib.Nexthops, nhop)
-		rib.Nexthop = nhop
 	}
 	return rib
 }
