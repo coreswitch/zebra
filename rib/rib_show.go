@@ -22,6 +22,7 @@ import (
 	"net"
 
 	"github.com/coreswitch/netutil"
+	"github.com/hash-set/zebra/policy"
 	"github.com/vishvananda/netlink/nl"
 )
 
@@ -54,9 +55,9 @@ func ribTypeShortString(rib *Rib) string {
 		return "C "
 	case RIB_STATIC:
 		return "S "
-	case RIB_RIP, RIB_RIPNG:
+	case RIB_RIP:
 		return "R "
-	case RIB_OSPF, RIB_OSPF6:
+	case RIB_OSPF:
 		return "O "
 	case RIB_BGP:
 		return "B "
@@ -86,14 +87,12 @@ func (v *Vrf) RibShowIPv4Nexthop(rib *Rib, n *Nexthop, offset int, out io.Writer
 	}
 	switch n.EncapType {
 	case nl.LWTUNNEL_ENCAP_SEG6:
-		fmt.Fprintf(out, " encap seg6 %s\n", n.EncapSeg6.String())
-	default:
-		fmt.Fprintf(out, "\n")
+		fmt.Fprintf(out, " encap seg6 %s", n.EncapSeg6.String())
 	}
 }
 
 func (v *Vrf) RibShowEntryJson(t *ShowTask, p *RibShowParam, rib *Rib) {
-	if !p.database && !rib.IsSelectedFib() {
+	if !p.database && !rib.IsFib() {
 		return
 	}
 	if p.separator {
@@ -112,7 +111,7 @@ func (v *Vrf) RibShowEntryJson(t *ShowTask, p *RibShowParam, rib *Rib) {
 func (v *Vrf) RibShowIPv4Entry(t *ShowTask, rib *Rib, database bool) {
 	buf := new(bytes.Buffer)
 
-	if !database && !rib.IsSelectedFib() {
+	if !database && !rib.IsFib() {
 		return
 	}
 	selected := ' '
@@ -128,24 +127,29 @@ func (v *Vrf) RibShowIPv4Entry(t *ShowTask, rib *Rib, database bool) {
 	fmt.Fprintf(buf, "%s %s %c%c %v", ribTypeShortString(rib), "  ", fib, selected, rib.Prefix)
 	offset := len(rib.Prefix.String()) + 9
 
-	if rib.Nexthop != nil {
-		v.RibShowIPv4Nexthop(rib, rib.Nexthop, 0, buf)
-	} else {
-		for pos, nexthop := range rib.Nexthops {
-			if pos == 0 {
-				v.RibShowIPv4Nexthop(rib, nexthop, 0, buf)
-			} else {
-				v.RibShowIPv4Nexthop(rib, nexthop, offset, buf)
-			}
+	for pos, nexthop := range rib.Nexthops {
+		if pos == 0 {
+			v.RibShowIPv4Nexthop(rib, nexthop, 0, buf)
+		} else {
+			v.RibShowIPv4Nexthop(rib, nexthop, offset, buf)
 		}
 	}
+	if rib.Aux != nil {
+		aspath := &policy.ASPath{}
+		aspath.DecodeFromBytes(rib.Aux)
+		fmt.Fprintf(buf, " aspath %s", aspath.String())
+	}
+	if rib.PathId != 0 {
+		fmt.Fprintf(buf, " pathid %d", rib.PathId)
+	}
+	fmt.Fprintf(buf, "\n")
 	t.Str += buf.String()
 }
 
 func (v *Vrf) RibShowIPv6Entry(t *ShowTask, rib *Rib, database bool) {
 	buf := new(bytes.Buffer)
 
-	if !database && !rib.IsSelectedFib() {
+	if !database && !rib.IsFib() {
 		return
 	}
 	selected := ' '
@@ -160,21 +164,21 @@ func (v *Vrf) RibShowIPv6Entry(t *ShowTask, rib *Rib, database bool) {
 	}
 	fmt.Fprintf(buf, "%s %c%c %v [%d/%d]\n", ribTypeShortString(rib), fib, selected, rib.Prefix, rib.Distance, rib.Metric)
 
-	if rib.Nexthop != nil {
-		switch rib.Nexthop.EncapType {
+	if len(rib.Nexthops) == 1 {
+		nhop := rib.Nexthops[0]
+		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
-			fmt.Fprintf(buf, "      encap seg6 %s\n", rib.Nexthop.EncapSeg6.String())
+			fmt.Fprintf(buf, "      encap seg6 %s\n", nhop.EncapSeg6.String())
 		}
-		if rib.Nexthop.IsIfOnly() {
-			fmt.Fprintf(buf, "      via %s, directly connected\n", v.IfName(rib.Nexthop.Index))
+		if nhop.IsIfOnly() {
+			fmt.Fprintf(buf, "      via %s, directly connected\n", v.IfName(nhop.Index))
 		} else {
-			if rib.Nexthop.IsAddrOnly() {
-				fmt.Fprintf(buf, "      via %v\n", rib.Nexthop.IP)
+			if nhop.IsAddrOnly() {
+				fmt.Fprintf(buf, "      via %v\n", nhop.IP)
 			} else {
-				fmt.Fprintf(buf, "      via %v, %s\n", rib.Nexthop.IP, v.IfName(rib.Nexthop.Index))
+				fmt.Fprintf(buf, "      via %v, %s\n", nhop.IP, v.IfName(nhop.Index))
 			}
 		}
-	} else {
 	}
 	t.Str += buf.String()
 }
