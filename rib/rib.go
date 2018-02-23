@@ -141,9 +141,7 @@ func (r *Rib) MarshalJSON() ([]byte, error) {
 	}
 	ribJSON.Type = RibTypeString(r.Type)
 	ribJSON.Nexthops = r.Nexthops
-	for _, nhop := range r.Nexthops {
-		ribJSON.Nexthops = append(ribJSON.Nexthops, nhop)
-	}
+
 	return json.Marshal(ribJSON)
 }
 
