@@ -26,6 +26,9 @@ import (
 	"github.com/coreswitch/cmd"
 	"github.com/coreswitch/component"
 	rpc "github.com/coreswitch/openconfigd/proto"
+	"github.com/coreswitch/zebra/config"
+	"github.com/coreswitch/zebra/policy"
+	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
@@ -357,6 +360,42 @@ func RpcConfig(conf *rpc.ConfigReply) {
 	Config(int(conf.Type), conf.Path)
 }
 
+func ConfigPrefixListJSON(jsonStr string) {
+	// Parse JSON.
+	var jsonIntf interface{}
+	err := json.Unmarshal([]byte(jsonStr), &jsonIntf)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//	fmt.Println("ConfigPrefixListJSON", jsonIntf)
+
+	// Mapstructure.
+	jsonBody := &config.PrefixLists{}
+	err = mapstructure.Decode(jsonIntf, &jsonBody)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//fmt.Println("Hello", jsonBody)
+
+	// Mapstructure -> prefix-list.
+	plistMaster := policy.PrefixListMasterFromJSON(jsonBody)
+	fmt.Println(plistMaster)
+
+	// Prefix-list -> Server.
+}
+
+func ConfigJSON(conf *rpc.ConfigReply) {
+	//fmt.Println(conf.Path, conf.Json)
+	if len(conf.Path) > 0 {
+		switch conf.Path[0] {
+		case "prefix-list":
+			ConfigPrefixListJSON(conf.Json)
+		}
+	}
+}
+
 var Stream struct {
 	client rpc.Config_DoConfigClient
 	lock   sync.RWMutex
@@ -412,19 +451,32 @@ func rpcSubscribe(conn *grpc.ClientConn) error {
 	Stream.client = stream
 	Stream.lock.Unlock()
 
-	path := []string{"vrf", "vlans", "interfaces", "routing-options"}
+	// path := []string{"vrf", "vlans", "interfaces", "routing-options"}
+	// msg := &rpc.ConfigRequest{
+	// 	Type:   rpc.ConfigType_SUBSCRIBE_MULTI,
+	// 	Module: "ribd",
+	// 	Port:   2601,
+	// 	Path:   path,
+	// }
+	subscription := []*rpc.SubscribeRequest{
+		{rpc.SubscribeType_COMMAND, "vrf"},
+		{rpc.SubscribeType_COMMAND, "vlans"},
+		{rpc.SubscribeType_COMMAND, "interfaces"},
+		{rpc.SubscribeType_COMMAND, "routing-options"},
+		{rpc.SubscribeType_JSON, "prefix-list"},
+	}
 	msg := &rpc.ConfigRequest{
-		Type:   rpc.ConfigType_SUBSCRIBE_MULTI,
-		Module: "ribd",
-		Port:   2601,
-		Path:   path,
+		Type:      rpc.ConfigType_SUBSCRIBE_REQUEST,
+		Module:    "ribd",
+		Port:      2601,
+		Subscribe: subscription,
 	}
 	err = stream.Send(msg)
 	if err != nil {
 		return err
 	}
 
-	path = []string{"show", "ribd"}
+	path := []string{"show", "ribd"}
 	msg = &rpc.ConfigRequest{
 		Type:   rpc.ConfigType_SUBSCRIBE,
 		Module: "ribd",
@@ -459,6 +511,8 @@ loop:
 			}
 		case rpc.ConfigType_SET, rpc.ConfigType_DELETE:
 			RpcConfig(conf)
+		case rpc.ConfigType_JSON_CONFIG:
+			ConfigJSON(conf)
 		default:
 		}
 	}

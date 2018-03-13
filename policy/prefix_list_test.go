@@ -67,7 +67,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ := json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"}]}`
 	result, err := EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -85,7 +85,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"deny","prefix":"10.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"deny","prefix":"10.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -103,7 +103,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"deny","prefix":"11.0.0.0/8"},{"seq":10,"action":"permit","prefix":"10.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"deny","prefix":"11.0.0.0/8"},{"number":10,"action":"permit","prefix":"10.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -121,7 +121,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -140,7 +140,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":8,"action":"permit","prefix":"12.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":8,"action":"permit","prefix":"12.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -155,7 +155,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":8,"action":"permit","prefix":"12.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"},{"seq":12,"action":"deny","prefix":"12.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":8,"action":"permit","prefix":"12.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"},{"number":12,"action":"deny","prefix":"12.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -170,7 +170,7 @@ func TestPrefixListAdd(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":8,"action":"permit","prefix":"12.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"},{"seq":12,"action":"deny","prefix":"12.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":8,"action":"permit","prefix":"12.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"},{"number":12,"action":"deny","prefix":"12.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -193,7 +193,7 @@ func TestPrefixListAddRange(t *testing.T) {
 	plist := pm.Lookup("plist")
 	byte, _ := json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8","le":32,"ge":9}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8","le":32,"ge":9}]}`
 	result, err := EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -220,7 +220,7 @@ func TestPrefixListDelete(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ := json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"}]}`
 	result, err := EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -238,7 +238,7 @@ func TestPrefixListDelete(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -257,7 +257,7 @@ func TestPrefixListDelete(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":15,"action":"permit","prefix":"12.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":15,"action":"permit","prefix":"12.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -276,7 +276,7 @@ func TestPrefixListDelete(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)
@@ -291,7 +291,7 @@ func TestPrefixListDelete(t *testing.T) {
 	OrderEnsure(t, plist)
 	byte, _ = json.Marshal(plist)
 	jsonStr = string(byte)
-	targetStr = `{"name":"plist","prefix-list-entries":[{"seq":5,"action":"permit","prefix":"10.0.0.0/8"},{"seq":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
+	targetStr = `{"name":"plist","seq":[{"number":5,"action":"permit","prefix":"10.0.0.0/8"},{"number":10,"action":"permit","prefix":"11.0.0.0/8"}]}`
 	result, err = EqualJSON(jsonStr, targetStr)
 	if err != nil || !result {
 		t.Error("PrefixList error", jsonStr, "should be", targetStr)

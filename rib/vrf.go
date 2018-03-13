@@ -57,6 +57,7 @@ type Vrf struct {
 	Watcher     map[*IfWatcher]bool // Will be merged to Watchers
 	WMutex      sync.Mutex
 	Watchers    []Watchers
+	DListOspf   string
 }
 
 // For all VRF redistribute.

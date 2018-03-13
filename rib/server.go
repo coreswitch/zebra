@@ -39,6 +39,7 @@ type Server struct {
 	sync       chan *Fn
 	async      chan *Fn
 	pm         *policy.PrefixListMaster
+	pmInternal *policy.PrefixListMaster
 }
 
 var (
@@ -56,6 +57,7 @@ func NewServer() *Server {
 		sync:       make(chan *Fn, 1024),
 		async:      make(chan *Fn, 1024),
 		pm:         policy.NewPrefixListMaster(),
+		pmInternal: policy.NewPrefixListMaster(),
 	}
 	server = inst
 	if NewServerHook != nil {
@@ -539,11 +541,11 @@ func EsiNewServerHook() {
 }
 
 func (s *Server) PrefixListOutAdd(entry *policy.PrefixListEntry) {
-	s.pm.EntryAdd("*redist-out*", entry)
+	s.pmInternal.EntryAdd("*redist-out*", entry)
 }
 
 func (s *Server) PrefixListOut() *policy.PrefixList {
-	return s.pm.Lookup("*redist-out*")
+	return s.pmInternal.Lookup("*redist-out*")
 }
 
 func (s *Server) RedistSubscribe(w Watcher, allVrf bool, vrfId uint32, afi int, typ uint8) error {
@@ -640,6 +642,41 @@ func (s *Server) WatcherUnsubscribe(w Watcher) error {
 		RibClearSrc(w)
 		return nil
 	})
+}
+
+func (s *Server) PrefixListMasterSet(pm *policy.PrefixListMaster) error {
+	return s.apiSync(func() error {
+		s.pm = pm
+		return nil
+	})
+}
+
+func (s *Server) VrfDistributeListOspfAdd(vrfName string, dlistName string) error {
+	return s.apiSync(func() error {
+		fmt.Println("[API] VrfDistributeListOspfAdd", vrfName, dlistName)
+		vrf := VrfLookupByName("")
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF name: %s", vrfName)
+		}
+		vrf.DListOspf = dlistName
+		return nil
+	})
+}
+
+func (s *Server) VrfDistributeListOspfDelete(vrfName string, dlistName string) error {
+	return s.apiSync(func() error {
+		fmt.Println("[API] VrfDistributeListOspfDelete", vrfName, dlistName)
+		vrf := VrfLookupByName("")
+		if vrf == nil {
+			return fmt.Errorf("Can't find VRF by VRF name: %s", vrfName)
+		}
+		vrf.DListOspf = ""
+		return nil
+	})
+}
+
+func (s *Server) PrefixListLookup(plistName string) *policy.PrefixList {
+	return s.pm.Lookup(plistName)
 }
 
 func (s *Server) Start() component.Component {

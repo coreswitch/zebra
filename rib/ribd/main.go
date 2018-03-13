@@ -47,6 +47,8 @@ func main() {
 
 	EsiHook()
 
+	// rib.PlistTest()
+
 	feaComponent := &fea.FeaComponent{}
 	ribComponent := rib.NewServer()
 	grpcComponent := rib.NewGrpcComponent()

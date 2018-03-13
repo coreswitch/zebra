@@ -18,10 +18,11 @@ import (
 	"fmt"
 
 	"github.com/coreswitch/netutil"
+	"github.com/coreswitch/zebra/config"
 )
 
 type PrefixListEntry struct {
-	Seq    int             `json:"seq"`
+	Seq    int             `json:"number"`
 	Action Action          `json:"action"`
 	Prefix *netutil.Prefix `json:"prefix"`
 	Le     *int            `json:"le,omitempty"`
@@ -34,7 +35,7 @@ type PrefixListEntrySlice []*PrefixListEntry
 type PrefixList struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description,omitempty"`
-	Entries     PrefixListEntrySlice `json:"prefix-list-entries"`
+	Entries     PrefixListEntrySlice `json:"seq"`
 }
 
 type PrefixListMaster struct {
@@ -272,4 +273,37 @@ func (plist *PrefixList) Match(p *netutil.Prefix) Action {
 		}
 	}
 	return Deny
+}
+
+func PrefixListMasterFromJSON(cfg *config.PrefixLists) *PrefixListMaster {
+	if cfg == nil {
+		return nil
+	}
+	pm := NewPrefixListMaster()
+	for _, plist := range *cfg {
+		for _, entry := range plist.SeqList {
+			var opts []PrefixListOption
+			if entry.Le != nil {
+				opts = append(opts, WithLe(*entry.Le))
+			}
+			if entry.Ge != nil {
+				opts = append(opts, WithGe(*entry.Ge))
+			}
+			if entry.Eq != nil {
+				opts = append(opts, WithEq(*entry.Eq))
+			}
+			p, _ := netutil.ParsePrefix(entry.Prefix)
+			action := String2Action(string(entry.Action))
+			pm.EntryAdd(plist.Name, NewPrefixListEntry(int(entry.Number), action, p, opts...))
+		}
+	}
+	// for name, plist := range pm.PrefixLists {
+	// 	for _, entry := range plist.Entries {
+	// 		fmt.Println("prefix-list", name, entry)
+	// 		if entry.Ge != nil {
+	// 			fmt.Printf(" ge %d\n", *entry.Ge)
+	// 		}
+	// 	}
+	// }
+	return pm
 }

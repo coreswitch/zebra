@@ -35,6 +35,7 @@ type LanForwardingTable struct {
 
 var (
 	LanInterfaceTable LanForwardingTable
+	LanInterfaceFound bool
 	LanInterfaceMutex sync.RWMutex
 )
 
@@ -64,10 +65,18 @@ func lanFileRead(fileName string) error {
 		return err
 	}
 
+	// Set LAN is found
+	LanInterfaceFound = true
+
 	// LAN File read success
 	fmt.Println("--lan list--")
 	for _, lan := range LanInterfaceTable.InterfaceTable.Tenant.Interfaces {
 		fmt.Println(lan)
+		ifp := IfLookupByName(lan)
+		if ifp != nil && !ifp.IsUp() {
+			fmt.Println(lan, "should be up")
+			LinkSetUp(ifp)
+		}
 	}
 
 	return nil
@@ -112,6 +121,12 @@ func LanFileMonitor(fileName string) {
 func IsLanInterface(ifName string) bool {
 	LanInterfaceMutex.Lock()
 	defer LanInterfaceMutex.Unlock()
+
+	// When "forwarder.json" is not yet created, make interface up by default.
+	if !LanInterfaceFound {
+		return true
+	}
+
 	for _, lan := range LanInterfaceTable.InterfaceTable.Tenant.Interfaces {
 		if ifName == lan {
 			return true

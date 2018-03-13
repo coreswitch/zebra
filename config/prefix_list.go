@@ -142,6 +142,13 @@ type PrefixList struct {
 	SeqList []Seq `mapstructure:"seq" json:"seq,omitempty"`
 }
 
+type PrefixLists []PrefixList
+
+// type PrefixLists struct {
+// 	// original -> plist:name
+// 	PrefixLists []PrefixList `mapstructure:"prefix-lists" json:"name,omitempty"`
+// }
+
 func (lhs *PrefixList) Equal(rhs *PrefixList) bool {
 	if lhs == nil || rhs == nil {
 		return false

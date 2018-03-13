@@ -822,11 +822,28 @@ func (b *RouteUpdateBody) DecodeFromBytes(command CommandType, data []byte) erro
 	return nil
 }
 
-func OspfRouteMap(ri *Rib) {
-	if ri.Type == RIB_OSPF && ri.Metric <= 20 {
+func DistributeListOspf(dlistName string, p *netutil.Prefix, ri *Rib) policy.Action {
+	// Lookup primary
+	fmt.Println("plist primary", dlistName+"primary")
+	primary := server.PrefixListLookup(dlistName + "primary")
+	fmt.Println("XXX primary", primary)
+	if primary != nil && primary.Match(p) {
 		ri.SetFlag(RIB_FLAG_DISTANCE)
 		ri.Distance = 180
+		return policy.Permit
 	}
+
+	fmt.Println("plist primary", dlistName+"backup")
+	backup := server.PrefixListLookup(dlistName + "backup")
+	fmt.Println("XXX backup", backup)
+	if backup != nil && backup.Match(p) {
+		ri.SetFlag(RIB_FLAG_DISTANCE)
+		ri.Distance = 180
+		//ri.Metric +=
+		return policy.Permit
+	}
+
+	return policy.Deny
 }
 
 func (b *RouteUpdateBody) Process(client *Client, h *Header) error {
@@ -866,8 +883,15 @@ func (b *RouteUpdateBody) Process(client *Client, h *Header) error {
 	}
 
 	// OSPF route-map.
-	if LocalPolicy {
-		OspfRouteMap(ri)
+	// if LocalPolicy {
+	// 	OspfRouteMap(ri)
+	// }
+	if ri.Type == RIB_OSPF && vrf.DListOspf != "" {
+		action := DistributeListOspf(vrf.DListOspf, b.Prefix, ri)
+		if action == policy.Deny {
+			fmt.Println("OSPF route filtered by distribute-list", b.Prefix)
+			return nil
+		}
 	}
 
 	// Call RIB API.

@@ -261,6 +261,18 @@ func VrfHubNodeApi(Cmd int, Args cmd.Args) int {
 	return cmd.Success
 }
 
+func DistributeListOspfApi(Cmd int, Args cmd.Args) int {
+	name := Args[0].(string)
+	dlistName := Args[1].(string)
+	if Cmd == cmd.Set {
+		server.VrfDistributeListOspfAdd(name, dlistName)
+	} else {
+		server.VrfDistributeListOspfDelete(name, dlistName)
+	}
+
+	return cmd.Success
+}
+
 func InitAPI() {
 	Parser = cmd.NewParser()
 	Parser.InstallCmd([]string{"vrf", "name", "WORD"}, VrfApi)
@@ -283,4 +295,5 @@ func InitAPI() {
 	Parser.InstallCmd([]string{"vrf", "name", "WORD", "hub-node", "WORD"}, VrfHubNodeApi)
 	Parser.InstallCmd([]string{"vrf", "name", "WORD", "static", "route", "A.B.C.D/M", "nexthop", "A.B.C.D"}, IPv4VrfRouteApi)
 	Parser.InstallCmd([]string{"vrf", "name", "WORD", "static", "route", "A.B.C.D/M", "interface", "WORD"}, IPv4VrfRouteApi2)
+	Parser.InstallCmd([]string{"vrf", "name", "WORD", "distribute-list-ospf", "WORD"}, DistributeListOspfApi)
 }

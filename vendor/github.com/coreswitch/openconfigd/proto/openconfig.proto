@@ -128,6 +128,8 @@ enum ConfigType {
 	COMMIT_END = 7;
 	SUBSCRIBE = 8;
 	SUBSCRIBE_MULTI = 9;
+	SUBSCRIBE_REQUEST = 10;
+	JSON_CONFIG = 11;
 }
 
 // Configuration
@@ -141,18 +143,25 @@ enum SubscribeType {
 	JSON = 1;
 }
 
+message SubscribeRequest {
+	SubscribeType type = 1;
+	string path = 2;
+}
+
 message ConfigRequest {
 	ConfigType type = 1;
 	string module = 2;
 	uint32 port = 3;
 	SubscribeType subtype = 4;
 	repeated string path = 5;
+	repeated SubscribeRequest subscribe = 6;
 }
 
 message ConfigReply {
 	int32 result = 1;
 	ConfigType type = 2;
 	repeated string path = 3;
+	string json = 4;
 }
 
 // Show service.

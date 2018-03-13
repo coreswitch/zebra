@@ -29,6 +29,17 @@ func (t Action) String() string {
 	}
 }
 
+func String2Action(str string) Action {
+	switch str {
+	case "permit":
+		return Permit
+	case "deny":
+		return Deny
+	default:
+		return Deny
+	}
+}
+
 func (t Action) MarshalJSON() ([]byte, error) {
 	if t {
 		return []byte(`"permit"`), nil
