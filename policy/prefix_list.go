@@ -297,13 +297,5 @@ func PrefixListMasterFromJSON(cfg *config.PrefixLists) *PrefixListMaster {
 			pm.EntryAdd(plist.Name, NewPrefixListEntry(int(entry.Number), action, p, opts...))
 		}
 	}
-	// for name, plist := range pm.PrefixLists {
-	// 	for _, entry := range plist.Entries {
-	// 		fmt.Println("prefix-list", name, entry)
-	// 		if entry.Ge != nil {
-	// 			fmt.Printf(" ge %d\n", *entry.Ge)
-	// 		}
-	// 	}
-	// }
 	return pm
 }

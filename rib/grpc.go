@@ -384,6 +384,7 @@ func ConfigPrefixListJSON(jsonStr string) {
 	fmt.Println(plistMaster)
 
 	// Prefix-list -> Server.
+	server.PrefixListMasterSet(plistMaster)
 }
 
 func ConfigJSON(conf *rpc.ConfigReply) {

@@ -654,7 +654,7 @@ func (s *Server) PrefixListMasterSet(pm *policy.PrefixListMaster) error {
 func (s *Server) VrfDistributeListOspfAdd(vrfName string, dlistName string) error {
 	return s.apiSync(func() error {
 		fmt.Println("[API] VrfDistributeListOspfAdd", vrfName, dlistName)
-		vrf := VrfLookupByName("")
+		vrf := VrfLookupByName(vrfName)
 		if vrf == nil {
 			return fmt.Errorf("Can't find VRF by VRF name: %s", vrfName)
 		}
@@ -666,7 +666,7 @@ func (s *Server) VrfDistributeListOspfAdd(vrfName string, dlistName string) erro
 func (s *Server) VrfDistributeListOspfDelete(vrfName string, dlistName string) error {
 	return s.apiSync(func() error {
 		fmt.Println("[API] VrfDistributeListOspfDelete", vrfName, dlistName)
-		vrf := VrfLookupByName("")
+		vrf := VrfLookupByName(vrfName)
 		if vrf == nil {
 			return fmt.Errorf("Can't find VRF by VRF name: %s", vrfName)
 		}

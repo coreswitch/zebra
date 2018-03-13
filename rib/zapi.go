@@ -824,18 +824,16 @@ func (b *RouteUpdateBody) DecodeFromBytes(command CommandType, data []byte) erro
 
 func DistributeListOspf(dlistName string, p *netutil.Prefix, ri *Rib) policy.Action {
 	// Lookup primary
-	fmt.Println("plist primary", dlistName+"primary")
-	primary := server.PrefixListLookup(dlistName + "primary")
-	fmt.Println("XXX primary", primary)
+	primary := server.PrefixListLookup(dlistName + "-primary")
+	fmt.Println("plist primary", dlistName+"-primary", primary)
 	if primary != nil && primary.Match(p) {
 		ri.SetFlag(RIB_FLAG_DISTANCE)
 		ri.Distance = 180
 		return policy.Permit
 	}
 
-	fmt.Println("plist primary", dlistName+"backup")
-	backup := server.PrefixListLookup(dlistName + "backup")
-	fmt.Println("XXX backup", backup)
+	backup := server.PrefixListLookup(dlistName + "-backup")
+	fmt.Println("plist backup", dlistName+"-backup", backup)
 	if backup != nil && backup.Match(p) {
 		ri.SetFlag(RIB_FLAG_DISTANCE)
 		ri.Distance = 180
