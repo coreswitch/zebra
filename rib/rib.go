@@ -388,7 +388,11 @@ func (v *Vrf) RibProcess(p *netutil.Prefix, ribs RibSlice, dels []*Rib, resolve 
 	}
 	// Special default route add path treatment.
 	if def != nil {
-		nSelected = def
+		if len(nFibs) > 0 {
+			nSelected = nFibs[0]
+		} else {
+			nSelected = def
+		}
 		nFibs = append(nFibs, def)
 	}
 
@@ -479,6 +483,9 @@ func (vrf *Vrf) RedistDefaultSync(w Watcher, afi int) {
 	}
 	for _, rib := range n.Item.(RibSlice) {
 		if rib.IsSelectedFib() {
+			if LocalPolicy && rib.Type == RIB_KERNEL {
+				return
+			}
 			w.Notify(vrf.Rib2Route(pb.Op_RouteAdd, p, rib))
 		}
 	}
@@ -505,6 +512,11 @@ func (vrf *Vrf) Rib2Route(op pb.Op, p *netutil.Prefix, rib *Rib) *pb.Route {
 }
 
 func (v *Vrf) Redistribute(op pb.Op, p *netutil.Prefix, rib *Rib) {
+	if LocalPolicy {
+		if p.IsDefault() && rib.Type == RIB_KERNEL {
+			return
+		}
+	}
 	notifyFunc := func(wr WatcherRedist) {
 		var watchers Watchers
 		if p.IsDefault() {
