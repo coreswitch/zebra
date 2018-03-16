@@ -78,3 +78,31 @@ func TestAsPathParse256(t *testing.T) {
 		fmt.Errorf("AS_PATH segment number is not 2")
 	}
 }
+
+func TestAsPathReplace(t *testing.T) {
+	aspath := &ASPath{}
+	aspath = aspath.Append(uint32(100))
+	aspath = aspath.Append(uint32(64512))
+	aspath = aspath.Append(uint32(200))
+	fmt.Println("AsPathReplace", aspath)
+	aspath.Replace(64512, 23456)
+	fmt.Println("AsPathReplace", aspath)
+
+	data, err := aspath.Serialize()
+	if err != nil {
+		t.Error(err)
+	}
+	conv := &ASPath{}
+	conv.DecodeFromBytes(data)
+	fmt.Println("Converted:", conv)
+
+	conv.Replace(23456, 64512)
+
+	data, err = conv.Serialize()
+	if err != nil {
+		t.Error(err)
+	}
+	trans := &ASPath{}
+	trans.DecodeFromBytes(data)
+	fmt.Println("Recover:", trans)
+}

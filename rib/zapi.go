@@ -357,6 +357,7 @@ func (b *InterfaceUpdateBody) Process(client *Client, h *Header) error {
 			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_CONNECTED)
 			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_OSPF)
 			server.RedistSubscribe(client, false, uint32(h.VrfId), AFI_IP, RIB_BGP)
+			server.RedistDefaultSubscribe(client, false, uint32(h.VrfId), AFI_IP)
 		}
 		if client.version == 3 && client.routeType == ROUTE_BGP {
 			server.RedistDefaultSubscribe(client, true, 0, AFI_IP)
@@ -734,10 +735,14 @@ func (b *RouteUpdateBody) Serialize() ([]byte, error) {
 	}
 
 	if b.Message&MESSAGE_ASPATH > 0 {
+		aspath := &policy.ASPath{}
+		aspath.DecodeFromBytes(b.Aux)
+		aspath.Replace(23456, 64512)
+		aux, _ := aspath.Serialize()
 		bbuf := make([]byte, 4)
-		binary.BigEndian.PutUint32(bbuf, uint32(len(b.Aux)))
+		binary.BigEndian.PutUint32(bbuf, uint32(len(aux)))
 		buf = append(buf, bbuf...)
-		buf = append(buf, b.Aux...)
+		buf = append(buf, aux...)
 	}
 
 	return buf, nil
@@ -812,8 +817,11 @@ func (b *RouteUpdateBody) DecodeFromBytes(command CommandType, data []byte) erro
 		aspathLen := binary.BigEndian.Uint32(data[:4])
 		data = data[4:]
 		if int(aspathLen) == len(data) {
-			b.Aux = make([]byte, len(data))
-			copy(b.Aux, data)
+			aspath := &policy.ASPath{}
+			aspath.DecodeFromBytes(data)
+			aspath.Replace(64512, 23456)
+			aux, _ := aspath.Serialize()
+			b.Aux = aux
 		} else {
 			log.Warnf("zapi:ASPath len %d is different with data len %d", aspathLen, len(data))
 		}

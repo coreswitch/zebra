@@ -94,6 +94,13 @@ func (aspath *ASPath) String() string {
 	return strings.Join(strs, " ")
 }
 
+func (aspath *ASPath) Replace(from, to uint32) *ASPath {
+	for _, seg := range aspath.segs {
+		seg.Replace(from, to)
+	}
+	return aspath
+}
+
 //////////////////////////////
 
 func (aspath AsPath) String() string {
@@ -153,8 +160,16 @@ func (seg *As4Segment) String() string {
 	return head + strings.Join(strs, " ") + tail
 }
 
-func (seg *As4Segment) Serialize() ([]byte, error) {
-	return nil, nil
+func (aspath *ASPath) Serialize() ([]byte, error) {
+	var data []byte
+	for _, seg := range aspath.segs {
+		buf, err := seg.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, buf...)
+	}
+	return data, nil
 }
 
 func (seg *As4Segment) GetLength() int {
@@ -190,6 +205,16 @@ func (seg *As4Segment) DecodeFromBytes(data []byte) error {
 	return nil
 }
 
+func (seg *As4Segment) Serialize() ([]byte, error) {
+	buf := make([]byte, 2+len(seg.As)*4)
+	buf[0] = seg.Type
+	buf[1] = seg.Length
+	for pos, as := range seg.As {
+		binary.BigEndian.PutUint32(buf[2+pos*4:], as)
+	}
+	return buf, nil
+}
+
 func (seg *As4Segment) EncodeLength() int {
 	return int(2 + (seg.Length * 4))
 }
@@ -202,6 +227,14 @@ func (seg *As4Segment) PathLength() int {
 		return 1
 	default:
 		return 0
+	}
+}
+
+func (seg *As4Segment) Replace(from, to uint32) {
+	for pos, as := range seg.As {
+		if as == from {
+			seg.As[pos] = to
+		}
 	}
 }
 
@@ -319,6 +352,24 @@ func (aspath AsPath) Append(asnum uint32) AsPath {
 	if seg.GetLength() == 255 {
 		seg = NewAs4Segment(seg.GetType())
 		aspath = append(aspath, seg)
+	}
+	seg.Append(asnum)
+
+	return aspath
+}
+
+func (aspath *ASPath) Append(asnum uint32) *ASPath {
+	var seg *As4Segment
+	if len(aspath.segs) == 0 {
+		seg = NewAs4Segment(AS_SEQUENCE)
+		aspath.segs = append(aspath.segs, seg)
+	} else {
+		seg = aspath.segs[len(aspath.segs)-1]
+	}
+	// Add a new segment if existing segment is full.
+	if seg.GetLength() == 255 {
+		seg = NewAs4Segment(seg.GetType())
+		aspath.segs = append(aspath.segs, seg)
 	}
 	seg.Append(asnum)
 
