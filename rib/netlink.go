@@ -169,6 +169,8 @@ func (route RouteInfo) String() string {
 		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
 			strs = append(strs, fmt.Sprintf("encap seg6 %s", nhop.EncapSeg6.String()))
+		case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+			strs = append(strs, fmt.Sprintf("encap seg6local %s", nhop.EncapSeg6Local.String()))
 		}
 	}
 	return fmt.Sprintf("%s", strings.Join(strs, " "))
@@ -176,11 +178,12 @@ func (route RouteInfo) String() string {
 }
 
 type NexthopInfo struct {
-	LinkIndex int
-	Hops      int
-	Gateway   net.IP
-	EncapType int
-	EncapSeg6 EncapSEG6
+	LinkIndex      int
+	Hops           int
+	Gateway        net.IP
+	EncapType      int
+	EncapSeg6      EncapSEG6
+	EncapSeg6Local EncapSEG6Local
 }
 
 func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
@@ -267,6 +270,21 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 						info.EncapType = nl.LWTUNNEL_ENCAP_SEG6
 						info.EncapSeg6.Mode = seg6.Mode
 						info.EncapSeg6.Segments = seg6.Segments
+					case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+						seg6local := &netlink.SEG6LocalEncap{}
+						if err := seg6local.Decode(encap.Value); err != nil {
+							fmt.Println("ERROR: failed to Decode seg6local RTA")
+							return nil, nil, err
+						}
+						info.EncapType = nl.LWTUNNEL_ENCAP_SEG6_LOCAL
+						info.EncapSeg6Local.Flags = seg6local.Flags
+						info.EncapSeg6Local.Action = seg6local.Action
+						info.EncapSeg6Local.Segments = seg6local.Segments
+						info.EncapSeg6Local.Table = seg6local.Table
+						info.EncapSeg6Local.InAddr = seg6local.InAddr
+						info.EncapSeg6Local.In6Addr = seg6local.In6Addr
+						info.EncapSeg6Local.Iif = seg6local.Iif
+						info.EncapSeg6Local.Oif = seg6local.Oif
 					}
 				}
 				return info, value[int(nh.RtNexthop.Len):], nil
@@ -303,6 +321,21 @@ func deserializeRoute(m syscall.NetlinkMessage) (*RouteInfo, error) {
 			nexthop.EncapType = nl.LWTUNNEL_ENCAP_SEG6
 			nexthop.EncapSeg6.Mode = seg6.Mode
 			nexthop.EncapSeg6.Segments = seg6.Segments
+		case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+			seg6local := &netlink.SEG6LocalEncap{}
+			if err := seg6local.Decode(encap.Value); err != nil {
+				fmt.Println("ERROR: failed to Decode seg6local RTA")
+				return nil, err
+			}
+			nexthop.EncapType = nl.LWTUNNEL_ENCAP_SEG6_LOCAL
+			nexthop.EncapSeg6Local.Flags = seg6local.Flags
+			nexthop.EncapSeg6Local.Action = seg6local.Action
+			nexthop.EncapSeg6Local.Segments = seg6local.Segments
+			nexthop.EncapSeg6Local.Table = seg6local.Table
+			nexthop.EncapSeg6Local.InAddr = seg6local.InAddr
+			nexthop.EncapSeg6Local.In6Addr = seg6local.In6Addr
+			nexthop.EncapSeg6Local.Iif = seg6local.Iif
+			nexthop.EncapSeg6Local.Oif = seg6local.Oif
 		}
 	}
 
@@ -924,6 +957,17 @@ func NetlinkRouteAdd(p *netutil.Prefix, rib *Rib, vrfId uint32) error {
 			seg6.Mode = nhop.EncapSeg6.Mode
 			seg6.Segments = nhop.EncapSeg6.Segments
 			route.Encap = seg6
+		case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+			seg6local := &netlink.SEG6LocalEncap{}
+			seg6local.Flags = nhop.EncapSeg6Local.Flags
+			seg6local.Action = nhop.EncapSeg6Local.Action
+			seg6local.Segments = nhop.EncapSeg6Local.Segments
+			seg6local.Table = nhop.EncapSeg6Local.Table
+			seg6local.InAddr = nhop.EncapSeg6Local.InAddr
+			seg6local.In6Addr = nhop.EncapSeg6Local.In6Addr
+			seg6local.Iif = nhop.EncapSeg6Local.Iif
+			seg6local.Oif = nhop.EncapSeg6Local.Oif
+			route.Encap = seg6local
 		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
@@ -963,6 +1007,17 @@ func NetlinkRouteDelete(p *netutil.Prefix, rib *Rib, vrfId uint32) error {
 			seg6.Mode = nhop.EncapSeg6.Mode
 			seg6.Segments = nhop.EncapSeg6.Segments
 			route.Encap = seg6
+		case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+			seg6local := &netlink.SEG6LocalEncap{}
+			seg6local.Flags = nhop.EncapSeg6Local.Flags
+			seg6local.Action = nhop.EncapSeg6Local.Action
+			seg6local.Segments = nhop.EncapSeg6Local.Segments
+			seg6local.Table = nhop.EncapSeg6Local.Table
+			seg6local.InAddr = nhop.EncapSeg6Local.InAddr
+			seg6local.In6Addr = nhop.EncapSeg6Local.In6Addr
+			seg6local.Iif = nhop.EncapSeg6Local.Iif
+			seg6local.Oif = nhop.EncapSeg6Local.Oif
+			route.Encap = seg6local
 		}
 	} else {
 		var multiPath []*netlink.NexthopInfo
@@ -1222,6 +1277,8 @@ func EncapTypeString(typ int) string {
 		return "seg6"
 	case nl.LWTUNNEL_ENCAP_BPF:
 		return "bpf"
+	case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+		return "seg6local"
 	}
 	return "unknown"
 }

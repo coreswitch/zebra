@@ -194,3 +194,68 @@ func (v *Vrf) StaticSeg6SegmentsDelete(p *netutil.Prefix, naddr net.IP, mode str
 	}
 	return nil
 }
+
+func (v *Vrf) StaticSeg6LocalAdd(p *netutil.Prefix, naddr net.IP, seg6local EncapSEG6Local) error {
+	node := v.staticTable[p.AFI()].Acquire(p.IP, p.Length)
+	nhop := NewNexthopAddr(naddr)
+	nhop.EncapType = nl.LWTUNNEL_ENCAP_SEG6_LOCAL
+	nhop.EncapSeg6Local = seg6local
+
+	var static *Static
+
+	if node.Item != nil {
+		static = node.Item.(*Static)
+		for _, n := range static.Nexthops {
+			if n.Equal(nhop) {
+				v.staticTable[p.AFI()].Release(node)
+				return fmt.Errorf("Same nexthop exists")
+			}
+		}
+	} else {
+		static = &Static{}
+		node.Item = static
+	}
+	static.Nexthops = append(static.Nexthops, nhop)
+
+	v.RibAdd(p, static.Rib())
+
+	return nil
+}
+func (v *Vrf) StaticSeg6LocalDelete(p *netutil.Prefix, naddr net.IP, seg6local EncapSEG6Local) error {
+	//fmt.Println("DEBUG: StaticSeg6LocalDelete:", p, naddr)
+	node := v.staticTable[p.AFI()].Lookup(p.IP, p.Length)
+	nhop := NewNexthopAddr(naddr)
+	nhop.EncapType = nl.LWTUNNEL_ENCAP_SEG6_LOCAL
+	nhop.EncapSeg6Local = seg6local
+
+	if node == nil {
+		fmt.Println("Can't find the route")
+		return fmt.Errorf("Can't find the route")
+	}
+	if node.Item == nil {
+		fmt.Println("No static route information")
+		return fmt.Errorf("No static route information")
+	}
+
+	static := node.Item.(*Static)
+	nhops := []*Nexthop{}
+	for _, n := range static.Nexthops {
+		if !n.Equal(nhop) {
+			nhops = append(nhops, n)
+		}
+	}
+	if len(nhops) == len(static.Nexthops) {
+		fmt.Println("Can't find the nexthop")
+		return fmt.Errorf("Can't find the nexthop")
+	}
+	static.Nexthops = nhops
+
+	if len(nhops) == 0 {
+		fmt.Println("RibDelete")
+		v.RibDelete(p, static.Rib())
+	} else {
+		fmt.Println("RibAdd with a nexthop deleted")
+		v.RibAdd(p, static.Rib())
+	}
+	return nil
+}

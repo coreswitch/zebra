@@ -3,11 +3,14 @@
 SRv6 show/set/delete commands are supported on Zebra and Openconfigd using following dataplane.
 
 * Linux Kernel version 4.10 or later
+	* SRv6 routes are implemented as LWT (Light Weight Tunnel) on Linux.
+	* Kernel version 4.10 supports T.Insert and T.Encaps
+	* Kernel version 4.14 supports some of End.* functions in SRv6 Network Programming [1]
+	* [1] draft-filsfils-spring-srv6-network-programming
 
-Currently SRv6 routes (Linux LWT, Light Weight Tunnel) is supported.
+This document descrives how to show/set/delete T.Insert and T.Encaps.
 
-SRv6 Network Programming [1] is not supported and planned to be a future work.  
-[1] draft-filsfils-spring-srv6-network-programming
+See "srv6local.md" for description of other End.* functions.
 
 ## Prerequisites
 

@@ -417,6 +417,18 @@ func (s *Server) StaticSeg6SegmentsDelete(prefix *netutil.Prefix, nexthop net.IP
 	})
 }
 
+func (s *Server) StaticSeg6LocalAdd(prefix *netutil.Prefix, nexthop net.IP, seg6local EncapSEG6Local) error {
+	return s.apiSync(func() error {
+		return VrfDefault().StaticSeg6LocalAdd(prefix, nexthop, seg6local)
+	})
+}
+
+func (s *Server) StaticSeg6LocalDelete(prefix *netutil.Prefix, nexthop net.IP, seg6local EncapSEG6Local) error {
+	return s.apiSync(func() error {
+		return VrfDefault().StaticSeg6LocalDelete(prefix, nexthop, seg6local)
+	})
+}
+
 func (s *Server) AddrAdd(ifName string, addr *netutil.Prefix) error {
 	return s.apiSync(func() error {
 		ifc := InterfaceConfigGet(ifName)
