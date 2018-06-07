@@ -428,6 +428,7 @@ func EtcdKeyValueParse(key, value []byte, get bool) {
 			OspfStatusUpdate()
 		}
 	}
+	NexthopWalkerUpdate()
 }
 
 func EtcdKeyDelete(key []byte) {
@@ -480,6 +481,7 @@ func EtcdKeyDelete(key []byte) {
 		}
 		ProcessQuaggaConfigDelete(vrfId, "local")
 	}
+	NexthopWalkerUpdate()
 }
 
 func EtcdDeletePath(etcdEndpoints []string, etcdPath string) {

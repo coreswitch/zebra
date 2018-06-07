@@ -26,7 +26,9 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreswitch/openconfigd/quagga"
 	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -128,21 +130,16 @@ func OspfStatusRoute(vrfName string, stat *OspfVrfStat) error {
 	}
 	return nil
 }
-
 func OspfStatusNeighbor(vrfName string, stat *OspfVrfStat) error {
-	cmd := exec.Command("vtysh", "-c", "show ip ospf neighbor")
-	env := os.Environ()
-	env = append(env, fmt.Sprintf("VRF=%s", vrfName))
-	env = append(env, "LD_PRELOAD=/usr/bin/vrf_socket.so")
-	cmd.Env = env
+    var in []string
+    in = append(in, "show ip ospf neighbor\n")
+    out, err := VrfQuaggaGet(vrfName, "ospfd", quagga.GetPasswd(), time.Second, in)
+    if err != nil {
+        log.Error("QuaggaStatusBgpSummary: VrfQuaggaGet()", err)
+        return err
+    }
 
-	out, err := cmd.Output()
-	if err != nil {
-		fmt.Println("OspfStatusNeighbor err:", err)
-		return err
-	}
-
-	strs := strings.Split(string(out), "\n")
+	strs := strings.Split(out[0], "\n")
 	for _, str := range strs {
 		r := regexp.MustCompile(`^[0-9]`)
 		if r.MatchString(str) {

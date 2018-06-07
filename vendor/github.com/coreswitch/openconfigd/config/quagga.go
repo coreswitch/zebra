@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 
 	"github.com/coreswitch/netutil"
+	"github.com/coreswitch/openconfigd/quagga"
 	"github.com/coreswitch/process"
 )
 
@@ -56,6 +58,9 @@ func QuaggaDelete(vrfId int) {
 }
 
 func QuaggaExec(vrfId int, interfaceName string, configStr string) {
+	re := regexp.MustCompile(`password 8 ([0-9A-Za-z]{13})`)
+	configStr = re.ReplaceAllString(configStr, "password 8 "+quagga.GetHash())
+
 	fmt.Println("[quagga]config: vrfId", vrfId, "Interface Name: ", interfaceName, configStr)
 	configFileName := fmt.Sprintf("/etc/quagga/bgpd-vrf%d-%s.conf", vrfId, interfaceName)
 	zapiSocketName := fmt.Sprintf("/var/run/zserv-vrf%d.api", vrfId)
@@ -112,4 +117,14 @@ func QuaggaVrfSync(vrfId int, cfg *VrfsConfig) {
 
 func QuaggaVrfDelete(vrfId int) {
 	QuaggaDelete(vrfId)
+}
+
+func NexthopWalkerUpdate() {
+	numProc := len(QuaggaProc) + len(OspfProcessMap)
+	if numProc == 0 {
+		ExecLine(fmt.Sprintf("delete routing-options nexthop-walker"))
+	} else {
+		ExecLine(fmt.Sprintf("set routing-options nexthop-walker"))
+	}
+	Commit()
 }

@@ -2,12 +2,28 @@ package quagga
 
 import (
 	"fmt"
+
 	"github.com/coreswitch/cmd"
 )
 
 var (
 	configParser *cmd.Node
+	quaggaPasswd string
+	quaggaHash   string
 )
+
+func init() {
+	quaggaPasswd = GeneratePasswd()
+	quaggaHash = Crypt(quaggaPasswd)
+}
+
+func GetPasswd() string {
+	return quaggaPasswd
+}
+
+func GetHash() string {
+	return quaggaHash
+}
 
 /*
 	tag:

@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package config_test
 
 import (
+	"github.com/coreswitch/openconfigd/config"
 	"strconv"
 	"testing"
 )
@@ -24,13 +25,13 @@ func TestProcessQuaggaConfigSync(t *testing.T) {
 
 	testInstanceName := "local"
 	completeNotify := make(chan int)
-	QuaggaConfigDir = "/tmp/"
+	config.QuaggaConfigDir = "/tmp/"
 	for i := 0; i < 10; i++ {
 		testJsonString := `{"lan-1": [{"quagga-config": "test1", "routing-protocol": "bgp"}, {"quagga-config": "test2", "routing-protocol": "rip"}],
 		"lan-2": [{"quagga-config": "test1", "routing-protocol": "bgp"}, {"quagga-config": "test2", "routing-protocol": "rip"}]}`
 		testVrfId := i
 		go func(loopcount int, jsonstring string, vrfid int, instName string) {
-			QuaggaConfigSync(jsonstring, vrfid, instName)
+			config.QuaggaConfigSync(jsonstring, vrfid, instName)
 			completeNotify <- loopcount
 		}(i, testJsonString, testVrfId, testInstanceName)
 	}
@@ -41,7 +42,7 @@ func TestProcessQuaggaConfigSync(t *testing.T) {
 		"lan-2": [{"quagga-config": "test1", "routing-protocol": "bgp"}, {"quagga-config": "test2", "routing-protocol": "rip"}]}`
 		testVrfId := i
 		go func(loopcount int, jsonstring string, vrfid int, instName string) {
-			QuaggaConfigSync(jsonstring, vrfid, instName)
+			config.QuaggaConfigSync(jsonstring, vrfid, instName)
 			completeNotify <- loopcount
 		}(i, testJsonString, testVrfId, testInstanceName)
 	}
@@ -54,35 +55,35 @@ func TestProcessQuaggaConfigSync(t *testing.T) {
 		}
 	}
 
-	localManagerInstance := GetIntanceManager("local")
+	localManagerInstance := config.GetInstanceManager("local")
 	if localManagerInstance == nil {
-		t.Errorf("Local Instance Manger is nil")
+		t.Error("Local Instance Manger is nil")
 	}
 	if len(localManagerInstance.QuaggaProcMap) != 10 {
-		t.Error("Expected 10 entry in cache. But found %d", len(localManagerInstance.QuaggaProcMap))
+		t.Errorf("Expected 10 entry in cache. But found %d", len(localManagerInstance.QuaggaProcMap))
 	}
 	for vrfId, vrfProcMap := range localManagerInstance.QuaggaProcMap {
 		for _, interfaceProcList := range vrfProcMap {
 			for _, proc := range interfaceProcList {
 				if proc.Vrf != "vrf"+strconv.Itoa(vrfId) {
-					t.Error("Expected vrf %s for process. But got %s", "vrf"+strconv.Itoa(vrfId), proc.Vrf)
+					t.Errorf("Expected vrf %s for process. But got %s", "vrf"+strconv.Itoa(vrfId), proc.Vrf)
 				}
 			}
 		}
 	}
 
-	remoteManagerInstance := GetIntanceManager("remote")
+	remoteManagerInstance := config.GetInstanceManager("remote")
 	if remoteManagerInstance == nil {
-		t.Errorf("Remote Instance Manger is nil")
+		t.Error("Remote Instance Manger is nil")
 	}
 	if len(remoteManagerInstance.QuaggaProcMap) != 10 {
-		t.Error("Expected 10 entry in cache. But found %d", len(remoteManagerInstance.QuaggaProcMap))
+		t.Errorf("Expected 10 entry in cache. But found %d", len(remoteManagerInstance.QuaggaProcMap))
 	}
 	for vrfId, vrfProcMap := range remoteManagerInstance.QuaggaProcMap {
 		for _, interfaceProcList := range vrfProcMap {
 			for _, proc := range interfaceProcList {
 				if proc.Vrf != "vrf"+strconv.Itoa(vrfId) {
-					t.Error("Expected vrf %s for process. But got %s", "vrf"+strconv.Itoa(vrfId), proc.Vrf)
+					t.Errorf("Expected vrf %s for process. But got %s", "vrf"+strconv.Itoa(vrfId), proc.Vrf)
 				}
 			}
 		}

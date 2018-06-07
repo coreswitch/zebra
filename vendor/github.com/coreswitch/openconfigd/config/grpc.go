@@ -234,6 +234,8 @@ loop:
 			go SubscribeRemoteAdd(stream, msg)
 		case rpc.ConfigType_SUBSCRIBE_MULTI:
 			go SubscribeRemoteAddMulti(stream, msg)
+		case rpc.ConfigType_SUBSCRIBE_REQUEST:
+			go SubscribeAdd(stream, msg)
 		case rpc.ConfigType_SET:
 			YangConfigPush(msg.Path)
 		case rpc.ConfigType_DELETE:
@@ -300,11 +302,13 @@ func DynamicCompletion(commands []string, module string, args []string) []string
 }
 
 // RPC component.
-type RpcComponent struct{}
+type RpcComponent struct {
+	GrpcEndpoint string
+}
 
 // RPC component start method.
 func (this *RpcComponent) Start() component.Component {
-	lis, err := net.Listen("tcp", ":2650")
+	lis, err := net.Listen("tcp", this.GrpcEndpoint)
 	if err != nil {
 		grpclog.Fatalf("failed %v", err)
 	}

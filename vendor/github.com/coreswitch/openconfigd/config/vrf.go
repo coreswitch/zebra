@@ -78,22 +78,28 @@ type QuaggaBgp struct {
 	Interface   string `mapstructure:"interface" json:"interface,omitempty"`
 }
 
+type PriorityConfig struct {
+	Priority string `mapstructure:"priority" json:"priority,omitempty"`
+}
+
 type VrfsConfig struct {
-	Name       string      `mapstructure:"name" json:"name,omitempty"`
-	Id         int         `mapstructure:"vrf_id" json:"vrf_id,omitempty"`
-	Rd         string      `mapstructure:"rd" json:"rd,omitempty"`
-	RtImport   string      `mapstructure:"rt_import" json:"rt_import,omitempty"`
-	RtExport   string      `mapstructure:"rt_export" json:"rt_export,omitempty"`
-	RtBoth     string      `mapstructure:"rt_both" json:"rt_both,omitempty"`
-	VrfRibs    []VrfRib    `mapstructure:"ribs" json:"ribs,omitempty"`
-	Hubs       []Hub       `mapstructure:"hubs" json:"hubs,omitempty"`
-	HubNode    string      `mapstructure:"hub_node" json:"hub_node,omitempty"`
-	Interfaces Interfaces  `mapstructure:"interfaces" json:"interfaces,omitempty"`
-	Vrrp       []Vrrp      `mapstructure:"vrrp" json:"vrrp,omitempty"`
-	Dhcp       Dhcp        `mapstructure:"dhcp" json:"dhcp,omitempty"`
-	Static     Static      `mapstructure:"static" json:"static,omitempty"`
-	Bgp        []QuaggaBgp `mapstructure:"bgp" json:"bgp,omitempty"`
-	Ospf       OspfArray   `mapstructure:"ospf" json:"ospf,omitempty"`
+	Name       string         `mapstructure:"name" json:"name,omitempty"`
+	Id         int            `mapstructure:"vrf_id" json:"vrf_id,omitempty"`
+	Rd         string         `mapstructure:"rd" json:"rd,omitempty"`
+	RtImport   string         `mapstructure:"rt_import" json:"rt_import,omitempty"`
+	RtExport   string         `mapstructure:"rt_export" json:"rt_export,omitempty"`
+	RtBoth     string         `mapstructure:"rt_both" json:"rt_both,omitempty"`
+	VrfRibs    []VrfRib       `mapstructure:"ribs" json:"ribs,omitempty"`
+	Hubs       []Hub          `mapstructure:"hubs" json:"hubs,omitempty"`
+	HubNode    string         `mapstructure:"hub_node" json:"hub_node,omitempty"`
+	Interfaces Interfaces     `mapstructure:"interfaces" json:"interfaces,omitempty"`
+	Vrrp       []Vrrp         `mapstructure:"vrrp" json:"vrrp,omitempty"`
+	Dhcp       Dhcp           `mapstructure:"dhcp" json:"dhcp,omitempty"`
+	Static     Static         `mapstructure:"static" json:"static,omitempty"`
+	Bgp        []QuaggaBgp    `mapstructure:"bgp" json:"bgp,omitempty"`
+	Ospf       OspfArray      `mapstructure:"ospf" json:"ospf,omitempty"`
+	Pair       PriorityConfig `mapstructure:"pair" json:"pair,omitempty"`
+	Gateway    PriorityConfig `mapstructure:"gateway" json:"gateway,omitempty"`
 }
 
 var EtcdVrfMap = map[int]VrfsConfig{}
@@ -401,6 +407,16 @@ func ProcessVrfUpdate(vrfId int, vrf *VrfsConfig) {
 
 func EtcdVrfSync(vrfId int, vrf *VrfsConfig) {
 	ExecLine(fmt.Sprintf("set vrf name vrf%d", vrfId))
+	if vrf.Pair.Priority == "backup" {
+		ExecLine(fmt.Sprintf("set vrf name vrf%d pair-backup", vrfId))
+	} else {
+		ExecLine(fmt.Sprintf("delete vrf name vrf%d pair-backup", vrfId))
+	}
+	if vrf.Gateway.Priority == "backup" {
+		ExecLine(fmt.Sprintf("set vrf name vrf%d region-backup", vrfId))
+	} else {
+		ExecLine(fmt.Sprintf("delete vrf name vrf%d region-backup", vrfId))
+	}
 	Commit()
 	ProcessVrfUpdate(vrfId, vrf)
 	Commit()
@@ -494,6 +510,7 @@ func VrfParse(vrfId int, jsonStr string) {
 	VrrpVrfSync(vrfId, &vrf)
 	QuaggaVrfSync(vrfId, &vrf)
 	OspfVrfSync(vrfId, &vrf)
+	DistributeListSync(vrfId, &vrf)
 
 	// GoBGP VrfConfig
 	vrfConfig := vrf.Copy()
@@ -518,6 +535,7 @@ func VrfDelete(vrfId int, vrfIfDelete bool) {
 	VrrpVrfDelete(vrfId)
 	QuaggaVrfDelete(vrfId)
 	OspfVrfDelete(vrfId)
+	DistributeListDelete(vrfId)
 	EtcdVrfDelete(vrfId, vrfIfDelete)
 
 	delete(EtcdVrfMap, vrfId)

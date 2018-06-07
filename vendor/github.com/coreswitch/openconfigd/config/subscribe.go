@@ -55,8 +55,7 @@ type SubPath interface {
 }
 
 type SubPathBase struct {
-	path *Path
-	//cmd  []*Command
+	path    *Path
 	pathcmd map[string][]*Command
 	sync    bool
 	json    bool
@@ -106,9 +105,23 @@ func (subPath *SubPathBase) CommandClear() {
 
 func (subPath *SubPathRemote) Commit() {
 	fmt.Println("[cmd]SubPathRemote:Commit() Start", subPath.path.Name)
-	for _, pathcmd := range subPath.pathcmd {
-		for _, cmd := range pathcmd {
-			subPath.sub.SendCommand(cmd)
+	for pathstr, pathcmd := range subPath.pathcmd {
+		if subPath.json {
+			fmt.Println("XXX JSON Commit", pathstr)
+			path := strings.Split(pathstr, "|")
+			config := configCandidate.LookupByPath(path)
+			json := "{}"
+			if config != nil {
+				json = config.JsonMarshal()
+			} else {
+				fmt.Println("XXXX empty JSON", path)
+			}
+			subPath.sub.SendJSON(path, json)
+			fmt.Println("JSON:", json)
+		} else {
+			for _, cmd := range pathcmd {
+				subPath.sub.SendCommand(cmd)
+			}
 		}
 	}
 	fmt.Println("[cmd]SubPathRemote:Commit() End", subPath.path.Name)
@@ -154,6 +167,19 @@ func (sub *Subscriber) SendMessage(typ rpc.ConfigType, path []string) {
 	msg := &rpc.ConfigReply{
 		Type: typ,
 		Path: path,
+	}
+	sub.stream.Send(msg)
+}
+
+func (sub *Subscriber) SendJSON(path []string, json string) {
+	if sub.stream == nil {
+		fmt.Println("[cmd]SendJSON: sub.stream is nil")
+		return
+	}
+	msg := &rpc.ConfigReply{
+		Type: rpc.ConfigType_JSON_CONFIG,
+		Path: path,
+		Json: json,
 	}
 	sub.stream.Send(msg)
 }
@@ -510,6 +536,57 @@ func SubscribeRemoteAdd(stream rpc.Config_DoConfigServer, req *rpc.ConfigRequest
 		fmt.Println("Ribd connected. Perform full resync")
 		EtcdWatchUpdate()
 	}
+}
+
+func SubscribeAdd(stream rpc.Config_DoConfigServer, req *rpc.ConfigRequest) {
+	fmt.Println("[sub]SubscribeAdd:", req.Module)
+
+	// In case of ribd we do a full resync from etcd - Delete and create
+	if IsRibdAsync(req.Module) {
+		RIBD_SYNCHRONIZED = true
+	} else {
+		fmt.Println("Lock:SubscribeAdd")
+		SubscribeMutex.Lock()
+		defer SubscribeMutex.Unlock()
+	}
+
+	sub := SubscribeLookup(stream)
+	if sub == nil {
+		sub = &Subscriber{Module: req.Module, Port: req.Port, stream: stream}
+		SubscribeMap[sub] = sub
+	}
+
+	// Registration
+	subPathList := []*SubPathRemote{}
+	for _, path := range req.Subscribe {
+		subPath := &SubPathRemote{sub: sub}
+		subPath.pathcmd = map[string][]*Command{}
+		subPath.sync = true
+		subPath.RegisterPath([]string{path.Path})
+		if path.Type == rpc.SubscribeType_JSON {
+			fmt.Println("XXX enable JSON", path.Path)
+			subPath.json = true
+		}
+		sub.SubPath = append(sub.SubPath, subPath)
+		subPathList = append(subPathList, subPath)
+	}
+
+	// Sync. Ribd needs special handling (order of resource configurations)
+	// So do a full etcd resync when ribd gets connected
+	if !IsRibdAsync(req.Module) {
+		SubscribeSync()
+	}
+
+	// Clear sync flag.
+	for _, subPath := range subPathList {
+		subPath.sync = false
+	}
+
+	if IsRibdAsync(req.Module) {
+		fmt.Println("Ribd connected. Perform full resync")
+		EtcdWatchUpdate()
+	}
+	//SubscribeDump()
 }
 
 func SubscribeRemoteAddMulti(stream rpc.Config_DoConfigServer, req *rpc.ConfigRequest) {

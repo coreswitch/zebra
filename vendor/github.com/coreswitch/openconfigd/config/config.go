@@ -23,6 +23,7 @@ import (
 	"os/user"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -179,7 +180,13 @@ func (configs ConfigSlice) Less(i, j int) bool {
 	if pi != pj {
 		return pi > pj
 	} else {
-		return configs[i].Name < configs[j].Name
+		inum, ierr := strconv.Atoi(configs[i].Name)
+		jnum, jerr := strconv.Atoi(configs[j].Name)
+		if ierr == nil && jerr == nil {
+			return inum < jnum
+		} else {
+			return configs[i].Name < configs[j].Name
+		}
 	}
 }
 
@@ -920,6 +927,7 @@ func (this *ConfigComponent) Stop() component.Component {
 	RelayExitFunc()
 	QuaggaExit()
 	OspfVrfExit()
+	DistributeListExit()
 	GobgpWanExit()
 
 	return this

@@ -41,6 +41,7 @@ func main() {
 	var opts struct {
 		ConfigActiveFile string `short:"c" long:"config-file" description:"active config file name" default:"openconfigd.conf"`
 		ConfigFileDir    string `short:"p" long:"config-dir" description:"config file directory" default:"/usr/local/etc"`
+		RpcEndPoint      string `short:"g" long:"grpc-endpoint" description:"Grpc End Point" default:"127.0.0.1:2650"`
 		YangPaths        string `short:"y" long:"yang-paths" description:"comma separated YANG load path directories"`
 		TwoPhaseCommit   bool   `short:"2" long:"two-phase" description:"two phase commit"`
 		ZeroConfig       bool   `short:"z" long:"zero-config" description:"Do not save or load config other than openconfigd.conf"`
@@ -82,7 +83,9 @@ func main() {
 	cliComponent := &config.CliComponent{}
 
 	// Rpc Component
-	rpcComponent := &config.RpcComponent{}
+	rpcComponent := &config.RpcComponent{
+		GrpcEndpoint: opts.RpcEndPoint,
+	}
 
 	systemMap := component.SystemMap{
 		"yang":   yangComponent,

@@ -32,9 +32,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const defaultGrpcEndpoint = ":50051"
+
 var (
-	gobgpConfig   GobgpConfig
-	gobgpRouterId string
+	gobgpConfig       GobgpConfig
+	gobgpRouterId     string
+	gobgpGrpcEndpoint string = defaultGrpcEndpoint
 )
 
 type GobgpConfig struct {
@@ -126,6 +129,10 @@ func (lhs *VrfRib) Equal(rhs *VrfRib) bool {
 	return true
 }
 
+func NewGobgpClient() (*client.Client, error) {
+	return client.New(gobgpGrpcEndpoint)
+}
+
 func GobgpRouterIdRegister(routerId string) {
 	if gobgpRouterId == routerId {
 		return
@@ -184,7 +191,7 @@ func GobgpStaticPath(s *Route) (*table.Path, error) {
 }
 
 func GobgpClearVrfRib(c *VrfConfig) error {
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -359,7 +366,7 @@ func GobgpSetGlobal(client *client.Client, cfg *GobgpConfig) {
 }
 
 func GobgpSetZebraRoutine() error {
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		return err
 	}
@@ -420,6 +427,7 @@ func GobgpSetVrf(client *client.Client, cfg *GobgpConfig) {
 
 func GobgpSetNeighbor(client *client.Client, cfg *GobgpConfig) {
 	for _, n := range cfg.Neighbors {
+		n.GracefulRestart.Config.RestartTime = 1
 		err := client.AddNeighbor(&n)
 		if err != nil {
 			fmt.Println("GobgpSetNeighbor:", err)
@@ -537,7 +545,7 @@ func GobgpClearGlobalPolicy(client *client.Client) {
 }
 
 func GobgpClearAll() {
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		fmt.Println("GobgpStopServer:", err)
 		return
@@ -635,7 +643,7 @@ func GobgpUpdateVrf(client *client.Client, cfg *GobgpConfig) {
 
 func GobgpUpdate(cfg *GobgpConfig) error {
 	fmt.Println("Updating configuration")
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		return err
 	}
@@ -647,12 +655,12 @@ func GobgpUpdate(cfg *GobgpConfig) error {
 	GobgpClearDefinedSet(client)
 
 	// Set and update.
-	GobgpSetZebra(client, cfg, 3)
 	GobgpUpdateVrf(client, cfg)
 	GobgpUpdateNeighbor(client, cfg)
 	GobgpSetDefinedSet(client, cfg)
 	GobgpSetPolicyDefinition(client, cfg)
 	GobgpSetGlobalPolicy(client, cfg)
+	GobgpSetZebra(client, cfg, 3)
 
 	// Soft reset all of neighbors to reflect policy change.
 	GobgpSoftresetNeighbor(client, cfg)
@@ -661,8 +669,7 @@ func GobgpUpdate(cfg *GobgpConfig) error {
 }
 
 func GobgpReset(cfg *GobgpConfig) error {
-	fmt.Println("New configuration")
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -676,12 +683,12 @@ func GobgpReset(cfg *GobgpConfig) error {
 
 	// Set.
 	GobgpSetGlobal(client, cfg)
-	GobgpSetZebra(client, cfg, 3)
 	GobgpSetVrf(client, cfg)
 	GobgpSetNeighbor(client, cfg)
 	GobgpSetDefinedSet(client, cfg)
 	GobgpSetPolicyDefinition(client, cfg)
 	GobgpSetGlobalPolicy(client, cfg)
+	GobgpSetZebra(client, cfg, 3)
 
 	return nil
 }
@@ -854,7 +861,7 @@ func GobgpVrfRibSync(name string, old, new []VrfRib) {
 	}
 	fmt.Println("------")
 
-	client, err := client.New("")
+	client, err := NewGobgpClient()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -1070,12 +1077,12 @@ func GobgpWanConfig(cfg *GobgpConfig) {
 	defer c.Close()
 
 	GobgpSetGlobal(c, cfg)
-	GobgpSetZebra(c, cfg, 2)
 	GobgpSetNeighbor(c, cfg)
 	GobgpSetDefinedSet(c, cfg)
 	GobgpSetPolicyDefinition(c, cfg)
 	GobgpSetGlobalPolicy(c, cfg)
 	GobgpSetRib(c, cfg)
+	GobgpSetZebra(c, cfg, 2)
 }
 
 // GoBGP WAN
@@ -1148,4 +1155,24 @@ func stringToCommunityValue(comStr string) uint32 {
 	asn, _ := strconv.ParseUint(elem[0], 10, 16)
 	val, _ := strconv.ParseUint(elem[1], 10, 16)
 	return uint32(asn<<16 | val)
+}
+
+func ConfigureGobgpGrpcEndpointApi(set bool, args []interface{}) {
+	if len(args) != 1 {
+		return
+	}
+	grpcEndPoint := args[0].(string)
+	if set {
+		SetGobgpGrpcEndpoint(grpcEndPoint)
+	} else {
+		ClearGobgpGrpcEndpoint()
+	}
+}
+
+func SetGobgpGrpcEndpoint(grpcEndpoint string) {
+	gobgpGrpcEndpoint = grpcEndpoint
+}
+
+func ClearGobgpGrpcEndpoint() {
+	gobgpGrpcEndpoint = defaultGrpcEndpoint
 }

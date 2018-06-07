@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  revision = "8c0189d9f6bbf301e5d055d34268156b317016af"
-
-[[projects]]
   name = "github.com/coreos/etcd"
   packages = [
     "auth/authpb",
@@ -42,7 +36,7 @@
   branch = "master"
   name = "github.com/coreswitch/log"
   packages = ["."]
-  revision = "2fa11ad090a9a3e44f6ef5c9626478cf729ffce9"
+  revision = "319a7dcf0937f2ff8f67e85a2e83f65c112a5405"
 
 [[projects]]
   branch = "master"
@@ -51,10 +45,10 @@
   revision = "505fe400e6fb19e50585deb5e58dab2225bb9a16"
 
 [[projects]]
-  branch = "master"
   name = "github.com/coreswitch/openconfigd"
   packages = ["proto"]
-  revision = "06a4d23d687bf78ba709a70eb5bdc812e874c06d"
+  revision = "bfc77fb4717eca472d05f3faf7d9a9363a42cff3"
+  version = "v0.8.1"
 
 [[projects]]
   branch = "master"
@@ -67,13 +61,7 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hash-set/zebra"
-  packages = ["proto"]
-  revision = "074d56d5876c2ef07f3823a570708d9c933ba1f7"
+  revision = "05f48f4eaf0e05663b562bab533cdd472238ce29"
 
 [[projects]]
   name = "github.com/howeyc/fsnotify"
@@ -85,7 +73,13 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "ea8897e79973357ba785ac2533559a6297e83c44"
 
 [[projects]]
   branch = "master"
@@ -94,7 +88,7 @@
     ".",
     "nl"
   ]
-  revision = "25d2c79295b361cac34eb41cfae90d5c69078b2a"
+  revision = "7c0b5944a3036fc8dc9f4cbf2f5c76dedd29af8b"
 
 [[projects]]
   branch = "master"
@@ -106,21 +100,21 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "49796115aa4b964c318aad4f3084fdb41e9aa067"
+  revision = "b47b1587369238182299fe4dad77d05b8b461e06"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/timeseries",
-    "lex/httplex",
     "trace"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   branch = "master"
@@ -129,7 +123,7 @@
     "unix",
     "windows"
   ]
-  revision = "c1138c84af3a9927aee1a1b8b7ce06c9b7ea52bc"
+  revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -159,7 +153,7 @@
     "googleapis/api/annotations",
     "googleapis/rpc/status"
   ]
-  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
+  revision = "81158efcc9f219c511e4d3c0d61a0e6e49c01a24"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -189,6 +183,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1d448a87d76262a177fd89d8b3b0bf9034024dcb0428c711d7ed92684035f5de"
+  inputs-digest = "0753f796d96dd22a81ca687e31600a59b7d5036a2bf721a5aef846c7e227dbf0"
   solver-name = "gps-cdcl"
   solver-version = 1

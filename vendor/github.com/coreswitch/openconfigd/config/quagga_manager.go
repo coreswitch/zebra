@@ -20,11 +20,12 @@ import (
 	"os"
 
 	"encoding/json"
+	"strings"
+	"sync"
+
 	"github.com/coreswitch/process"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
-	"strings"
-	"sync"
 )
 
 var QuaggaConfigDir = "/etc/quagga/"
@@ -265,7 +266,7 @@ func (qim QuaggaInstanceManager) QuaggaConfigSync(jsonStr string, vrfId int) {
 
 	// TODO: Make locks more granular
 	qim.LocalCacheLock.Lock()
-	fmt.Println("Got lock qim: %+v", qim)
+	fmt.Printf("Got lock qim: %+v\n", qim)
 	defer fmt.Println("Deferred unlocking")
 	defer qim.LocalCacheLock.Unlock()
 	_, ok := qim.QuaggaConfigCache[vrfId]
@@ -291,33 +292,58 @@ func (qim QuaggaInstanceManager) ProcessQuaggaConfigDelete(vrfId int) {
 	qim.ProcessVrfQuaggaConfigDelete(vrfId)
 }
 
-var quaggaManagers = make(map[string]QuaggaInstanceManager)
+var (
+	quaggaManagers      = make(map[string]QuaggaInstanceManager)
+	quaggaManagersMutex sync.Mutex
+)
 
 func QuaggaConfigSync(jsonStr string, vrfId int, instanceName string) {
 	log.WithFields(log.Fields{
 		"vrfId":        vrfId,
 		"instanceName": instanceName,
 	}).Debug("QuaggaConfigSync")
-	_, ok := quaggaManagers[instanceName]
-	if !ok {
-		log.Debug("Create new quagga manager instance")
-		quaggaManagers[instanceName] = *NewQuaggaManager()
-	}
-	quaggaManagers[instanceName].QuaggaConfigSync(jsonStr, vrfId)
+
+	manager := GetOrCreateInstanceManager(instanceName)
+	manager.QuaggaConfigSync(jsonStr, vrfId)
 }
 
 func ProcessQuaggaConfigDelete(vrfId int, instanceName string) {
-	manager, ok := quaggaManagers[instanceName]
-	if ok {
+	manager := GetInstanceManager(instanceName)
+	if manager != nil {
 		manager.ProcessQuaggaConfigDelete(vrfId)
 	}
 }
 
-func GetIntanceManager(instanceName string) *QuaggaInstanceManager {
+func GetOrCreateInstanceManager(instanceName string) *QuaggaInstanceManager {
+	quaggaManagersMutex.Lock()
+	defer quaggaManagersMutex.Unlock()
+
+	if manager := getInstanceManager(instanceName); manager != nil {
+		return manager
+	}
+
+	return createInstanceManager(instanceName)
+}
+
+func GetInstanceManager(instanceName string) *QuaggaInstanceManager {
+	quaggaManagersMutex.Lock()
+	defer quaggaManagersMutex.Unlock()
+
+	return getInstanceManager(instanceName)
+}
+
+func getInstanceManager(instanceName string) *QuaggaInstanceManager {
 	manager, ok := quaggaManagers[instanceName]
 	if !ok {
 		return nil
 	} else {
 		return &manager
 	}
+}
+
+func createInstanceManager(instanceName string) *QuaggaInstanceManager {
+	log.Debug("Create new quagga manager instance")
+	manager := NewQuaggaManager()
+	quaggaManagers[instanceName] = *manager
+	return manager
 }

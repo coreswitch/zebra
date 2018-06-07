@@ -40,6 +40,9 @@ module coreswitch {
       leaf hub-node {
         type string;
       }
+      leaf distribute-list-ospf {
+        type string;
+      }
       container dhcp {
         uses "dhcp:dhcp";
       }
@@ -327,9 +330,68 @@ module coreswitch {
           }
         }
       }
+      list localsid { /* update based on draft-raza-spring-srv6-yang */
+        key "prefix";
+        leaf prefix {
+          type inet:ipv6-prefix;
+        }
+        list nexthop {
+          key "address";
+          leaf "address" {
+            type inet:ipv6-address;
+          }
+          list action {
+            key "action-type";
+            leaf action-type {
+              type enumeration {
+                enum End;
+                enum End.X;
+                enum End.T;
+                enum End.DX2;
+                enum End.DX6;
+                enum End.DX4;
+                enum End.DT6;
+                enum End.B6;
+                enum End.B6.Encaps;
+              }
+            }
+            leaf-list segments {
+              when "../action-type = 'End.B6' || ../action-type = 'End.B6.Encaps'";
+              type inet:ipv6-address;
+              /* mandatory true; */
+            }
+            leaf nh6 {
+              when "../action-type = 'End.X' || ../action-type = 'End.DX6'";
+              type inet:ipv6-address;
+              /* mandatory true; */
+			}
+            leaf table {
+              when "../action-type = 'End.T' || ../action-type = 'End.DT6'";
+              type uint8 {
+                range 1..255;
+              }
+              /* mandatory true; */
+            }
+            leaf oif {
+              when "../action-type = 'End.DX2'";
+              type string;
+              /* mandatory true; */
+              description "Output interface name";
+            }
+            leaf nh4 {
+              when "../action-type = 'End.DX4'";
+              type inet:ipv4-address;
+              /* mandatory true; */
+            }
+          }
+        }
+      }
+    }
+    leaf nexthop-walker {
+      type empty;
     }
   }
-  
+
   container protocols {
     ext:help "Routing protocol configuration";
     uses quagga:protocols;
@@ -361,6 +423,65 @@ module coreswitch {
       }
       leaf path {
         type string;
+      }
+    }
+  }
+  // ip prefix-list
+  list prefix-list {
+    key "name";
+    leaf name {
+      type string;
+    }
+    // ip prefix-list * description
+    leaf description {
+      description
+        "Prefix-list specific description";
+      type string {
+        length "1..80";
+      }
+    }
+    list seq {
+      // NOTE: the seq element is not actually mandatory
+      // in the Cisco CLI. If it isn't give
+      description
+        "sequence number of an entry";
+      key "number";
+      leaf number {
+        type uint32 {
+          range "1..4294967294";
+        }
+      }
+      leaf action {
+        mandatory;
+        type enumeration {
+          enum permit;
+          enum deny;
+        }
+      }
+      leaf prefix {
+        mandatory;
+        type inet:ipv4-prefix;
+      }
+      leaf ge {
+        description
+          "Minimum prefix length to be matched";
+        type uint8 {
+          range "1..32";
+        }
+      }
+      leaf le {
+        description
+          "Maximum prefix length to be matched";
+        type uint8 {
+          range "1..32";
+        }
+      }
+      leaf eq {
+        description
+          "Maximum prefix length to be matched";
+        type uint8 {
+          range "1..32";
+        }
       }
     }
   }

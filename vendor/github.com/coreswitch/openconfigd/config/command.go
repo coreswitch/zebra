@@ -22,6 +22,7 @@ import (
 
 	"github.com/coreswitch/cmd"
 	"github.com/coreswitch/component"
+	"github.com/coreswitch/openconfigd/quagga"
 	"github.com/coreswitch/process"
 )
 
@@ -87,6 +88,12 @@ func showIpBgpRoute(Args []string) (inst int, instStr string) {
 func showIpBgpNeighbor(Args []string) (inst int, instStr string) {
 	inst = CliSuccessExec
 	instStr = "gobgp neighbor"
+	return
+}
+
+func showQuaggaPassword(Args []string) (inst int, instStr string) {
+	inst = CliSuccessShow
+	instStr = fmt.Sprintf("quagga password is: %s", quagga.GetPasswd())
 	return
 }
 
@@ -355,6 +362,8 @@ func (this *CliComponent) Start() component.Component {
 		&cmd.Param{Helps: []string{"Start", "Process"}})
 	mode.InstallLine("stop process WORD", stopProcess,
 		&cmd.Param{Helps: []string{"Stop", "Process"}})
+	mode.InstallLine("show quagga password", showQuaggaPassword,
+		&cmd.Param{Helps: []string{"Show running system information", "quagga infromation", "Show password"}})
 
 	// Link "run" command to operational node.
 	run := mode.Parser.Lookup("run")
@@ -363,6 +372,7 @@ func (this *CliComponent) Start() component.Component {
 	Parser.InstallLine("system host-name WORD", HostnameApi)
 	Parser.InstallLine("system etcd endpoints WORD", EtcdEndpointsApi)
 	Parser.InstallLine("system etcd path WORD", EtcdPathApi)
+	Parser.InstallLine("system gobgp grpcendpoint WORD", ConfigureGobgpGrpcEndpointApi)
 	Parser.InstallLine("interfaces interface WORD dhcp-relay-group WORD", RelayApi)
 
 	TopCmd = Cmd

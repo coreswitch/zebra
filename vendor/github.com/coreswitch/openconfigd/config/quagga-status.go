@@ -17,14 +17,14 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreswitch/openconfigd/quagga"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -33,20 +33,16 @@ type QuaggaStat struct {
 }
 
 func QuaggaStatusBgpSummary(vrf string, stat *GobgpStat) error {
-	cmd := exec.Command("vtysh", "-c", "show ip bgp sum")
-	env := os.Environ()
-	env = append(env, fmt.Sprintf("VRF=%s", vrf))
-	env = append(env, "LD_PRELOAD=/usr/bin/vrf_socket.so")
-	cmd.Env = env
-
-	out, err := cmd.Output()
+	var in []string
+	in = append(in, "show ip bgp sum\n")
+	out, err := VrfQuaggaGet(vrf, "bgpd", quagga.GetPasswd(), time.Second, in)
 	if err != nil {
-		fmt.Println("QuaggaStatusBgpSummary: err", err)
+		log.Error("QuaggaStatusBgpSummary: VrfQuaggaGet()", err)
 		return err
 	}
 	neighbor := false
 
-	strs := strings.Split(string(out), "\n")
+	strs := strings.Split(out[0], "\n")
 	for _, str := range strs {
 		if !neighbor {
 			r := regexp.MustCompile(`^BGP[a-z\s]+([\d\.]+).*\s([\d\.]+)$`)
@@ -84,20 +80,24 @@ func QuaggaStatusBgpSummary(vrf string, stat *GobgpStat) error {
 }
 
 func QuaggaStatusRib(vrf string, stat *GobgpStat) error {
-	cmd := exec.Command("vtysh", "-c", "show ip bgp")
-	env := os.Environ()
-	env = append(env, fmt.Sprintf("VRF=%s", vrf))
-	env = append(env, "LD_PRELOAD=/usr/bin/vrf_socket.so")
-	cmd.Env = env
+	if len(stat.Neighbor) == 0 {
+		log.Info("QuaggaStatusRib(): no neighbors")
+		return nil
+	} else {
+		log.Infof("QuaggaStatusRib(): No. of neighbors: %d", len(stat.Neighbor))
+	}
+	var in []string
+	fmt.Println("QuaggaStatusRib(): neighbor", stat.Neighbor[0].Peer)
 
-	out, err := cmd.Output()
+	in = append(in, fmt.Sprintf("show ip bgp neighbor %s received-routes\n", stat.Neighbor[0].Peer))
+	out, err := VrfQuaggaGet(vrf, "bgpd", quagga.GetPasswd(), time.Second, in)
 	if err != nil {
-		fmt.Println("QuaggaStatusBgpSummary: err", err)
+		log.Error("QuaggaStatusBgpRib: VrfQuaggaGet()", err)
 		return err
 	}
 	network := false
 
-	strs := strings.Split(string(out), "\n")
+	strs := strings.Split(out[0], "\n")
 	for _, str := range strs {
 		if !network {
 			r := regexp.MustCompile(`^\s+Network`)
@@ -154,7 +154,8 @@ func QuaggaStatusUpdate() {
 	stats := QuaggaStat{}
 
 	for vrfId, _ := range QuaggaProc {
-		QuaggaStatusVrf(fmt.Sprintf("vrf%d", vrfId), &stats)
+		vrf := fmt.Sprintf("vrf%d", vrfId)
+		QuaggaStatusVrf(vrf, &stats)
 	}
 
 	str := ""
