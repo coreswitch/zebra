@@ -169,6 +169,8 @@ func (v *Vrf) RibShowIPv6Entry(t *ShowTask, rib *Rib, database bool) {
 		switch nhop.EncapType {
 		case nl.LWTUNNEL_ENCAP_SEG6:
 			fmt.Fprintf(buf, "      encap seg6 %s\n", nhop.EncapSeg6.String())
+		case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+			fmt.Fprintf(buf, "      encap seg6local %s\n", nhop.EncapSeg6Local.String())
 		}
 		if nhop.IsIfOnly() {
 			fmt.Fprintf(buf, "      via %s, directly connected\n", v.IfName(nhop.Index))

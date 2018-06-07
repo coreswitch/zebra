@@ -30,7 +30,6 @@ type EncapSEG6 struct {
 }
 
 func (e EncapSEG6) String() string {
-	//seg := netlink.SEG6Encap{ Mode: e.Mode, Segments: e.Segments }
 	seg := netlink.SEG6Encap{Mode: e.Mode}
 	seg.Segments = e.Segments
 	return seg.String()
@@ -50,11 +49,52 @@ func (e EncapSEG6) Equal(x EncapSEG6) bool {
 	return true
 }
 
+type EncapSEG6Local netlink.SEG6LocalEncap
+
+func (e EncapSEG6Local) String() string {
+	seg := netlink.SEG6LocalEncap{
+		Flags:   e.Flags,
+		Action:  e.Action,
+		Table:   e.Table,
+		InAddr:  e.InAddr,
+		In6Addr: e.In6Addr,
+		Iif:     e.Iif,
+		Oif:     e.Oif,
+	}
+	seg.Segments = e.Segments
+	return seg.String()
+}
+func (e EncapSEG6Local) Equal(o EncapSEG6Local) bool {
+	// compare all arrays first
+	for i := range e.Flags {
+		if e.Flags[i] != o.Flags[i] {
+			return false
+		}
+	}
+	if len(e.Segments) != len(o.Segments) {
+		return false
+	}
+	for i := range e.Segments {
+		if !e.Segments[i].Equal(o.Segments[i]) {
+			return false
+		}
+	}
+	// compare values
+	if !e.InAddr.Equal(o.InAddr) || !e.In6Addr.Equal(o.In6Addr) {
+		return false
+	}
+	if e.Action != o.Action || e.Table != o.Table || e.Iif != o.Iif || e.Oif != o.Oif {
+		return false
+	}
+	return true
+}
+
 type Nexthop struct {
 	net.IP
-	Index     IfIndex
-	EncapType int
-	EncapSeg6 EncapSEG6
+	Index          IfIndex
+	EncapType      int
+	EncapSeg6      EncapSEG6
+	EncapSeg6Local EncapSEG6Local
 }
 
 func (n *Nexthop) AddressString() string {
@@ -93,6 +133,8 @@ func (n Nexthop) String() string {
 	switch n.EncapType {
 	case nl.LWTUNNEL_ENCAP_SEG6:
 		strs = append(strs, fmt.Sprintf("encap seg6 %s", n.EncapSeg6.String()))
+	case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+		strs = append(strs, fmt.Sprintf("encap seg6local %s", n.EncapSeg6Local.String()))
 	}
 	return fmt.Sprintf("%s", strings.Join(strs, " "))
 }
@@ -135,6 +177,10 @@ func (n *Nexthop) Equal(nn *Nexthop) bool {
 	switch n.EncapType {
 	case nl.LWTUNNEL_ENCAP_SEG6:
 		if !n.EncapSeg6.Equal(nn.EncapSeg6) {
+			return false
+		}
+	case nl.LWTUNNEL_ENCAP_SEG6_LOCAL:
+		if !n.EncapSeg6Local.Equal(nn.EncapSeg6Local) {
 			return false
 		}
 	}
