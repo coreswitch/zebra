@@ -15,7 +15,7 @@
 package rip
 
 const (
-	RIPv1               uint8 = 2
+	RIPv1               uint8 = 1
 	RIPv2               uint8 = 2
 	RIP_PORT_DEFAULT          = 520
 	RIP_PACKET_MINSIZE        = 4

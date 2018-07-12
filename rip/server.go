@@ -23,7 +23,7 @@ import (
 )
 
 type Server struct {
-	Version      uint8
+	Version      uint8 // RIPv1 and RIPv2
 	Sock         int
 	SyncCh       chan *Fn
 	DispatCh     chan interface{}
