@@ -148,19 +148,26 @@ func destinationCheck(addr net.IP) bool {
 	return false
 }
 
-func (s *Server) PacketRecv() {
-	s.Buffer = make([]byte, 1024)
-	nbytes, err := unix.Read(s.Sock, s.Buffer)
-	fmt.Println("XXX Read", nbytes, err)
-	s.Buffer = s.Buffer[0:nbytes]
-
-	// unix.Recvmsg(s.Sock, p []byte, oob []byte, flags int)
-}
-
 func (s *Server) Read() {
 	for {
-		log.Info("Start Read")
-		s.PacketRecv()
-		s.PacketParse()
+		buf := make([]byte, RIP_PACKET_MAXLEN)
+
+		nbytes, err := unix.Read(s.Sock, buf)
+		fmt.Println("XXX Read", nbytes, err)
+		buf = buf[:nbytes]
+
+		p := &Packet{}
+		err = p.DecodeFromBytes(buf)
+		if err != nil {
+			log.Info("Parse error")
+			continue
+		}
+		log.Info("Packet:", p)
+		log.Info("AF ", unix.AF_INET)
+
+		// Process Packet
+		// for _, rte :=  range p.RTEs {
+
+		// }
 	}
 }

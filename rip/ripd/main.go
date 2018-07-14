@@ -26,6 +26,7 @@ import (
 )
 
 func main() {
+	//log.SetJSONFormatter()
 	log.Info("RIPd Starting")
 	server := rip.NewServer()
 	serverComponent := &rip.ServerComponent{
@@ -41,8 +42,9 @@ func main() {
 	systemMap.Start()
 	log.Info("RIPd Started")
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 1)
 	log.Info("Adding enp0s6")
+	server.RouterSet()
 	server.EnableInterfaceSet("enp0s6")
 
 	sigs := make(chan os.Signal, 1)

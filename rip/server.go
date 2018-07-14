@@ -33,7 +33,6 @@ type Server struct {
 	IfMap        map[string]*fea.Interface
 	EnableIfMap  map[string]bool
 	PassiveIfMap map[string]bool
-	Buffer       []byte
 }
 
 type Fn struct {
@@ -69,8 +68,6 @@ func (s *Server) Start() {
 			break
 		}
 	}
-
-	s.Client.Stop()
 }
 
 func (s *Server) Stop() {
@@ -86,6 +83,7 @@ func (s *Server) api(fn func() error) error {
 func (s *Server) RouterSet() error {
 	return s.api(func() error {
 		fmt.Println("RouterSet")
+		s.up()
 		return nil
 	})
 }

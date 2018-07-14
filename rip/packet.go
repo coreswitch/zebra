@@ -15,11 +15,20 @@
 package rip
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 )
 
-type Rte struct {
+type Packet struct {
+	Command  byte   `json:"command"`
+	Version  byte   `json:"version"`
+	Padding1 byte   `json:"padding1,omitempty"`
+	Padding2 byte   `json:"padding2,omitempty"`
+	RTEs     []*RTE `json:"rtes,omitempty"`
+}
+
+type RTE struct {
 	Family  uint16
 	Tag     uint16
 	Prefix  net.IP
@@ -28,21 +37,18 @@ type Rte struct {
 	Metric  uint32
 }
 
-type Packet struct {
-	Command  byte
-	Version  byte
-	Padding1 byte
-	Padding2 byte
-	Rtes     []*Rte
+type DecodeOption struct {
 }
 
-func (p *Packet) DecodeFromBytes(data []byte) error {
-	fmt.Println("data len", len(data))
-	if len(data) < RIP_PACKET_MINSIZE {
-		return fmt.Errorf("Pakcet len %d is smaller than minimum size %d", len(data), RIP_PACKET_MINSIZE)
+func (p *Packet) DecodeFromBytes(data []byte, opts ...DecodeOption) error {
+	if len(data) < RIP_HEADER_LEN {
+		return fmt.Errorf("Pakcet len %d is smaller than minimum size %d", len(data), RIP_HEADER_LEN)
 	}
-	if (len(data)-RIP_PACKET_MINSIZE)%20 > 0 {
-		return fmt.Errorf("packet size %d is wrong RIP packet alignment", len(data))
+	if len(opts) > 0 && len(data) > RIP_PACKET_MAXLEN {
+		return fmt.Errorf("Pakcet len %d is larger than maximum size %d", len(data), RIP_PACKET_MAXLEN)
+	}
+	if (len(data)-RIP_HEADER_LEN)%RIP_RTE_LEN > 0 {
+		return fmt.Errorf("Packet len %d is wrong RIP packet alignment", len(data))
 	}
 
 	p.Command = data[0]
@@ -50,20 +56,53 @@ func (p *Packet) DecodeFromBytes(data []byte) error {
 	p.Padding1 = data[2]
 	p.Padding2 = data[3]
 
-	data = data[RIP_PACKET_MINSIZE:]
-	rtenum := len(data) / 20
-	fmt.Println("Num RTEs", rtenum)
+	data = data[RIP_HEADER_LEN:]
+	rteNum := len(data) / 20
 
+	for i := 0; i < rteNum; i++ {
+		rte := &RTE{}
+		rte.Family = binary.BigEndian.Uint16(data[0:2])
+		rte.Tag = binary.BigEndian.Uint16(data[2:4])
+		rte.Prefix = data[4:8]
+		rte.Mask = data[8:12]
+		rte.Nexthop = data[12:16]
+		rte.Metric = binary.BigEndian.Uint32(data[16:20])
+
+		p.RTEs = append(p.RTEs, rte)
+		data = data[RIP_RTE_LEN:]
+	}
 	return nil
 }
 
-func (s *Server) PacketParse() error {
-	p := &Packet{}
-	err := p.DecodeFromBytes(s.Buffer)
-	if err != nil {
-		fmt.Println("Parse error")
-		return err
+func (p *Packet) String() string {
+	str := ""
+	str += fmt.Sprintf("command:%s ", Command2Str(p.Command))
+	str += fmt.Sprintf("version:%d ", p.Version)
+	for _, rte := range p.RTEs {
+		str += fmt.Sprintf("family:%d ", rte.Family)
+		str += fmt.Sprintf("tag:%d ", rte.Tag)
+		str += fmt.Sprintf("prefix:%s ", rte.Prefix)
+		str += fmt.Sprintf("mask:%s ", rte.Mask)
+		str += fmt.Sprintf("nexthop:%s ", rte.Nexthop)
+		str += fmt.Sprintf("metrid:%d ", rte.Metric)
 	}
-	fmt.Println("Packet:", p)
-	return nil
+	return str
+}
+
+func (p *Packet) Serialize() ([]byte, error) {
+	buf := make([]byte, RIP_HEADER_LEN+(len(p.RTEs)*RIP_RTE_LEN))
+	buf[0] = p.Command
+	buf[1] = p.Version
+
+	i := RIP_HEADER_LEN
+	for _, rte := range p.RTEs {
+		binary.BigEndian.PutUint16(buf[i:], rte.Family)
+		binary.BigEndian.PutUint16(buf[i+2:], rte.Tag)
+		copy(buf[i+4:], rte.Prefix)
+		copy(buf[i+8:], rte.Mask)
+		copy(buf[i+12:], rte.Nexthop)
+		binary.BigEndian.PutUint32(buf[i+16:], rte.Metric)
+		i += RIP_RTE_LEN
+	}
+	return buf, nil
 }
