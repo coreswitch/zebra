@@ -78,8 +78,8 @@ func (s *Server) EnableInterface(ifp *Interface) {
 
 	s.Run()
 
-	// s.passiveIfApply(ifi)
-	// s.prefixUpdate(ifi)
+	// s.passiveIfApply(ifp)
+	// s.prefixUpdate(ifp)
 
 	InterfaceMulticastJoin(s.Sock, ifp.dev)
 
