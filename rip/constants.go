@@ -26,13 +26,12 @@ const (
 )
 
 const (
-	RIP_REQUEST     byte = 1
-	RIP_RESPONSE         = 2
-	RIP_TRACEON          = 3 // Obsolete
-	RIP_TRACEOFF         = 4 // Obsolete
-	RIP_POLL             = 5
-	RIP_POLL_ENTRY       = 6
-	RIP_COMMAND_MAX      = 7
+	RIP_REQUEST    byte = 1
+	RIP_RESPONSE        = 2
+	RIP_TRACEON         = 3 // Obsolete
+	RIP_TRACEOFF        = 4 // Obsolete
+	RIP_POLL            = 5
+	RIP_POLL_ENTRY      = 6
 )
 
 var Command2StrMap = map[byte]string{
@@ -42,7 +41,6 @@ var Command2StrMap = map[byte]string{
 	4: "TRACEOFF",
 	5: "POLL",
 	6: "POLL_ENTRY",
-	7: "UNKNOWN",
 }
 
 func Command2Str(command byte) string {

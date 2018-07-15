@@ -19,20 +19,17 @@ import (
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/log"
-	"github.com/coreswitch/zebra/fea"
 )
 
 type Server struct {
-	Version      uint8 // RIPv1 and RIPv2
-	Sock         int
-	SyncCh       chan *Fn
-	DispatCh     chan interface{}
-	Done         chan interface{}
-	Client       *Client
-	Running      bool
-	IfMap        map[string]*fea.Interface
-	EnableIfMap  map[string]bool
-	PassiveIfMap map[string]bool
+	Version    uint8 // RIPv1 and RIPv2
+	Sock       int
+	SyncCh     chan *Fn
+	DispatCh   chan interface{}
+	Done       chan interface{}
+	Client     *Client
+	Running    bool
+	Interfaces *Interfaces
 }
 
 type Fn struct {
@@ -42,14 +39,12 @@ type Fn struct {
 
 func NewServer() *Server {
 	return &Server{
-		Version:      RIPv2,
-		Sock:         -1,
-		SyncCh:       make(chan *Fn, 1024),
-		DispatCh:     make(chan interface{}),
-		Done:         make(chan interface{}),
-		IfMap:        map[string]*fea.Interface{},
-		EnableIfMap:  map[string]bool{},
-		PassiveIfMap: map[string]bool{},
+		Version:    RIPv2,
+		Sock:       -1,
+		SyncCh:     make(chan *Fn, 1024),
+		DispatCh:   make(chan interface{}),
+		Done:       make(chan interface{}),
+		Interfaces: NewInterfaces(),
 	}
 }
 
@@ -83,7 +78,7 @@ func (s *Server) api(fn func() error) error {
 func (s *Server) RouterSet() error {
 	return s.api(func() error {
 		fmt.Println("RouterSet")
-		s.up()
+		s.Run()
 		return nil
 	})
 }
@@ -100,22 +95,29 @@ func (s *Server) VersionUnset(version int) error {
 	return nil
 }
 
+func (s *Server) enableInterfaceSet(ifName string) error {
+	ifp := s.Interfaces.GetByName(ifName)
+	if ifp.Enabled {
+		return nil
+	}
+	s.EnableInterface(ifp)
+	return nil
+}
+
 func (s *Server) EnableInterfaceSet(ifName string) error {
 	return s.api(func() error {
-		if s.enableIfLookup(ifName) {
-			return nil
-		}
-		s.enableIfAdd(ifName)
-		ifp := s.ifLookupByName(ifName)
-		if ifp != nil {
-			s.enableApply(ifp)
-		}
-		return nil
+		return s.enableInterfaceSet(ifName)
 	})
 }
 
-func (s *Server) EnableInterfaceUnset(ifName string) error {
+func (s *Server) enableInterfaceUnset(ifName string) error {
 	return nil
+}
+
+func (s *Server) EnableInterfaceUnset(ifName string) error {
+	return s.api(func() error {
+		return s.enableInterfaceUnset(ifName)
+	})
 }
 
 func (s *Server) EnableNetworkSet() error {
@@ -134,7 +136,7 @@ func (s *Server) NeighborUnset() error {
 	return nil
 }
 
-func (s *Server) up() {
+func (s *Server) Run() {
 	if s.Running {
 		return
 	}

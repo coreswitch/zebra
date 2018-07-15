@@ -15,83 +15,75 @@
 package rip
 
 import (
-	"fmt"
-
+	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
 	"github.com/coreswitch/zebra/fea"
 )
 
-func (s *Server) ifLookupByName(ifName string) *fea.Interface {
-	return s.IfMap[ifName]
+type Interface struct {
+	dev     *fea.Interface
+	Enabled bool
 }
 
-func (s *Server) enableIfLookup(ifName string) bool {
-	return s.EnableIfMap[ifName]
+type Interfaces struct {
+	IfMap   map[string]*Interface
+	IfTable map[uint32]*Interface
 }
 
-func (s *Server) enableIfAdd(ifName string) {
-	s.EnableIfMap[ifName] = true
+func NewInterfaces() *Interfaces {
+	ifdb := &Interfaces{
+		IfTable: map[uint32]*Interface{},
+		IfMap:   map[string]*Interface{},
+	}
+	return ifdb
 }
 
-func (s *Server) enableIfDelete(ifName string) {
-	delete(s.EnableIfMap, ifName)
+func (ifdb *Interfaces) GetByName(ifName string) *Interface {
+	ifp, ok := ifdb.IfMap[ifName]
+	if !ok {
+		ifp = &Interface{}
+		ifdb.IfMap[ifName] = ifp
+	}
+	return ifp
 }
 
-func (s *Server) interfaceWakeUp(ifp *fea.Interface) {
+func (ifdb *Interfaces) LookupByName(ifName string) *Interface {
+	return ifdb.IfMap[ifName]
+}
+
+func (ifdb *Interfaces) Register(dev *fea.Interface) {
+	ifp := ifdb.GetByName(dev.Name)
+	ifp.dev = dev
+	ifdb.IfTable[dev.Index] = ifp
+}
+
+func (ifdb *Interfaces) Unregister(dev *fea.Interface) {
+	ifp := ifdb.GetByName(dev.Name)
+	ifp.dev = nil
+	delete(ifdb.IfTable, dev.Index)
+}
+
+func InterfaceMulticastJoin(sock int, dev *fea.Interface) {
 	maddr := netutil.ParseIPv4(INADDR_RIP_GROUP)
-	for _, ifAddr := range ifp.AddrIpv4 {
-		multicastJoin(s.Sock, maddr, ifAddr.Address.IP, ifp.Index)
+	for _, ifAddr := range dev.AddrIpv4 {
+		multicastJoin(sock, maddr, ifAddr.Address.IP, dev.Index)
 	}
 }
 
-func (s *Server) prefixUpdate(ifi *InterfaceInfo) {
-}
-
-func (s *Server) triggeredUpdateAll() {
-}
-
-func (s *Server) enableApply(ifp *fea.Interface) {
-	ifi := s.InterfaceInfoGet(ifp)
-
-	s.passiveIfApply(ifi)
-	s.prefixUpdate(ifi)
-
-	s.up()
-
-	if !ifi.up {
-		ifi.up = true
-		s.interfaceWakeUp(ifp)
+func (s *Server) EnableInterface(ifp *Interface) {
+	if ifp.dev == nil {
+		log.Info("Do not enable interface since ifp.dev is nil")
+		return
 	}
 
-	s.triggeredUpdateAll()
-}
+	s.Run()
 
-func (s *Server) enableApplyAll() {
-}
+	// s.passiveIfApply(ifi)
+	// s.prefixUpdate(ifi)
 
-func (s *Server) passiveIfLookup(ifName string) bool {
-	return s.PassiveIfMap[ifName]
-}
+	InterfaceMulticastJoin(s.Sock, ifp.dev)
 
-func (s *Server) passiveIfAdd(ifName string) {
-	s.PassiveIfMap[ifName] = true
-}
+	//s.triggeredUpdateAll()
 
-func (s *Server) passiveIfDelete(ifName string) {
-	delete(s.PassiveIfMap, ifName)
-}
-
-func (s *Server) passiveIfApply(ifi *InterfaceInfo) {
-	if s.passiveIfLookup(ifi.ifp.Name) {
-		ifi.passive = true
-	} else {
-		ifi.passive = false
-	}
-}
-
-func (s *Server) multicastJoin(ifp *fea.Interface) bool {
-	// s.sock,
-	multicast := netutil.ParseIPv4(INADDR_RIP_GROUP)
-	fmt.Println(multicast)
-	return true
+	ifp.Enabled = true
 }

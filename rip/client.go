@@ -147,12 +147,13 @@ func (s *Server) Dispatch(res interface{}) {
 	switch res.(type) {
 	case *pb.InterfaceUpdate:
 		mes := res.(*pb.InterfaceUpdate)
+		dev := fea.InterfaceFromPb(mes)
 		switch mes.Op {
 		case pb.Op_InterfaceAdd:
-			ifp := fea.InterfaceFromPb(mes)
-			s.IfMap[ifp.Name] = ifp
+			log.Info("ZAPI: ifp ", dev)
+			s.Interfaces.Register(dev)
 		case pb.Op_InterfaceDelete:
-			delete(s.IfMap, mes.Name)
+			s.Interfaces.Unregister(dev)
 		}
 	case *pb.RouterIdUpdate:
 	case *pb.Route:

@@ -74,21 +74,6 @@ func (p *Packet) DecodeFromBytes(data []byte, opts ...DecodeOption) error {
 	return nil
 }
 
-func (p *Packet) String() string {
-	str := ""
-	str += fmt.Sprintf("command:%s ", Command2Str(p.Command))
-	str += fmt.Sprintf("version:%d ", p.Version)
-	for _, rte := range p.RTEs {
-		str += fmt.Sprintf("family:%d ", rte.Family)
-		str += fmt.Sprintf("tag:%d ", rte.Tag)
-		str += fmt.Sprintf("prefix:%s ", rte.Prefix)
-		str += fmt.Sprintf("mask:%s ", rte.Mask)
-		str += fmt.Sprintf("nexthop:%s ", rte.Nexthop)
-		str += fmt.Sprintf("metrid:%d ", rte.Metric)
-	}
-	return str
-}
-
 func (p *Packet) Serialize() ([]byte, error) {
 	buf := make([]byte, RIP_HEADER_LEN+(len(p.RTEs)*RIP_RTE_LEN))
 	buf[0] = p.Command
@@ -105,4 +90,30 @@ func (p *Packet) Serialize() ([]byte, error) {
 		i += RIP_RTE_LEN
 	}
 	return buf, nil
+}
+
+func (p *Packet) Validate() error {
+	// Version check.
+	if p.Version != RIPv1 && p.Version != RIPv2 {
+		return fmt.Errorf("")
+	}
+
+	// Destination address check.
+
+	return nil
+}
+
+func (p *Packet) String() string {
+	str := ""
+	str += fmt.Sprintf("command:%s ", Command2Str(p.Command))
+	str += fmt.Sprintf("version:%d ", p.Version)
+	for _, rte := range p.RTEs {
+		str += fmt.Sprintf("family:%d ", rte.Family)
+		str += fmt.Sprintf("tag:%d ", rte.Tag)
+		str += fmt.Sprintf("prefix:%s ", rte.Prefix)
+		str += fmt.Sprintf("mask:%s ", rte.Mask)
+		str += fmt.Sprintf("nexthop:%s ", rte.Nexthop)
+		str += fmt.Sprintf("metrid:%d ", rte.Metric)
+	}
+	return str
 }

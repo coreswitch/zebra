@@ -148,14 +148,33 @@ func destinationCheck(addr net.IP) bool {
 	return false
 }
 
+func (s *Server) Response(p *Packet) {
+	log.Info("RESPONSE packet")
+
+	// Auth
+	log.Info("AF ", unix.AF_INET)
+}
+
+func (s *Server) Request(p *Packet) {
+	//
+
+	log.Info("REQUEST packet")
+	// Auth
+	log.Info("AF ", unix.AF_INET)
+}
+
 func (s *Server) Read() {
 	for {
+		// Read packet.
 		buf := make([]byte, RIP_PACKET_MAXLEN)
-
 		nbytes, err := unix.Read(s.Sock, buf)
-		fmt.Println("XXX Read", nbytes, err)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 		buf = buf[:nbytes]
 
+		// Decode packet.
 		p := &Packet{}
 		err = p.DecodeFromBytes(buf)
 		if err != nil {
@@ -163,11 +182,25 @@ func (s *Server) Read() {
 			continue
 		}
 		log.Info("Packet:", p)
-		log.Info("AF ", unix.AF_INET)
 
-		// Process Packet
-		// for _, rte :=  range p.RTEs {
+		// Validate packet.
+		err = p.Validate()
+		if err != nil {
+			continue
+		}
 
-		// }
+		// Process Packet.
+		switch p.Command {
+		case RIP_REQUEST:
+			s.Request(p)
+		case RIP_RESPONSE:
+			s.Response(p)
+		case RIP_TRACEON, RIP_TRACEOFF, RIP_POLL, RIP_POLL_ENTRY:
+			// peer_bad_packet()
+			log.Warnf("RECV[%s] Obsolete RIP command %s received", Command2Str(p.Command))
+		default:
+			// peer_bad_packet()
+			log.Warnf("RECV[%s] Unknown RIP command %d received", p.Command)
+		}
 	}
 }
