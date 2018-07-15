@@ -15,6 +15,9 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +29,10 @@ import (
 )
 
 func main() {
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6061", nil))
+	}()
+
 	//log.SetJSONFormatter()
 	log.Info("RIPd Starting")
 	server := rip.NewServer()
