@@ -27,13 +27,14 @@ import (
 )
 
 type Client struct {
+	running         bool
 	conn            *grpc.ClientConn
 	serv            pb.ZebraClient
 	dispatCh        chan interface{}
-	done            chan interface{}
 	interfaceStream pb.Zebra_InterfaceServiceClient
 	routerIdStream  pb.Zebra_RouterIdServiceClient
 	wg              sync.WaitGroup
+	//done            chan interface{}
 }
 
 func NewClient(dispatCh chan interface{}) *Client {
@@ -108,38 +109,48 @@ func (c *Client) RouterIdSubscribe(vrfId uint32) error {
 
 func (c *Client) Start() {
 	log.Info("Client start")
+	c.running = true
 	for {
-		var err error
-		c.conn, err = grpc.Dial(":2699", grpc.WithInsecure())
-		if err == nil {
-			log.Info("Client conn success", c.conn)
-			break
+		for {
+			var err error
+			c.conn, err = grpc.Dial(":2699", grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second))
+			if err == nil {
+				log.Info("Client conn success")
+				break
+			}
+			log.Info("Client start err", err)
+			timer := time.NewTimer(time.Second * 3)
+			select {
+			// case <-c.done:
+			// 	timer.Stop()
+			// 	break
+			case <-timer.C:
+				log.Info("Client conn retry!")
+			}
 		}
-		log.Info("Client start err", err)
-		timer := time.NewTimer(time.Second * 3)
-		select {
-		case <-c.done:
-			timer.Stop()
-			break
-		case <-timer.C:
-			// Retry.
+		c.serv = pb.NewZebraClient(c.conn)
+
+		err := c.InterfaceSubscribe(VRF_DEFAULT)
+		if err != nil {
+			c.conn.Close()
+			goto Retry
 		}
-	}
-	c.serv = pb.NewZebraClient(c.conn)
+		err = c.RouterIdSubscribe(VRF_DEFAULT)
+		if err != nil {
+			c.conn.Close()
+			goto Retry
+		}
 
-	err := c.InterfaceSubscribe(VRF_DEFAULT)
-	if err != nil {
-		c.Stop()
-		return
-	}
-	err = c.RouterIdSubscribe(VRF_DEFAULT)
-	if err != nil {
-		c.Stop()
-		return
-	}
+	Retry:
+		c.wg.Wait()
+		c.conn.Close()
 
-	select {
-	case <-c.done:
+		// Clean up interfaces.
+
+		// If client is shutting down, return here.
+		if !c.running {
+			return
+		}
 	}
 }
 
@@ -161,5 +172,9 @@ func (s *Server) Dispatch(res interface{}) {
 }
 
 func (c *Client) Stop() {
-	c.conn.Close()
+	log.Info("Stop")
+	c.running = false
+	if c.conn != nil {
+		c.conn.Close()
+	}
 }
