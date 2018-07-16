@@ -164,7 +164,7 @@ func (s *Server) Dispatch(res interface{}) {
 		case pb.Op_InterfaceAdd:
 			log.Info("ZAPI: ifp ", dev)
 			ifp := s.Interfaces.Register(dev)
-			if cfg.BoolVal(ifp.Enabled) {
+			if cfg.BoolVal(ifp.Enable) {
 				s.EnableInterface(ifp)
 			}
 		case pb.Op_InterfaceDelete:

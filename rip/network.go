@@ -33,10 +33,15 @@ func MakeSocket() int {
 
 	// VRF?
 
-	// broadcast
-	// reuseaddr
-	// reuseport
-
+	if err = SocketBroadcast(sock, 1); err != nil {
+		log.Warn(err)
+	}
+	if err = SocketReusePort(sock, 1); err != nil {
+		log.Warn(err)
+	}
+	if err = SocketReuseAddress(sock, 1); err != nil {
+		log.Warn(err)
+	}
 	// recvif
 
 	// ipv4_dstaddr
@@ -45,7 +50,7 @@ func MakeSocket() int {
 
 	// sockaddr for port bind
 	addr := &unix.SockaddrInet4{}
-	addr.Port = 520
+	addr.Port = RIP_PORT_DEFAULT
 
 	// bind.
 	err = unix.Bind(sock, addr)
@@ -54,7 +59,80 @@ func MakeSocket() int {
 	return sock
 }
 
-func multicastJoin(sock int, mcAddr []byte, ifAddr []byte, ifIndex uint32) {
+func SocketBroadcast(sock int, value int) error {
+	return unix.SetsockoptInt(sock, unix.SOL_SOCKET, unix.SO_BROADCAST, value)
+}
+
+func SocketReusePort(sock int, value int) error {
+	return unix.SetsockoptInt(sock, unix.SOL_SOCKET, unix.SO_REUSEPORT, value)
+}
+
+func SocketReuseAddress(sock int, value int) error {
+	return unix.SetsockoptInt(sock, unix.SOL_SOCKET, unix.SO_REUSEADDR, value)
+}
+
+func SocketIPv4MulticastLoop(sock int, value int) error {
+	return unix.SetsockoptInt(sock, unix.IPPROTO_IP, unix.IP_MULTICAST_LOOP, value)
+}
+
+func SendMulticastPacket(ifp *Interface, p *Packet) error {
+	log.Info("SendMulticastPacket")
+	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		return err
+	}
+	if err = SocketBroadcast(sock, 1); err != nil {
+		log.Warn(err)
+	}
+	if err = SocketReusePort(sock, 1); err != nil {
+		log.Warn(err)
+	}
+	if err = SocketReuseAddress(sock, 1); err != nil {
+		log.Warn(err)
+	}
+	if err = SocketIPv4MulticastLoop(sock, 0); err != nil {
+		log.Warn(err)
+	}
+	// XXX VRF binding.
+
+	if err = InterfaceMulticastIf(sock, ifp.dev); err != nil {
+		log.Warn(err)
+	}
+
+	// /* Set multicast interface. */
+	// sin.sin_family = AF_INET
+	// sin.sin_port = pal_hton16 (RIP_PORT_DEFAULT);
+	// sin.sin_addr.s_addr = pal_hton32 (INADDR_RIP_GROUP);
+	sin := &unix.SockaddrInet4{}
+	sin.Port = RIP_PORT_DEFAULT
+	copy(sin.Addr[:], RIP_GROUP_ADDR)
+	fmt.Println(len(sin.Addr))
+	fmt.Println(len(RIP_GROUP_ADDR))
+
+	data, err := p.Serialize()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	unix.Sendto(sock, data, 0, sin)
+
+	unix.Close(sock)
+
+	return nil
+}
+
+func multicastIf(sock int, ifAddr []byte, ifIndex uint32) error {
+	var mr unix.IPMreqn
+	//copy(mr.Multiaddr[:], mcAddr)
+	copy(mr.Address[:], ifAddr)
+	mr.Ifindex = int32(ifIndex)
+	fmt.Println(mr)
+	err := unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_MULTICAST_IF, &mr)
+	fmt.Println("multicastIf", err)
+	return err
+}
+
+func multicastJoin(sock int, mcAddr []byte, ifAddr []byte, ifIndex uint32) error {
 	var mr unix.IPMreqn
 	copy(mr.Multiaddr[:], mcAddr)
 	copy(mr.Address[:], ifAddr)
@@ -62,6 +140,7 @@ func multicastJoin(sock int, mcAddr []byte, ifAddr []byte, ifIndex uint32) {
 	fmt.Println(mr)
 	err := unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_ADD_MEMBERSHIP, &mr)
 	fmt.Println("multicastJoin", err)
+	return err
 }
 
 func IsClassA(ip net.IP) bool {

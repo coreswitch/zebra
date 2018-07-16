@@ -34,6 +34,8 @@ func main() {
 	}()
 
 	//log.SetJSONFormatter()
+	log.SourceField = false
+	log.FuncField = false
 	log.Info("RIPd Starting")
 	server := rip.NewServer()
 	serverComponent := &rip.ServerComponent{

@@ -21,9 +21,10 @@ const (
 	RIP_HEADER_LEN            = 4
 	RIP_PACKET_MAXLEN         = 1500
 	RIP_RTE_LEN               = 20
-	INADDR_RIP_GROUP          = "224.0.0.9"
 	RIP_METRIC_INFINITY       = 16
 )
+
+var RIP_GROUP_ADDR = []byte{224, 0, 0, 9}
 
 const (
 	RIP_REQUEST    byte = 1

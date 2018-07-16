@@ -61,7 +61,7 @@ func (s *Server) Start() {
 			s.Dispatch(res)
 		case <-s.Done:
 			log.Info("Server Done")
-			break
+			return
 		}
 	}
 }
@@ -99,11 +99,11 @@ func (s *Server) VersionUnset(version int) error {
 func (s *Server) EnableInterfaceSet(ifName string) error {
 	return s.api(func() error {
 		ifp := s.Interfaces.GetByName(ifName)
-		if cfg.BoolVal(ifp.Enabled) {
+		if cfg.BoolVal(ifp.Enable) {
 			return nil
 		}
 		s.EnableInterface(ifp)
-		ifp.Enabled = cfg.Bool(true)
+		ifp.Enable = cfg.Bool(true)
 		return nil
 	})
 }

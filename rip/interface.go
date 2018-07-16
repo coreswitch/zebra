@@ -15,14 +15,16 @@
 package rip
 
 import (
+	"github.com/coreswitch/cfg"
 	"github.com/coreswitch/log"
-	"github.com/coreswitch/netutil"
 	"github.com/coreswitch/zebra/fea"
+	"golang.org/x/sys/unix"
 )
 
 type Interface struct {
-	dev     *fea.Interface
-	Enabled *bool
+	dev         *fea.Interface
+	Enable      *bool
+	SendVersion *byte
 }
 
 type Interfaces struct {
@@ -65,10 +67,57 @@ func (ifdb *Interfaces) Unregister(dev *fea.Interface) {
 }
 
 func InterfaceMulticastJoin(sock int, dev *fea.Interface) {
-	maddr := netutil.ParseIPv4(INADDR_RIP_GROUP)
 	for _, ifAddr := range dev.AddrIpv4 {
-		multicastJoin(sock, maddr, ifAddr.Address.IP, dev.Index)
+		multicastJoin(sock, RIP_GROUP_ADDR, ifAddr.Address.IP, dev.Index)
 	}
+}
+
+func InterfaceMulticastIf(sock int, dev *fea.Interface) error {
+	for _, ifAddr := range dev.AddrIpv4 {
+		err := multicastIf(sock, ifAddr.Address.IP, dev.Index)
+		if err != nil {
+			return err
+		}
+		addr := &unix.SockaddrInet4{}
+		addr.Port = RIP_PORT_DEFAULT
+		copy(addr.Addr[:], ifAddr.Address.IP)
+		err = unix.Bind(sock, addr)
+		if err != nil {
+			log.Warn(err)
+		}
+	}
+	return nil
+}
+
+func RequestSendPacket(ifp *Interface, version byte) {
+	log.Info("RequestSendPacket")
+	// RFC2453 3.9.1 Request Messages: If there is exactly one entry in the
+	// request, and it has an address family identifier of zero and a metric of
+	// infinity (i.e., 16), then this is a request to send the entire routing
+	// table.
+	p := &Packet{}
+	p.Command = RIP_REQUEST
+	p.Version = version
+	rte := &RTE{}
+	rte.Metric = RIP_METRIC_INFINITY
+	p.RTEs = append(p.RTEs, rte)
+	SendMulticastPacket(ifp, p)
+}
+
+func RequestSendInterface(ifp *Interface, version byte) {
+	if version == RIPv2 {
+		RequestSendPacket(ifp, version)
+	} else {
+	}
+}
+
+func RequestSend(ifp *Interface) {
+	// Figure out version.
+	version := RIPv2
+	if ifp.SendVersion != nil {
+		version = cfg.ByteVal(ifp.SendVersion)
+	}
+	RequestSendInterface(ifp, version)
 }
 
 func (s *Server) EnableInterface(ifp *Interface) {
@@ -85,4 +134,6 @@ func (s *Server) EnableInterface(ifp *Interface) {
 	InterfaceMulticastJoin(s.Sock, ifp.dev)
 
 	//s.triggeredUpdateAll()
+
+	RequestSend(ifp)
 }
