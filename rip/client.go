@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreswitch/cfg"
 	"github.com/coreswitch/log"
 	"github.com/coreswitch/zebra/fea"
 	pb "github.com/coreswitch/zebra/proto"
@@ -162,7 +163,10 @@ func (s *Server) Dispatch(res interface{}) {
 		switch mes.Op {
 		case pb.Op_InterfaceAdd:
 			log.Info("ZAPI: ifp ", dev)
-			s.Interfaces.Register(dev)
+			ifp := s.Interfaces.Register(dev)
+			if cfg.BoolVal(ifp.Enabled) {
+				s.EnableInterface(ifp)
+			}
 		case pb.Op_InterfaceDelete:
 			s.Interfaces.Unregister(dev)
 		}

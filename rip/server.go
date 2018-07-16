@@ -17,6 +17,7 @@ package rip
 import (
 	"fmt"
 
+	"github.com/coreswitch/cfg"
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/log"
 )
@@ -95,18 +96,15 @@ func (s *Server) VersionUnset(version int) error {
 	return nil
 }
 
-func (s *Server) enableInterfaceSet(ifName string) error {
-	ifp := s.Interfaces.GetByName(ifName)
-	if ifp.Enabled {
-		return nil
-	}
-	s.EnableInterface(ifp)
-	return nil
-}
-
 func (s *Server) EnableInterfaceSet(ifName string) error {
 	return s.api(func() error {
-		return s.enableInterfaceSet(ifName)
+		ifp := s.Interfaces.GetByName(ifName)
+		if cfg.BoolVal(ifp.Enabled) {
+			return nil
+		}
+		s.EnableInterface(ifp)
+		ifp.Enabled = cfg.Bool(true)
+		return nil
 	})
 }
 

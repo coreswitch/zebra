@@ -22,7 +22,7 @@ import (
 
 type Interface struct {
 	dev     *fea.Interface
-	Enabled bool
+	Enabled *bool
 }
 
 type Interfaces struct {
@@ -51,10 +51,11 @@ func (ifdb *Interfaces) LookupByName(ifName string) *Interface {
 	return ifdb.IfMap[ifName]
 }
 
-func (ifdb *Interfaces) Register(dev *fea.Interface) {
+func (ifdb *Interfaces) Register(dev *fea.Interface) *Interface {
 	ifp := ifdb.GetByName(dev.Name)
 	ifp.dev = dev
 	ifdb.IfTable[dev.Index] = ifp
+	return ifp
 }
 
 func (ifdb *Interfaces) Unregister(dev *fea.Interface) {
@@ -84,6 +85,4 @@ func (s *Server) EnableInterface(ifp *Interface) {
 	InterfaceMulticastJoin(s.Sock, ifp.dev)
 
 	//s.triggeredUpdateAll()
-
-	ifp.Enabled = true
 }
