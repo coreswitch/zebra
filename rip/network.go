@@ -17,6 +17,7 @@ package rip
 import (
 	"fmt"
 	"net"
+	"unsafe"
 
 	"github.com/coreswitch/log"
 	"golang.org/x/sys/unix"
@@ -30,9 +31,7 @@ func MakeSocket() int {
 	if err != nil {
 		return -1
 	}
-
-	// VRF?
-
+	// XXX VRF binding.
 	if err = SocketBroadcast(sock, 1); err != nil {
 		log.Warn(err)
 	}
@@ -42,10 +41,9 @@ func MakeSocket() int {
 	if err = SocketReuseAddress(sock, 1); err != nil {
 		log.Warn(err)
 	}
-	// recvif
-
-	// ipv4_dstaddr
-
+	if err = SocketPktInfo(sock, 1); err != nil {
+		log.Warn(err)
+	}
 	// recvbuf
 
 	// sockaddr for port bind
@@ -75,12 +73,19 @@ func SocketIPv4MulticastLoop(sock int, value int) error {
 	return unix.SetsockoptInt(sock, unix.IPPROTO_IP, unix.IP_MULTICAST_LOOP, value)
 }
 
+func SocketPktInfo(sock int, value int) error {
+	return unix.SetsockoptInt(sock, unix.IPPROTO_IP, unix.IP_PKTINFO, value)
+}
+
 func SendMulticastPacket(ifp *Interface, p *Packet) error {
 	log.Info("SendMulticastPacket")
 	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
 	if err != nil {
 		return err
 	}
+	defer unix.Close(sock)
+
+	// XXX VRF binding.
 	if err = SocketBroadcast(sock, 1); err != nil {
 		log.Warn(err)
 	}
@@ -93,21 +98,13 @@ func SendMulticastPacket(ifp *Interface, p *Packet) error {
 	if err = SocketIPv4MulticastLoop(sock, 0); err != nil {
 		log.Warn(err)
 	}
-	// XXX VRF binding.
-
 	if err = InterfaceMulticastIf(sock, ifp.dev); err != nil {
 		log.Warn(err)
 	}
 
-	// /* Set multicast interface. */
-	// sin.sin_family = AF_INET
-	// sin.sin_port = pal_hton16 (RIP_PORT_DEFAULT);
-	// sin.sin_addr.s_addr = pal_hton32 (INADDR_RIP_GROUP);
 	sin := &unix.SockaddrInet4{}
 	sin.Port = RIP_PORT_DEFAULT
 	copy(sin.Addr[:], RIP_GROUP_ADDR)
-	fmt.Println(len(sin.Addr))
-	fmt.Println(len(RIP_GROUP_ADDR))
 
 	data, err := p.Serialize()
 	if err != nil {
@@ -116,20 +113,14 @@ func SendMulticastPacket(ifp *Interface, p *Packet) error {
 	}
 	unix.Sendto(sock, data, 0, sin)
 
-	unix.Close(sock)
-
 	return nil
 }
 
 func multicastIf(sock int, ifAddr []byte, ifIndex uint32) error {
 	var mr unix.IPMreqn
-	//copy(mr.Multiaddr[:], mcAddr)
 	copy(mr.Address[:], ifAddr)
 	mr.Ifindex = int32(ifIndex)
-	fmt.Println(mr)
-	err := unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_MULTICAST_IF, &mr)
-	fmt.Println("multicastIf", err)
-	return err
+	return unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_MULTICAST_IF, &mr)
 }
 
 func multicastJoin(sock int, mcAddr []byte, ifAddr []byte, ifIndex uint32) error {
@@ -137,10 +128,7 @@ func multicastJoin(sock int, mcAddr []byte, ifAddr []byte, ifIndex uint32) error
 	copy(mr.Multiaddr[:], mcAddr)
 	copy(mr.Address[:], ifAddr)
 	mr.Ifindex = int32(ifIndex)
-	fmt.Println(mr)
-	err := unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_ADD_MEMBERSHIP, &mr)
-	fmt.Println("multicastJoin", err)
-	return err
+	return unix.SetsockoptIPMreqn(sock, unix.IPPROTO_IP, unix.IP_ADD_MEMBERSHIP, &mr)
 }
 
 func IsClassA(ip net.IP) bool {
@@ -227,31 +215,74 @@ func destinationCheck(addr net.IP) bool {
 	return false
 }
 
-func (s *Server) Response(p *Packet) {
+func (s *Server) ResponseRecv(p *Packet) {
 	log.Info("RESPONSE packet")
-
 	// Auth
-	log.Info("AF ", unix.AF_INET)
 }
 
-func (s *Server) Request(p *Packet) {
-	//
-
+func (s *Server) RequestRecv(p *Packet) {
 	log.Info("REQUEST packet")
 	// Auth
-	log.Info("AF ", unix.AF_INET)
+}
+
+type PktInfo struct {
+	ifIndex int32
+	ifAddr  net.IP
+	dstAddr net.IP
+}
+
+func NewPktInfo() *PktInfo {
+	return &PktInfo{
+		ifAddr:  make([]byte, net.IPv4len),
+		dstAddr: make([]byte, net.IPv4len),
+	}
+}
+
+func Recv(sock int, buf []byte) (int, *unix.SockaddrInet4, *PktInfo, error) {
+	var info *PktInfo
+	oob := make([]byte, SOCKET_CONTROLL_BUFLEN)
+
+	n, oobn, _, from, err := unix.Recvmsg(sock, buf, oob, 0)
+	if err != nil {
+		return -1, nil, nil, err
+	}
+	oob = oob[:oobn]
+
+	fromAddr, ok := from.(*unix.SockaddrInet4)
+	if !ok {
+		return -1, nil, nil, fmt.Errorf("Recvmsg's from address is not SockaddrInet4")
+	}
+
+	if oobn > 0 {
+		cmsgs, err := unix.ParseSocketControlMessage(oob)
+		if err != nil {
+			return -1, nil, nil, err
+		}
+		for _, cmsg := range cmsgs {
+			if cmsg.Header.Level == unix.IPPROTO_IP && cmsg.Header.Type == unix.IP_PKTINFO {
+				cmsgInfo := (*unix.Inet4Pktinfo)(unsafe.Pointer(&cmsg.Data[0]))
+				info = NewPktInfo()
+				info.ifIndex = cmsgInfo.Ifindex
+				copy(info.ifAddr, cmsgInfo.Spec_dst[:])
+				copy(info.dstAddr, cmsgInfo.Addr[:])
+			}
+		}
+	}
+	return n, fromAddr, info, nil
 }
 
 func (s *Server) Read() {
 	for {
 		// Read packet.
 		buf := make([]byte, RIP_PACKET_MAXLEN)
-		nbytes, err := unix.Read(s.Sock, buf)
+		nbytes, from, info, err := Recv(s.Sock, buf)
 		if err != nil {
 			log.Error(err)
 			return
 		}
 		buf = buf[:nbytes]
+		fmt.Println("from:", from)
+		fmt.Println("info:", info)
 
 		// Decode packet.
 		p := &Packet{}
@@ -271,9 +302,9 @@ func (s *Server) Read() {
 		// Process Packet.
 		switch p.Command {
 		case RIP_REQUEST:
-			s.Request(p)
+			s.RequestRecv(p)
 		case RIP_RESPONSE:
-			s.Response(p)
+			s.ResponseRecv(p)
 		case RIP_TRACEON, RIP_TRACEOFF, RIP_POLL, RIP_POLL_ENTRY:
 			// peer_bad_packet()
 			log.Warnf("RECV[%s] Obsolete RIP command %s received", Command2Str(p.Command))

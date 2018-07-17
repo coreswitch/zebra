@@ -24,6 +24,10 @@ const (
 	RIP_METRIC_INFINITY       = 16
 )
 
+const (
+	SOCKET_CONTROLL_BUFLEN = 1024
+)
+
 var RIP_GROUP_ADDR = []byte{224, 0, 0, 9}
 
 const (
