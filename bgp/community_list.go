@@ -40,7 +40,7 @@ type CommunityList struct {
 
 type CommunityListEntry struct {
 	Type      CommunityListType
-	Policy    policy.Type
+	Policy    policy.Action
 	Community Community
 	Regstr    string
 }
@@ -105,7 +105,7 @@ func (lhs *CommunityListEntry) Equal(rhs *CommunityListEntry) bool {
 	return true
 }
 
-func NewCommunityListEntry(typ CommunityListType, policy policy.Type, str string) (*CommunityListEntry, error) {
+func NewCommunityListEntry(typ CommunityListType, policy policy.Action, str string) (*CommunityListEntry, error) {
 	entry := &CommunityListEntry{
 		Type:   typ,
 		Policy: policy,
@@ -123,7 +123,7 @@ func NewCommunityListEntry(typ CommunityListType, policy policy.Type, str string
 	return entry, nil
 }
 
-func (clist CommunityListMap) CommunityListAdd(name string, typ CommunityListType, policy policy.Type, str string) error {
+func (clist CommunityListMap) CommunityListAdd(name string, typ CommunityListType, policy policy.Action, str string) error {
 	list := clist.CommunityListGet(name)
 	if list.Type != typ {
 		return fmt.Errorf("community-list type mismatch")
@@ -141,7 +141,7 @@ func (clist CommunityListMap) CommunityListAdd(name string, typ CommunityListTyp
 	return nil
 }
 
-func (clist CommunityListMap) CommunityListDelete(name string, typ CommunityListType, policy policy.Type, str string) error {
+func (clist CommunityListMap) CommunityListDelete(name string, typ CommunityListType, policy policy.Action, str string) error {
 	list := clist[name]
 	if list == nil {
 		return fmt.Errorf("community-list name %s dose not exist", name)
