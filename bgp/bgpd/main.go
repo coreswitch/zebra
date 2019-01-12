@@ -26,7 +26,7 @@ func main() {
 	fmt.Println("Starting bgpd")
 	module.Init()
 
-	server := bgp.NewServer(65100)
+	server := bgp.NewServer(1)
 
 	serverComponent := &bgp.ServerComponent{
 		Server: server,
@@ -41,24 +41,24 @@ func main() {
 	}
 	systemMap.Start()
 
-	err := server.RouterIdSet("192.168.55.1")
+	err := server.RouterIdSet("172.16.1.2")
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	err = server.NeighborAdd("192.168.55.2")
+	err = server.NeighborAdd("172.16.1.56", "1")
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = server.NeighborRemoteAsSet("192.168.55.2", 65520)
+	// err = server.NeighborRemoteAsSet("172.16.1.56", 1)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	err = server.NeighborAfiSafiSet("172.16.1.56", bgp.AFI_IP, bgp.SAFI_UNICAST)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = server.NeighborAfiSafiSet("192.168.55.2", bgp.AFI_IP, bgp.SAFI_UNICAST)
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = server.NeighborAfiSafiSet("192.168.55.2", bgp.AFI_IP6, bgp.SAFI_UNICAST)
+	err = server.NeighborAfiSafiSet("172.16.1.56", bgp.AFI_IP6, bgp.SAFI_UNICAST)
 	if err != nil {
 		fmt.Println(err)
 	}

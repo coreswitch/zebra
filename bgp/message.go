@@ -78,7 +78,7 @@ func (msg *BgpHeader) DecodeFromBytes(data []byte) error {
 
 func (msg *BgpHeader) Serialize() ([]byte, error) {
 	buf := make([]byte, BGP_HEADER_LEN)
-	for i, _ := range buf[:16] {
+	for i := range buf[:16] {
 		buf[i] = 0xff
 	}
 	binary.BigEndian.PutUint16(buf[16:18], msg.Len)

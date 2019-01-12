@@ -61,10 +61,11 @@ type Neighbor struct {
 	reflectorClient  bool
 }
 
-func NewNeighbor(server *Server, addr net.IP) *Neighbor {
+func NewNeighbor(server *Server, addr net.IP, as uint32) *Neighbor {
 	n := &Neighbor{
 		server:        server,
 		addr:          addr,
+		as:            &as,
 		afiSafi:       map[AfiSafi]bool{},
 		connRetryTime: 3,
 	}
@@ -136,7 +137,7 @@ func (n *Neighbor) AfiSafiSet(afi Afi, safi Safi) error {
 	return nil
 }
 
-func (s *Server) neighborAdd(addrStr string) error {
+func (s *Server) neighborAdd(addrStr string, asStr string) error {
 	ip := ParseIP(addrStr)
 	if ip == nil {
 		return fmt.Errorf("address format error: %s", addrStr)
@@ -145,7 +146,7 @@ func (s *Server) neighborAdd(addrStr string) error {
 		return fmt.Errorf("neighbor %s already exists", addrStr)
 	}
 
-	n := NewNeighbor(s, ip)
+	n := NewNeighbor(s, ip, 0)
 	s.Neighbors[addrStr] = n
 
 	if s.Runnable() {
@@ -201,9 +202,9 @@ func (s *Server) neighborReflectorClientDisable(addrStr string) error {
 	return nil
 }
 
-func (s *Server) NeighborAdd(addrStr string) error {
+func (s *Server) NeighborAdd(addrStr string, asStr string) error {
 	return s.api(func() error {
-		return s.neighborAdd(addrStr)
+		return s.neighborAdd(addrStr, asStr)
 	})
 }
 
