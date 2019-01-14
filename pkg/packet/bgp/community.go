@@ -103,15 +103,15 @@ func CommunityValParse(s string) (uint32, error) {
 			return 0, err
 		}
 		return uint32(as<<16 | val), nil
-	} else {
-		val, err := strconv.ParseUint(str[0], 10, 32)
-		if err != nil {
-			return 0, err
-		}
-		return uint32(val), nil
 	}
+	val, err := strconv.ParseUint(str[0], 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(val), nil
 }
 
+// CommunityParse parses string representation of community value.
 func CommunityParse(s string) (Community, error) {
 	c := Community{}
 	for _, str := range strings.Split(s, " ") {
