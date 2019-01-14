@@ -20,6 +20,7 @@ package bgp
 import (
 	"fmt"
 
+	"github.com/coreswitch/zebra/pkg/packet/bgp"
 	"github.com/coreswitch/zebra/policy"
 )
 
@@ -41,7 +42,7 @@ type CommunityList struct {
 type CommunityListEntry struct {
 	Type      CommunityListType
 	Policy    policy.Action
-	Community Community
+	Community bgp.Community
 	Regstr    string
 }
 
@@ -112,7 +113,7 @@ func NewCommunityListEntry(typ CommunityListType, policy policy.Action, str stri
 	}
 	switch typ {
 	case CommunityListStandard:
-		com, err := CommunityParse(str)
+		com, err := bgp.CommunityParse(str)
 		if err != nil {
 			return nil, err
 		}

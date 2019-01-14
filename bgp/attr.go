@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/coreswitch/zebra/pkg/packet/bgp"
 )
 
 type BGPAttrFlag uint8
@@ -431,7 +433,7 @@ func (attr *AttrAggregator) DecodeFromBytes(data []byte) error {
 // Community.
 type AttrCommunity struct {
 	AttrBase
-	Community Community
+	Community bgp.Community
 }
 
 func (attr *AttrCommunity) DecodeFromBytes(data []byte) error {
@@ -452,7 +454,7 @@ func (attr *AttrCommunity) DecodeFromBytes(data []byte) error {
 
 func (attr *AttrCommunity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Community Community `json:"community"`
+		Community bgp.Community `json:"community"`
 	}{
 		Community: attr.Community,
 	})
