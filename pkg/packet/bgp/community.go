@@ -1,4 +1,4 @@
-// Copyright 2017 zebra project
+// Copyright 2019 zebra project.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,40 +21,43 @@ import (
 	"strings"
 )
 
+// Community represents BGP Community value.
 type Community []uint32
 
 const (
-	COMMUNITY_INTERNET     uint32 = 0x00000000
-	COMMUNITY_GSHUT               = 0xffff0000
-	COMMUNITY_NO_EXPORT           = 0xffffff01
-	COMMUNITY_NO_ADVERTISE        = 0xffffff02
-	COMMUNITY_LOCAL_AS            = 0xffffff03
-	COMMUNITY_NO_PEER             = 0xffffff04
+	// CommunityInternet is used for.
+	CommunityInternet         uint32 = 0x00000000
+	CommunityGracefulShutdown        = 0xffff0000
+	CommunityNoExport                = 0xffffff01
+	CommunityNoAdvertise             = 0xffffff02
+	CommunityLocalAs                 = 0xffffff03
+	CommunityNoPeer                  = 0xffffff04
 )
 
 var WellKnownCommunityMap = map[uint32]string{
-	COMMUNITY_INTERNET:     "internet",
-	COMMUNITY_GSHUT:        "gshut",
-	COMMUNITY_NO_EXPORT:    "no-export",
-	COMMUNITY_NO_ADVERTISE: "no-advertise",
-	COMMUNITY_LOCAL_AS:     "local-AS",
-	COMMUNITY_NO_PEER:      "nopeer",
+	CommunityInternet:         "internet",
+	CommunityGracefulShutdown: "gshut",
+	CommunityNoExport:         "no-export",
+	CommunityNoAdvertise:      "no-advertise",
+	CommunityLocalAs:          "local-AS",
+	CommunityNoPeer:           "nopeer",
 }
 
 var WellKnownCommunityStrMap = map[string]uint32{
-	"internet":     COMMUNITY_INTERNET,
-	"gshut":        COMMUNITY_GSHUT,
-	"no-export":    COMMUNITY_NO_EXPORT,
-	"no-advertise": COMMUNITY_NO_ADVERTISE,
-	"local-AS":     COMMUNITY_LOCAL_AS,
-	"nopeer":       COMMUNITY_NO_PEER,
+	"internet":     CommunityInternet,
+	"gshut":        CommunityGracefulShutdown,
+	"no-export":    CommunityNoExport,
+	"no-advertise": CommunityNoAdvertise,
+	"local-AS":     CommunityLocalAs,
+	"nopeer":       CommunityNoPeer,
 }
 
+// Equal compare two Community value.
 func (lhs Community) Equal(rhs Community) bool {
 	if len(lhs) != len(rhs) {
 		return false
 	}
-	for pos, _ := range lhs {
+	for pos := range lhs {
 		if lhs[pos] != rhs[pos] {
 			return false
 		}
