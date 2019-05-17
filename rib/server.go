@@ -205,6 +205,8 @@ func (s *Server) vrfDelete(vrfName string, errCh chan error) error {
 
 	delete(VrfMap, v.Name)
 	VrfTable[v.Id] = nil
+	//GobgpVrfDelete(v.Id)
+	ZServerStop(v.ZServer)
 
 	return nil
 }
