@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	"github.com/coreswitch/netutil"
-	pb "github.com/coreswitch/zebra/proto"
+	pb "github.com/coreswitch/zebra/api"
 )
 
 const (
