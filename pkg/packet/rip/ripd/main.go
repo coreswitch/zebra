@@ -22,7 +22,7 @@ import (
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/log"
-	"github.com/coreswitch/zebra/rip"
+	"github.com/coreswitch/zebra/pkg/packet/rip"
 )
 
 func main() {
