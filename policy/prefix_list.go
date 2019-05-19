@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/coreswitch/netutil"
-	"github.com/coreswitch/zebra/config"
+	"github.com/coreswitch/zebra/pkg/config"
 )
 
 type PrefixListEntry struct {
