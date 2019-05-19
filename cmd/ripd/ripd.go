@@ -15,12 +15,49 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"github.com/coreswitch/component"
+	"github.com/coreswitch/log"
+	"github.com/coreswitch/zebra/pkg/packet/rip"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	fmt.Println("ripd")
+	log.Info("RIPd Starting")
+	server := rip.NewServer()
+	serverComponent := &rip.ServerComponent{
+		Server: server,
+	}
+	rpcComponent := &rip.RpcComponent{
+		Server: server,
+	}
+	systemMap := component.SystemMap{
+		"server": serverComponent,
+		"rpc":    component.ComponentWith(rpcComponent, "server"),
+	}
+	systemMap.Start()
+	log.Info("RIPd Started")
+
+	time.Sleep(time.Second * 3)
+	log.Info("Adding enp0s6")
+	server.EnableInterfaceSet("enp0s6")
+
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool)
+
+	signal.Ignore(syscall.SIGWINCH)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		log.Info("RIPd Stopping")
+		systemMap.Stop()
+		log.Info("RIPd Stopped")
+		done <- true
+	}()
+
+	<-done
 }

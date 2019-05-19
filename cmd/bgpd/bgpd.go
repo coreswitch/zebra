@@ -16,11 +16,53 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
+
+	"github.com/coreswitch/component"
+	"github.com/coreswitch/zebra/pkg/packet/bgp"
+	"github.com/coreswitch/zebra/pkg/server/module"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	fmt.Println("bgpd")
+	fmt.Println("Starting bgpd")
+	module.Init()
+
+	server := bgp.NewServer(65100)
+
+	serverComponent := &bgp.ServerComponent{
+		Server: server,
+	}
+	grpcComponent := &bgp.GrpcComponent{
+		Server: server,
+	}
+
+	systemMap := component.SystemMap{
+		"server": serverComponent,
+		"grpc":   component.ComponentWith(grpcComponent, "server"),
+	}
+	systemMap.Start()
+
+	err := server.RouterIdSet("192.168.55.1")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = server.NeighborAdd("192.168.55.2")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = server.NeighborRemoteAsSet("192.168.55.2", 65520)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = server.NeighborAfiSafiSet("192.168.55.2", bgp.AFI_IP, bgp.SAFI_UNICAST)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = server.NeighborAfiSafiSet("192.168.55.2", bgp.AFI_IP6, bgp.SAFI_UNICAST)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	ch := make(chan struct{})
+	<-ch
 }
