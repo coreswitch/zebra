@@ -10,7 +10,7 @@ import (
 	"github.com/coreswitch/log"
 	"github.com/coreswitch/zebra/fea"
 	"github.com/coreswitch/zebra/fea/linux"
-	"github.com/coreswitch/zebra/module"
+	"github.com/coreswitch/zebra/pkg/server/module"
 	"github.com/coreswitch/zebra/rib"
 )
 
