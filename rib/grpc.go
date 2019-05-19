@@ -27,7 +27,7 @@ import (
 	"github.com/coreswitch/component"
 	rpc "github.com/coreswitch/openconfigd/proto"
 	"github.com/coreswitch/zebra/pkg/config"
-	"github.com/coreswitch/zebra/policy"
+	"github.com/coreswitch/zebra/pkg/policy"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

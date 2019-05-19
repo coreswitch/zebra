@@ -17,7 +17,7 @@ package linux
 import (
 	"fmt"
 
-	"github.com/coreswitch/zebra/fea"
+	"github.com/coreswitch/zebra/pkg/fea"
 )
 
 func VrfAdd(vrfName string, index uint32) error {

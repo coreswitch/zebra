@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/coreswitch/netutil"
-	"github.com/coreswitch/zebra/fea"
+	"github.com/coreswitch/zebra/pkg/fea"
 )
 
 func (s *Server) ifLookupByName(ifName string) *fea.Interface {

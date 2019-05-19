@@ -20,7 +20,7 @@ package bgp
 import (
 	"fmt"
 
-	"github.com/coreswitch/zebra/policy"
+	"github.com/coreswitch/zebra/pkg/policy"
 )
 
 type CommunityListType int

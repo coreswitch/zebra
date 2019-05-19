@@ -30,7 +30,7 @@ import (
 	"github.com/coreswitch/log"
 	"github.com/coreswitch/netutil"
 	pb "github.com/coreswitch/zebra/api"
-	"github.com/coreswitch/zebra/policy"
+	"github.com/coreswitch/zebra/pkg/policy"
 )
 
 type Client struct {

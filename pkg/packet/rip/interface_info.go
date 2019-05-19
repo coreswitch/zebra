@@ -14,7 +14,7 @@
 
 package rip
 
-import "github.com/coreswitch/zebra/fea"
+import "github.com/coreswitch/zebra/pkg/fea"
 
 type InterfaceInfo struct {
 	ifp       *fea.Interface

@@ -21,8 +21,8 @@ import (
 
 	"github.com/coreswitch/component"
 	"github.com/coreswitch/netutil"
-	"github.com/coreswitch/zebra/fea"
-	"github.com/coreswitch/zebra/policy"
+	"github.com/coreswitch/zebra/pkg/fea"
+	"github.com/coreswitch/zebra/pkg/policy"
 )
 
 type Fn struct {
